@@ -1,0 +1,4 @@
+# Add all the application routes to the app.routes file
+->         /simple-journey                    app.Routes
+# ->         /simple-journey                    journey.Routes
+->         /                          health.Routes

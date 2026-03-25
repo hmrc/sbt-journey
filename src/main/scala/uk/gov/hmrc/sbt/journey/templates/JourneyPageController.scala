@@ -1,0 +1,235 @@
+/*
+ * Copyright 2026 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package uk.gov.hmrc.sbt.journey.templates
+
+import uk.gov.hmrc.sbt.journey.models.*
+import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{capitalise, pascalCase}
+
+import scala.annotation.tailrec
+
+object JourneyPageController {
+  def render(
+    basePackage: QualifiedName,
+    requiresData: Boolean,
+    pageName: String,
+    journeyPage: JourneyPage,
+    journey: Journey
+  ): String = {
+    val capitalPageName = pascalCase(pageName)
+    val interfaceName   = s"${capitalPageName}BaseController"
+
+    val defaultImplName  = s"Default${capitalPageName}Controller"
+    val pageClassName    = s"${capitalPageName}Page"
+    val formProviderName = s"${capitalPageName}FormProvider"
+
+    val action =
+      if (requiresData) "(identify andThen getData andThen requireData)"
+      else "(identify andThen getData)"
+
+    val overloads = journey.pathsFor(pageName)
+
+    def initialiseAnswers(indent: Int) =
+      if (requiresData) ""
+      else s"\n|${" " * indent}.getOrElse(UserAnswers(request.userId))"
+
+    def onPageLoadDeclFor(indexParam: String): String = {
+      s"  def onPageLoad(${indexParam}mode: Mode): Action[AnyContent]"
+    }
+
+    def onSubmitDeclFor(indexParam: String): String = {
+      s"  def onSubmit(${indexParam}mode: Mode): Action[AnyContent]"
+    }
+
+    def indexParamsFor(path: JourneyPath): String = {
+      val paths = path.indexPaths
+      if (paths.isEmpty) ""
+      else paths.map(p => s"${p.pageKey}Index: Int").mkString("", ", ", ", ")
+    }
+
+    def pageParamsFor(paths: List[PathAtom]): String = {
+      @tailrec def go(paths: List[PathAtom], acc: List[String] = Nil): String = paths match {
+        case Nil =>
+          if (acc.isEmpty) ""
+          else acc.reverse.mkString("(", ", ", ")")
+        case IndexPath(pageKey) :: tail =>
+          val indexParam = s"${pageKey}Index"
+          go(tail, indexParam :: acc)
+        case ChoicePath(pageKey, _) :: tail =>
+          go(tail, pageKey :: acc)
+        case _ :: tail =>
+          go(tail, acc)
+      }
+
+      go(paths)
+    }
+
+    def fetchAnswerGeneratorsFor(path: JourneyPath): List[String] = {
+      @tailrec def go(paths: List[PathAtom], acc: List[String] = Nil): List[String] = paths match {
+        case Nil => acc.reverse
+        case ChoicePath(pageKey, _) :: tail =>
+          val pageName   = pascalCase(pageKey)
+          val pageParams = pageParamsFor(tail)
+          val generator  = s"${" " * 6}$pageKey <- userAnswers.get(${pageName}Page$pageParams)"
+          go(tail, generator :: acc)
+        case _ :: tail =>
+          go(tail, acc)
+      }
+
+      go(path.paths.reverse)
+    }
+
+    def onPageLoadImplFor(
+      path: JourneyPath,
+      indexParams: String,
+      pageParams: String,
+      fetchAnswerGenerators: List[String]
+    ): String = {
+      if (path.isIndex && fetchAnswerGenerators.isEmpty) {
+        s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+            |    val preparedForm = request.userAnswers${initialiseAnswers(6)}
+            |      .get($pageClassName$pageParams)
+            |      .map(form.fill)
+            |      .getOrElse(form)
+            |
+            |    Ok(view(preparedForm, mode))
+            |  }""".stripMargin
+      } else if (path.isIndex) {
+        s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+            |    val userAnswers = request.userAnswers${initialiseAnswers(6)}
+            |    val preparedForm = for {
+            |${fetchAnswerGenerators.mkString(System.lineSeparator())}
+            |      $pageName <- userAnswers.get($pageClassName$pageParams)
+            |    } yield form.fill($pageName)
+            |    Ok(view(preparedForm.getOrElse(form), mode))
+            |  }""".stripMargin
+      } else if (fetchAnswerGenerators.isEmpty) {
+        s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+            |    val preparedForm = request.userAnswers${initialiseAnswers(6)}
+            |      .get($pageClassName$pageParams)
+            |      .map(form.fill)
+            |      .getOrElse(form)
+            |
+            |    Ok(view(preparedForm, mode))
+            |  }""".stripMargin
+      } else {
+        s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+            |    val userAnswers = request.userAnswers${initialiseAnswers(6)}
+            |    val preparedForm = for {
+            |${fetchAnswerGenerators.mkString(System.lineSeparator())}
+            |      $pageName <- userAnswers.get($pageClassName$pageParams)
+            |    } yield form.fill($pageName)
+            |    Ok(view(preparedForm.getOrElse(form), mode))
+            |  }""".stripMargin
+      }
+    }
+
+    def onSubmitImplFor(
+      path: JourneyPath,
+      indexParams: String,
+      pageParams: String,
+      fetchAnswerGenerators: List[String]
+    ): String = {
+      if (fetchAnswerGenerators.isEmpty)
+        s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+            |    form.bindFromRequest().fold(
+            |      formWithErrors =>
+            |        Future.successful(BadRequest(view(formWithErrors, mode))),
+            |      answer =>
+            |        request
+            |          .userAnswers${initialiseAnswers(10)}
+            |          .set($pageClassName$pageParams, answer)
+            |          .map { updatedAnswers =>
+            |            Redirect(navigator.nextPage($pageClassName$pageParams, mode, updatedAnswers))
+            |          }
+            |    )
+            |  }
+            |""".stripMargin
+      else
+        s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+            |    form.bindFromRequest().fold(
+            |      formWithErrors =>
+            |        Future.successful(BadRequest(view(formWithErrors, mode))),
+            |      answer =>
+            |        for {
+            |    ${fetchAnswerGenerators.mkString(System.lineSeparator() + "    ")}
+            |          updatedAnswers = request
+            |            .userAnswers${initialiseAnswers(12)}
+            |            .set($pageClassName$pageParams, answer)
+            |        } yield Redirect(navigator.nextPage($pageClassName$pageParams, mode, updatedAnswers))
+            |    )
+            |  }
+            |""".stripMargin
+    }
+
+    val indexes = overloads.map(indexParamsFor)
+
+    val onPageLoadDecls = indexes.map(onPageLoadDeclFor)
+    val onSubmitDecls   = indexes.map(onSubmitDeclFor)
+
+    val (onPageLoadImpls, onSubmitImpls) = overloads
+      .zip(indexes)
+      .map { case (path, indexParams) =>
+        val pageParams       = pageParamsFor(path.paths)
+        val answerGenerators = fetchAnswerGeneratorsFor(path)
+        val onPageLoadImpl   = onPageLoadImplFor(path, indexParams, pageParams, answerGenerators)
+        val onSubmitImpl     = onSubmitImplFor(path, indexParams, pageParams, answerGenerators)
+        (onPageLoadImpl, onSubmitImpl)
+      }
+      .unzip
+
+    s"""package ${basePackage / "controllers"}
+       |
+       |import controllers.actions.*  // ${basePackage / "controllers.actions.*"}
+       |import models.Mode // ${basePackage / "models.Mode"}
+       |import models.UserAnswers
+       |import ${basePackage / "models.*"}
+       |import ${basePackage / "pages.*"}
+       |
+       |import play.api.i18n.I18nSupport
+       |import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
+       |import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendBaseController
+       |
+       |import com.google.inject.ImplementedBy
+       |import javax.inject.{Inject, Singleton}
+       |import scala.concurrent.{ExecutionContext, Future}
+       |
+       |@ImplementedBy(classOf[$defaultImplName])
+       |trait $interfaceName extends FrontendBaseController with I18nSupport {
+       |${onPageLoadDecls.mkString(System.lineSeparator())}
+       |${onSubmitDecls.mkString(System.lineSeparator())}
+       |}
+       |
+       |@Singleton
+       |class $defaultImplName @Inject() (
+       |  identify: IdentifierAction,
+       |  getData: DataRetrievalAction,
+       |  requireData: DataRequiredAction,
+       |  formProvider: $formProviderName,
+       |  view: ${journeyPage.viewClass},
+       |  override val controllerComponents: MessagesControllerComponents
+       |)(implicit ec: ExecutionContext) extends $interfaceName {
+       |
+       |  val form = formProvider()
+       |
+       |${onPageLoadImpls.mkString(System.lineSeparator() * 2)}
+       |
+       |${onSubmitImpls.mkString(System.lineSeparator() * 2)}
+       |}
+       |""".stripMargin
+  }
+
+}
