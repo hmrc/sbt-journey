@@ -29,7 +29,8 @@ class RootPageControllerSpec extends AnyFlatSpec with Matchers {
       headingKey = "beforeYouStart.heading",
       viewRoute = "before-you-start",
       controllerClass = (basePackage / "controllers" / "DefaultBeforeYouStartController").toString,
-      viewClass = "views.html.BeforeYouStartView"
+      viewClass = "views.html.BeforeYouStartView",
+      withDefaultController = true
     )
 
     RootPageController.render(basePackage, "beforeYouStart", rootPage) shouldBe

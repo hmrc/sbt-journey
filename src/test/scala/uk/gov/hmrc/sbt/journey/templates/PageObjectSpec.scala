@@ -31,7 +31,10 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
     s"/${kebabCase(pageKey)}",
     s"/change-${kebabCase(pageKey)}",
     (basePackage / "controllers" / s"Default${pascalCase(pageKey)}Controller").toString,
+    (basePackage / "forms" / s"Default${pascalCase(pageKey)}FormProvider").toString,
     s"views.html.${pascalCase(pageKey)}View",
+    withDefaultController = true,
+    withDefaultFormProvider = true,
     answerType
   )
 
@@ -50,12 +53,16 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
     PageObject.render(basePackage, journey, contactDetailsPage) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.pages
         |
+        |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import _root_.pages.* // TODO: Remove this once we have a better template
         |import play.api.libs.json.JsPath
+        |import play.api.mvc.Call
+        |import uk.gov.hmrc.sbtjourneytest.controllers.routes
         |import uk.gov.hmrc.sbtjourneytest.models.ContactDetails
         |
         |object ContactDetailsPage extends QuestionPage[ContactDetails] {
         |  override def path: JsPath = JsPath \ "contactDetails"
+        |  override def submitRoute(mode: Mode): Call = routes.ContactDetailsBaseController.onSubmit(mode)
         |  override def toString: String = "contactDetails"
         |}
         |""".stripMargin
@@ -87,17 +94,30 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
     PageObject.render(basePackage, journey, auditEvent) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.pages
         |
+        |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import _root_.pages.* // TODO: Remove this once we have a better template
-        |import play.api.libs.json.JsPath
+        |import play.api.libs.json.{JsPath, KeyPathNode, IdxPathNode}
+        |import play.api.mvc.Call
+        |import uk.gov.hmrc.sbtjourneytest.controllers.routes
         |
         |
-        |case class AuditEventPage private (override val path: JsPath) extends QuestionPage[String] {
+        |case class AuditEventPage private (override val path: JsPath, makeRoute: Mode => Call) extends QuestionPage[String] {
+        |  override def submitRoute(mode: Mode): Call = makeRoute(mode)
         |  override def toString: String = "auditEvent"
         |}
         |
         |object AuditEventPage {
         |  def apply(auditEventsIndex: Int): AuditEventPage =
-        |    new AuditEventPage(JsPath \ "auditEvents" \ auditEventsIndex \ "auditEvent")
+        |    new AuditEventPage(
+        |      JsPath \ "auditEvents" \ auditEventsIndex \ "auditEvent",
+        |      mode => routes.AuditEventBaseController.onSubmit(auditEventsIndex, mode)
+        |    )
+        |
+        |  def unapply(page: AuditEventPage): Option[Int] =
+        |    page.path.path match {
+        |      case KeyPathNode("auditEvents") :: IdxPathNode(auditEventsIndex) :: KeyPathNode("auditEvent") :: Nil => Some(auditEventsIndex)
+        |      case _ => None
+        |    }
         |}
         |""".stripMargin
   }
@@ -132,17 +152,30 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
     PageObject.render(basePackage, journey, saInfo) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.pages
         |
+        |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import _root_.pages.* // TODO: Remove this once we have a better template
-        |import play.api.libs.json.JsPath
+        |import play.api.libs.json.{JsPath, KeyPathNode, IdxPathNode}
+        |import play.api.mvc.Call
+        |import uk.gov.hmrc.sbtjourneytest.controllers.routes
         |import uk.gov.hmrc.sbtjourneytest.models.TaxRegime
         |
-        |case class SaInfoPage private (override val path: JsPath) extends QuestionPage[String] {
+        |case class SaInfoPage private (override val path: JsPath, makeRoute: Mode => Call) extends QuestionPage[String] {
+        |  override def submitRoute(mode: Mode): Call = makeRoute(mode)
         |  override def toString: String = "saInfo"
         |}
         |
         |object SaInfoPage {
         |  def apply(whichTaxRegime: TaxRegime): SaInfoPage =
-        |    new SaInfoPage(JsPath \ "whichTaxRegime" \ whichTaxRegime.toString \ "saInfo")
+        |    new SaInfoPage(
+        |      JsPath \ "whichTaxRegime" \ whichTaxRegime.toString \ "saInfo",
+        |      routes.SaInfoBaseController.onSubmit
+        |    )
+        |
+        |  def unapply(page: SaInfoPage): Option[TaxRegime] =
+        |    page.path.path match {
+        |      case KeyPathNode("whichTaxRegime") :: KeyPathNode("SA") :: KeyPathNode("saInfo") :: Nil => Some(TaxRegime.SA)
+        |      case _ => None
+        |    }
         |}
         |""".stripMargin
   }
@@ -178,17 +211,30 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
     PageObject.render(basePackage, journey, auditEvent) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.pages
         |
+        |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import _root_.pages.* // TODO: Remove this once we have a better template
-        |import play.api.libs.json.JsPath
+        |import play.api.libs.json.{JsPath, KeyPathNode, IdxPathNode}
+        |import play.api.mvc.Call
+        |import uk.gov.hmrc.sbtjourneytest.controllers.routes
         |
         |
-        |case class AuditEventPage private (override val path: JsPath) extends QuestionPage[String] {
+        |case class AuditEventPage private (override val path: JsPath, makeRoute: Mode => Call) extends QuestionPage[String] {
+        |  override def submitRoute(mode: Mode): Call = makeRoute(mode)
         |  override def toString: String = "auditEvent"
         |}
         |
         |object AuditEventPage {
         |  def apply(auditSourcesIndex: Int, auditEventsIndex: Int): AuditEventPage =
-        |    new AuditEventPage(JsPath \ "auditSources" \ auditSourcesIndex \ "auditEvents" \ auditEventsIndex \ "auditEvent")
+        |    new AuditEventPage(
+        |      JsPath \ "auditSources" \ auditSourcesIndex \ "auditEvents" \ auditEventsIndex \ "auditEvent",
+        |      mode => routes.AuditEventBaseController.onSubmit(auditSourcesIndex, auditEventsIndex, mode)
+        |    )
+        |
+        |  def unapply(page: AuditEventPage): Option[(Int, Int)] =
+        |    page.path.path match {
+        |      case KeyPathNode("auditSources") :: IdxPathNode(auditSourcesIndex) :: KeyPathNode("auditEvents") :: IdxPathNode(auditEventsIndex) :: KeyPathNode("auditEvent") :: Nil => Some((auditSourcesIndex, auditEventsIndex))
+        |      case _ => None
+        |    }
         |}
         |""".stripMargin
   }

@@ -16,9 +16,32 @@
 
 package uk.gov.hmrc.sbt.journey.models
 
+import scala.annotation.tailrec
+
 /** A journey consisting of one or more pages.
   */
-sealed trait JourneyPart extends Product with Serializable
+sealed trait JourneyPart extends Product with Serializable {
+  def startPage: String = {
+    @tailrec def find(journeyPart: JourneyPart): String = journeyPart match {
+      case DoWhilePart(_, subJourney, _)    => find(subJourney.head)
+      case SwitchCasePart(choicePage, _, _) => choicePage
+      case IfThenPart(choicePage, _, _)     => choicePage
+      case SinglePagePart(pageKey, _)       => pageKey
+    }
+
+    find(this)
+  }
+
+  def startPageIndexes: List[IndexPath] = {
+    @tailrec def find(journeyPart: JourneyPart, path: List[IndexPath] = Nil): List[IndexPath] =
+      journeyPart match {
+        case DoWhilePart(_, subJourney, as) => find(subJourney.head, IndexPath(as) :: path)
+        case _                              => path.reverse
+      }
+
+    find(this)
+  }
+}
 
 /** A looping journey which accumulates a list of answers as long as the user answers the
   * [[choicePage]] affirmatively.

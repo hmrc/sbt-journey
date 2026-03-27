@@ -37,6 +37,7 @@ class JourneyPluginSpec extends AnyFlatSpec with Matchers {
           headingKey = "index.heading",
           viewRoute = "/index",
           controllerClass = "uk.gov.hmrc.pra.DefaultIndexController",
+          withDefaultController = true,
           viewClass = "views.html.IndexView"
         )
       ),
@@ -51,7 +52,10 @@ class JourneyPluginSpec extends AnyFlatSpec with Matchers {
               viewRoute = "/before-you-start",
               changeRoute = "/change-before-you-start",
               controllerClass = "uk.gov.hmrc.pra.DefaultBeforeYouStartController",
+              formProviderClass = "uk.gov.hmrc.pra.forms.DefaultBeforeYouStartFormProvider",
               viewClass = "views.html.SubmissionStartView",
+              withDefaultController = true,
+              withDefaultFormProvider = true,
               answerType = PrimitiveType(classOf[Int])
             ),
             "serviceUrl" -> JourneyPage(
@@ -61,7 +65,10 @@ class JourneyPluginSpec extends AnyFlatSpec with Matchers {
               viewRoute = "/service-url",
               changeRoute = "/edit-service-url",
               controllerClass = "uk.gov.hmrc.pra.ServiceUrlController",
+              formProviderClass = "uk.gov.hmrc.pra.forms.DefaultServiceUrlFormProvider",
               viewClass = "views.html.ServiceUrlView",
+              withDefaultController = true,
+              withDefaultFormProvider = true,
               answerType = PrimitiveType(classOf[Int])
             )
           ),

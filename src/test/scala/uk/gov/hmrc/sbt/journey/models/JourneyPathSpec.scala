@@ -77,7 +77,7 @@ class JourneyPathSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "return true for a lone IndexPath" in {
-   assert(IndexPath("auditEvents").isIndex)
+    assert(IndexPath("auditEvents").isIndex)
   }
 
   it should "return false for compound paths that don't end with an index" in {

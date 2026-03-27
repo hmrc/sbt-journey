@@ -21,6 +21,7 @@ import uk.gov.hmrc.sbt.journey.models.*
 object Imports {
   private[templates] val JavaLangPrefix             = List("java", "lang")
   private[templates] val JavaTimePrefix             = List("java", "time")
+  private[templates] val PlayI18nPrefix             = List("play", "api", "i18n")
   private[templates] val PlayJsonPrefix             = List("play", "api", "libs", "json")
   private[templates] val HmrcMongoJavaTimeInstances = Set("LocalDate", "Instant")
 

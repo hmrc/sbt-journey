@@ -1,0 +1,23 @@
+@this(
+    layout: templates.Layout,
+    formHelper: FormWithCSRF,
+    govukErrorSummary: GovukErrorSummary,
+    govukButton: GovukButton
+)
+
+@(form: Form[_], action: Call, mode: Mode)(implicit request: Request[_], messages: Messages)
+
+@layout(pageTitle = title(form, messages("addAnotherAuditEvent.title"))) {
+
+    @formHelper(action = action, Symbol("autoComplete") -> "off") {
+        @if(form.errors.nonEmpty) {
+            @govukErrorSummary(ErrorSummaryViewModel(form))
+        }
+
+        // TODO: Add your form fields here
+
+        @govukButton(
+            ButtonViewModel(messages("site.continue"))
+        )
+    }
+}

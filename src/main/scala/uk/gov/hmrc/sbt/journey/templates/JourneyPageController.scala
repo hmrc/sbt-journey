@@ -17,7 +17,7 @@
 package uk.gov.hmrc.sbt.journey.templates
 
 import uk.gov.hmrc.sbt.journey.models.*
-import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{capitalise, pascalCase}
+import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.pascalCase
 
 import scala.annotation.tailrec
 
@@ -34,7 +34,7 @@ object JourneyPageController {
 
     val defaultImplName  = s"Default${capitalPageName}Controller"
     val pageClassName    = s"${capitalPageName}Page"
-    val formProviderName = s"${capitalPageName}FormProvider"
+    val formProviderName = QualifiedName(journeyPage.formProviderClass)
 
     val action =
       if (requiresData) "(identify andThen getData andThen requireData)"
@@ -82,8 +82,9 @@ object JourneyPageController {
         case Nil => acc.reverse
         case ChoicePath(pageKey, _) :: tail =>
           val pageName   = pascalCase(pageKey)
-          val pageParams = pageParamsFor(tail)
-          val generator  = s"${" " * 6}$pageKey <- userAnswers.get(${pageName}Page$pageParams)"
+          val pageParams = pageParamsFor(tail.reverse)
+          val generator =
+            s"${" " * 6}$pageKey <- request.userAnswers.get(${pageName}Page$pageParams)"
           go(tail, generator :: acc)
         case _ :: tail =>
           go(tail, acc)
@@ -98,41 +99,26 @@ object JourneyPageController {
       pageParams: String,
       fetchAnswerGenerators: List[String]
     ): String = {
-      if (path.isIndex && fetchAnswerGenerators.isEmpty) {
-        s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
-            |    val preparedForm = request.userAnswers${initialiseAnswers(6)}
-            |      .get($pageClassName$pageParams)
-            |      .map(form.fill)
-            |      .getOrElse(form)
-            |
-            |    Ok(view(preparedForm, mode))
-            |  }""".stripMargin
-      } else if (path.isIndex) {
-        s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
-            |    val userAnswers = request.userAnswers${initialiseAnswers(6)}
-            |    val preparedForm = for {
-            |${fetchAnswerGenerators.mkString(System.lineSeparator())}
-            |      $pageName <- userAnswers.get($pageClassName$pageParams)
-            |    } yield form.fill($pageName)
-            |    Ok(view(preparedForm.getOrElse(form), mode))
+      if (path.isIndex) {
+        // TODO: Decide whether to fill this based upon the existing answers
+        //  Problem: we can't tell the difference between "No" to add another element and "not filled yet"
+        s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
+            |    val page = $pageClassName$pageParams
+            |    Ok(view(form(), page.submitRoute(mode), mode))
             |  }""".stripMargin
       } else if (fetchAnswerGenerators.isEmpty) {
-        s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+        s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
+            |    val page = $pageClassName$pageParams
             |    val preparedForm = request.userAnswers${initialiseAnswers(6)}
-            |      .get($pageClassName$pageParams)
-            |      .map(form.fill)
-            |      .getOrElse(form)
+            |      .get(page)
+            |      .map(form().fill)
+            |      .getOrElse(form())
             |
-            |    Ok(view(preparedForm, mode))
+            |    Ok(view(preparedForm, page.submitRoute(mode), mode))
             |  }""".stripMargin
       } else {
-        s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
-            |    val userAnswers = request.userAnswers${initialiseAnswers(6)}
-            |    val preparedForm = for {
-            |${fetchAnswerGenerators.mkString(System.lineSeparator())}
-            |      $pageName <- userAnswers.get($pageClassName$pageParams)
-            |    } yield form.fill($pageName)
-            |    Ok(view(preparedForm.getOrElse(form), mode))
+        s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
+            |    ???
             |  }""".stripMargin
       }
     }
@@ -143,34 +129,42 @@ object JourneyPageController {
       pageParams: String,
       fetchAnswerGenerators: List[String]
     ): String = {
-      if (fetchAnswerGenerators.isEmpty)
-        s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
-            |    form.bindFromRequest().fold(
+      if (path.isIndex && fetchAnswerGenerators.isEmpty) {
+        s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
+            |    val page = $pageClassName$pageParams
+            |    form().bindFromRequest().fold(
             |      formWithErrors =>
-            |        Future.successful(BadRequest(view(formWithErrors, mode))),
+            |        BadRequest(view(formWithErrors, page.submitRoute(mode), mode)),
             |      answer =>
+            |        Redirect(navigator.nextPage(page, mode, request.userAnswers, answer))
+            |    )
+            |  }
+            |""".stripMargin
+      } else if (path.isIndex) {
+        s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+            |    ???
+            |  }
+            |""".stripMargin
+      } else if (fetchAnswerGenerators.isEmpty)
+        s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+            |    val page = $pageClassName$pageParams
+            |    form().bindFromRequest().fold(
+            |      formWithErrors =>
+            |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+            |      answer => Future.fromTry {
             |        request
             |          .userAnswers${initialiseAnswers(10)}
-            |          .set($pageClassName$pageParams, answer)
+            |          .set(page, answer)
             |          .map { updatedAnswers =>
-            |            Redirect(navigator.nextPage($pageClassName$pageParams, mode, updatedAnswers))
+            |            Redirect(navigator.nextPage(page, mode, updatedAnswers, answer))
             |          }
+            |      }
             |    )
             |  }
             |""".stripMargin
       else
         s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
-            |    form.bindFromRequest().fold(
-            |      formWithErrors =>
-            |        Future.successful(BadRequest(view(formWithErrors, mode))),
-            |      answer =>
-            |        for {
-            |    ${fetchAnswerGenerators.mkString(System.lineSeparator() + "    ")}
-            |          updatedAnswers = request
-            |            .userAnswers${initialiseAnswers(12)}
-            |            .set($pageClassName$pageParams, answer)
-            |        } yield Redirect(navigator.nextPage($pageClassName$pageParams, mode, updatedAnswers))
-            |    )
+            |    ???
             |  }
             |""".stripMargin
     }
@@ -197,6 +191,8 @@ object JourneyPageController {
        |import models.Mode // ${basePackage / "models.Mode"}
        |import models.UserAnswers
        |import ${basePackage / "models.*"}
+       |import ${basePackage / "forms.*"}
+       |import ${basePackage / "navigation.*"}
        |import ${basePackage / "pages.*"}
        |
        |import play.api.i18n.I18nSupport
@@ -218,12 +214,11 @@ object JourneyPageController {
        |  identify: IdentifierAction,
        |  getData: DataRetrievalAction,
        |  requireData: DataRequiredAction,
-       |  formProvider: $formProviderName,
+       |  navigator: JourneyNavigator,
+       |  form: ${formProviderName.parts.last},
        |  view: ${journeyPage.viewClass},
        |  override val controllerComponents: MessagesControllerComponents
        |)(implicit ec: ExecutionContext) extends $interfaceName {
-       |
-       |  val form = formProvider()
        |
        |${onPageLoadImpls.mkString(System.lineSeparator() * 2)}
        |

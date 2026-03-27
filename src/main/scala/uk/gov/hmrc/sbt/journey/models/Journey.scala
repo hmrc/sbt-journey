@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.sbt.journey.models
 
-import scala.annotation.tailrec
-
 /** A journey consisting of multiple [[JourneyPart]]s.
   *
   * @param pages
@@ -29,16 +27,7 @@ case class Journey(pages: Map[String, JourneyPage], journey: List[JourneyPart]) 
 
   /** The [[JourneyPage.pageKey]] of the first [[SinglePagePart]] in the [[journey]].
     */
-  def startPage: String = {
-    @tailrec def find(journeyPart: JourneyPart): String = journeyPart match {
-      case DoWhilePart(_, subJourney, _)    => find(subJourney.head)
-      case SwitchCasePart(choicePage, _, _) => choicePage
-      case IfThenPart(choicePage, _, _)     => choicePage
-      case SinglePagePart(pageKey, _)       => pageKey
-    }
-
-    find(journey.head)
-  }
+  def startPage: String = journey.head.startPage
 
   /** * A list of [[JourneyPath]]s at which the given [[JourneyPage.pageKey]] appears.
     */

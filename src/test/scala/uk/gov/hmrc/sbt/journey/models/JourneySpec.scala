@@ -30,7 +30,10 @@ class JourneySpec extends AnyFlatSpec with Matchers {
     s"/${kebabCase(pageKey)}",
     s"/change-${kebabCase(pageKey)}",
     (basePackage / "controllers" / s"Default${pascalCase(pageKey)}Controller").toString,
+    (basePackage / "forms" / s"Default${pascalCase(pageKey)}FormProvider").toString,
     s"views.html.${pascalCase(pageKey)}View",
+    withDefaultController = true,
+    withDefaultFormProvider = true,
     answerType
   )
 

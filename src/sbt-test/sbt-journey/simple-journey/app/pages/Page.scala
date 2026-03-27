@@ -2,7 +2,9 @@ package pages
 
 import scala.language.implicitConversions
 
-trait Page
+trait Page {
+  type AnswerType
+}
 
 object Page {
 

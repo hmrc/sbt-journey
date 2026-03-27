@@ -17,6 +17,8 @@
 package uk.gov.hmrc.sbt.journey.templates
 
 import uk.gov.hmrc.sbt.journey.models.{AnswerModel, CaseClassModel, EnumModel, QualifiedName}
+import uk.gov.hmrc.sbt.journey.templates.Imports.PlayJsonPrefix
+import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.camelCase
 
 object CustomModel {
   def render(basePackage: QualifiedName, model: AnswerModel): String = model match {
@@ -24,29 +26,69 @@ object CustomModel {
     case model: EnumModel      => enumModel(basePackage, model)
   }
 
+  private def enumRead(caseName: String): String = {
+    val nm = camelCase(caseName)
+    s"""|        case $nm if $nm == config.typeNaming("$caseName") =>
+        |          JsSuccess($caseName)""".stripMargin
+  }
+
+  private def enumWrite(caseName: String): String = {
+    s"""|    case $caseName =>
+        |      Json.obj(config.discriminator -> config.typeNaming("$caseName"))""".stripMargin
+  }
+
   private[templates] def enumModel(basePackage: QualifiedName, enumModel: EnumModel): String = {
     val modelsPackage = basePackage / "models"
     val name          = enumModel.name
     val cases         = enumModel.cases
 
+    val imports = Imports.importsFor(
+      modelsPackage,
+      Map(
+        PlayJsonPrefix -> Set(
+          "Json",
+          "JsonConfiguration",
+          "JsError",
+          "JsObject",
+          "JsPath",
+          "JsSuccess",
+          "JsValue",
+          "Format",
+          "Reads",
+          "Writes"
+        )
+      )
+    )
+
     s"""package $modelsPackage
        |
-       |import play.api.libs.json.{Json, JsonValidationError, Format, Reads, Writes}
+       |import models.Enumerable // import ${basePackage / "models.Enumerable"}
+       |$imports
        |
        |enum $name {
        |  case ${cases.mkString(", ")}
        |}
        |
        |object $name {
-       |  private val labels = values.map(_.toString)
+       |  given reads(using config: JsonConfiguration): Reads[$name] = Reads {
+       |    case obj: JsObject => obj.value.get(config.discriminator) match {
+       |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
+       |${cases.map(enumRead).mkString(System.lineSeparator())}
+       |        case _ =>
+       |          JsError("error.invalid")
+       |      }
+       |      case _ => JsError(JsPath \\ config.discriminator, "error.missing.path")
+       |    }
+       |    case _ => JsError("error.expected.jsobject")
+       |  }
        |
-       |  given reads: Reads[$name] = Reads.of[String]
-       |    .filter(JsonValidationError("error.invalid"))(labels.contains)
-       |    .map($name.valueOf)
-       |
-       |  given writes: Writes[$name] = Writes.of[String].contramap(_.toString)
+       |  given writes(using config: JsonConfiguration): Writes[$name] = Writes {
+       |${cases.map(enumWrite).mkString(System.lineSeparator())}
+       |  }
        |
        |  given Format[$name] = Format(reads, writes)
+       |
+       |  given Enumerable[$name] = (value: String) => fromString(value)
        |
        |  def fromString(value: String): Option[$name] =
        |    values.find(_.toString == value)

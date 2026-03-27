@@ -38,13 +38,16 @@ sealed trait Page extends Product with Serializable {
   * @param viewClass
   *   The fully-qualified class name of the view to use to render this route. Defaults to
   *   <code>views.html.${PageKey}View</code>.
+  * @param withDefaultController
+  *   Whether to generate a default controller implementation for this page.
   */
 case class RootPage(
   titleKey: String,
   headingKey: String,
   viewRoute: String,
   controllerClass: String,
-  viewClass: String
+  viewClass: String,
+  withDefaultController: Boolean
 ) extends Page
 
 /** A page of a journey.
@@ -69,9 +72,16 @@ case class RootPage(
   * @param controllerClass
   *   The fully-qualified class name of the controller to use to respond to this route. Defaults to
   *   <code>${basepackage}.controllers.${PageKey}BaseController</code>.
+  * @param formProviderClass
+  *   The fully-qualified class name of the form provider to use to create forms for this page.
+  *   Defaults to <code>${basepackage}.forms.${PageKey}FormProvider</code>.
   * @param viewClass
   *   The fully-qualified class name of the view to use to render this route. Defaults to
   *   <code>views.html.${PageKey}View</code>.
+  * @param withDefaultController
+  *   Whether to generate a default controller implementation for this page.
+  * @param withDefaultFormProvider
+  *   Whether to generate a default form provider implementation for this page.
   * @param answerType
   *   The type of the answer saved by this journey page.
   */
@@ -82,6 +92,9 @@ case class JourneyPage(
   viewRoute: String,
   changeRoute: String,
   controllerClass: String,
+  formProviderClass: String,
   viewClass: String,
+  withDefaultController: Boolean,
+  withDefaultFormProvider: Boolean,
   answerType: FieldType
 ) extends Page

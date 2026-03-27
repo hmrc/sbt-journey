@@ -21,10 +21,10 @@ import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, kebabCase}
 
 object Routes {
   private[templates] def journeyRoutes(journey: Journey, journeyPage: JourneyPage): String = {
-    val viewRoute       = journeyPage.viewRoute
-    val changeRoute     = journeyPage.changeRoute
-    val controllerClass = journeyPage.controllerClass
-    val viewRoutePadding = " " * (math.max(changeRoute.length - viewRoute.length, 0) + 2)
+    val viewRoute          = journeyPage.viewRoute
+    val changeRoute        = journeyPage.changeRoute
+    val controllerClass    = journeyPage.controllerClass
+    val viewRoutePadding   = " " * (math.max(changeRoute.length - viewRoute.length, 0) + 2)
     val changeRoutePadding = " " * (math.max(viewRoute.length - changeRoute.length, 0) + 2)
 
     journey
@@ -58,7 +58,7 @@ object Routes {
     val rootPages =
       journeyConfig.rootPages.values.toList.sortBy(_.viewRoute)
 
-    val rootPageRoutes = rootPages.map { case RootPage(_, _, viewRoute, controllerClass, _) =>
+    val rootPageRoutes = rootPages.map { case RootPage(_, _, viewRoute, controllerClass, _, _) =>
       s"GET  ${viewRoute}  ${controllerClass}.onPageLoad"
     }
 

@@ -34,7 +34,7 @@ object FieldType {
   val DOUBLE  = PrimitiveType(classOf[Double])
   val CHAR    = PrimitiveType(classOf[Char])
   val BOOLEAN = PrimitiveType(classOf[Boolean])
-  val STRING  = ClassType(classOf[String].getName)
+  val STRING  = ClassType(classOf[String])
 }
 
 /** An array answer.
@@ -82,6 +82,8 @@ case class PrimitiveType(clazz: Class[? <: AnyVal]) extends FieldType
 case class ClassType(clazz: String) extends FieldType
 
 object ClassType {
+  def apply(clazz: Class[_]): ClassType =
+    ClassType(clazz.getName)
   def apply(name: QualifiedName): ClassType =
     ClassType(name.toString)
 }

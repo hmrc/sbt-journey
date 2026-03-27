@@ -22,37 +22,6 @@ import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, pascalCase}
 import scala.annotation.tailrec
 
 object PageObject {
-  private def listAnswerType(
-    modelsPackage: QualifiedName,
-    journey: Journey,
-    journeyPage: JourneyPage
-  ): FieldType = {
-    def go(parts: List[JourneyPart]): Option[JourneyPart] = parts match {
-      case (part @ DoWhilePart(choicePage, subJourney, _)) :: tail =>
-        if (choicePage == journeyPage.pageKey) Some(part) else go(subJourney).orElse(go(tail))
-      case SwitchCasePart(_, subJourneys, _) :: tail =>
-        subJourneys.values.toList.flatMap(go).headOption.orElse(go(tail))
-      case IfThenPart(_, subJourney, _) :: tail =>
-        go(subJourney).orElse(go(tail))
-      case SinglePagePart(_, _) :: tail =>
-        go(tail)
-      case Nil =>
-        None
-    }
-
-    go(journey.journey)
-      .collect { case DoWhilePart(_, subJourney, _) =>
-        val subJourneyFields = subJourney.flatMap(ModelFields.forPart(modelsPackage, journey, _))
-        if (subJourneyFields.length == 1) subJourneyFields.head._2
-        else ClassType("play.api.libs.json.JsObject")
-      }
-      .getOrElse(
-        throw new NoSuchElementException(
-          s"Unable to find the list answer type for the add-another page ${journeyPage.pageKey}"
-        )
-      )
-  }
-
   private def applyParams(journey: Journey, path: JourneyPath): List[String] = {
     @tailrec def params(paths: List[PathAtom], acc: List[String] = Nil): List[String] =
       paths match {
@@ -70,6 +39,19 @@ object PageObject {
       }
 
     params(path.paths)
+  }
+
+  private def submitRouteFor(pageName: String, path: JourneyPath): String = {
+    val indexPaths = path.indexPaths
+    if (indexPaths.isEmpty) s"routes.${pageName}BaseController.onSubmit"
+    else
+      path.indexPaths
+        .map(idx => s"${camelCase(idx.pageKey)}Index")
+        .mkString(
+          s"mode => routes.${pageName}BaseController.onSubmit(",
+          ", ",
+          ", mode)"
+        )
   }
 
   private def jsPathFor(path: JourneyPath): String = {
@@ -90,23 +72,88 @@ object PageObject {
     go(path.paths)
   }
 
+  private def unapplyTypeFor(journey: Journey, path: JourneyPath): String = {
+    @tailrec def go(paths: List[PathAtom], acc: List[String] = Nil): String =
+      paths match {
+        case Nil =>
+          if (acc.length == 1) acc.head
+          else acc.reverse.mkString("(", ", ", ")")
+        case IndexPath(_) :: tail =>
+          go(tail, "Int" :: acc)
+        case ChoicePath(pageKey, _) :: tail =>
+          val choiceType = ModelFields.fieldType(journey.pages(pageKey).answerType)
+          go(tail, choiceType :: acc)
+        case _ :: tail =>
+          go(tail, acc)
+      }
+
+    go(path.paths)
+  }
+
+  private def unapplyResultFor(journey: Journey, path: JourneyPath): String = {
+    @tailrec def go(paths: List[PathAtom], acc: List[String] = Nil): String =
+      paths match {
+        case Nil =>
+          if (acc.length == 1) acc.head
+          else acc.reverse.mkString("(", ", ", ")")
+        case IndexPath(pageKey) :: tail =>
+          go(tail, s"${pageKey}Index" :: acc)
+        case ChoicePath(pageKey, choice) :: tail =>
+          val choiceType = ModelFields.fieldType(journey.pages(pageKey).answerType)
+          go(tail, s"$choiceType.$choice" :: acc)
+        case _ :: tail =>
+          go(tail, acc)
+      }
+
+    go(path.paths)
+  }
+
+  private def jsPathNodesFor(path: JourneyPath): String = {
+    @tailrec def go(paths: List[PathAtom], acc: List[String] = Nil): String =
+      paths match {
+        case Nil =>
+          acc.reverse.mkString("", " :: ", " :: Nil")
+        case IndexPath(pageKey) :: tail =>
+          go(tail, s"IdxPathNode(${pageKey}Index)" :: s"""KeyPathNode("$pageKey")""" :: acc)
+        case ChoicePath(_, choice) :: tail =>
+          go(tail, s"""KeyPathNode("$choice")""" :: acc)
+        case StringPath(pageKey) :: tail =>
+          go(tail, s"""KeyPathNode("$pageKey")""" :: acc)
+        case Root :: tail =>
+          go(tail, acc)
+      }
+
+    go(path.paths)
+  }
+
   def applyMethod(pageName: String, journey: Journey, path: JourneyPath): String = {
     val params       = applyParams(journey, path)
     val paramsString = if (params.isEmpty) "" else params.mkString("(", ", ", ")")
     val jsPath       = jsPathFor(path)
+    val submitRoute  = submitRouteFor(pageName, path)
     s"""|  def apply$paramsString: ${pageName}Page =
-        |    new ${pageName}Page($jsPath)""".stripMargin
+        |    new ${pageName}Page(
+        |      $jsPath,
+        |      $submitRoute
+        |    )""".stripMargin
+  }
+
+  def unapplyMethod(pageName: String, journey: Journey, path: JourneyPath): String = {
+    val unapplyType   = unapplyTypeFor(journey, path)
+    val unapplyResult = unapplyResultFor(journey, path)
+    val jsPathNodes   = jsPathNodesFor(path)
+    s"""|  def unapply(page: ${pageName}Page): Option[$unapplyType] =
+        |    page.path.path match {
+        |      case $jsPathNodes => Some($unapplyResult)
+        |      case _ => None
+        |    }""".stripMargin
   }
 
   def render(basePackage: QualifiedName, journey: Journey, journeyPage: JourneyPage): String = {
-    val modelsPackage   = basePackage / "models"
     val pagesPackage    = basePackage / "pages"
     val capitalPageName = pascalCase(journeyPage.pageKey)
     val overloads       = journey.pathsFor(journeyPage.pageKey)
-
-    val answerType =
-      if (overloads.exists(_.isIndex)) listAnswerType(modelsPackage, journey, journeyPage)
-      else journey.pages(journeyPage.pageKey).answerType
+    val answerType      = journey.pages(journeyPage.pageKey).answerType
 
     val pageType = ModelFields.fieldType(answerType)
 
@@ -124,31 +171,43 @@ object PageObject {
     if (overloads.length == 1 && applyParams(journey, overloads.head).isEmpty) {
       s"""package ${basePackage / "pages"}
          |
+         |import models.Mode // ${basePackage / "models.Mode"}
          |import _root_.pages.* // TODO: Remove this once we have a better template
          |import play.api.libs.json.JsPath
+         |import play.api.mvc.Call
+         |import ${basePackage / "controllers.routes"}
          |$imports
          |
          |object ${capitalPageName}Page extends QuestionPage[$pageType] {
          |  override def path: JsPath = ${jsPathFor(overloads.head)}
+         |  override def submitRoute(mode: Mode): Call = routes.${capitalPageName}BaseController.onSubmit(mode)
          |  override def toString: String = "${journeyPage.pageKey}"
          |}
          |""".stripMargin
     } else {
       val applyMethods =
         overloads.map(applyMethod(capitalPageName, journey, _)).mkString(System.lineSeparator())
+      val unapplyMethods =
+        overloads.map(unapplyMethod(capitalPageName, journey, _)).mkString(System.lineSeparator())
 
       s"""package ${basePackage / "pages"}
          |
+         |import models.Mode // ${basePackage / "models.Mode"}
          |import _root_.pages.* // TODO: Remove this once we have a better template
-         |import play.api.libs.json.JsPath
+         |import play.api.libs.json.{JsPath, KeyPathNode, IdxPathNode}
+         |import play.api.mvc.Call
+         |import ${basePackage / "controllers.routes"}
          |$imports
          |
-         |case class ${capitalPageName}Page private (override val path: JsPath) extends QuestionPage[$pageType] {
+         |case class ${capitalPageName}Page private (override val path: JsPath, makeRoute: Mode => Call) extends QuestionPage[$pageType] {
+         |  override def submitRoute(mode: Mode): Call = makeRoute(mode)
          |  override def toString: String = "${journeyPage.pageKey}"
          |}
          |
          |object ${capitalPageName}Page {
          |$applyMethods
+         |
+         |$unapplyMethods
          |}
          |""".stripMargin
     }

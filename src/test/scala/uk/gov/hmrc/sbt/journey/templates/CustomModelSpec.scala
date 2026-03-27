@@ -18,16 +18,7 @@ package uk.gov.hmrc.sbt.journey.templates
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import uk.gov.hmrc.sbt.journey.models.{
-  CaseClassModel,
-  ClassType,
-  EnumModel,
-  FieldType,
-  ListType,
-  OptionType,
-  PrimitiveType,
-  QualifiedName
-}
+import uk.gov.hmrc.sbt.journey.models.*
 
 import java.time.LocalDate
 
@@ -40,22 +31,43 @@ class CustomModelSpec extends AnyFlatSpec with Matchers {
     CustomModel.render(basePackage, enumModel) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
-        |import play.api.libs.json.{Json, JsonValidationError, Format, Reads, Writes}
+        |import models.Enumerable // import uk.gov.hmrc.sbtjourneytest.models.Enumerable
+        |import play.api.libs.json.{Format,JsError,JsObject,JsPath,JsSuccess,JsValue,Json,JsonConfiguration,Reads,Writes}
         |
         |enum TestEnum {
         |  case A, B, C
         |}
         |
         |object TestEnum {
-        |  private val labels = values.map(_.toString)
+        |  given reads(using config: JsonConfiguration): Reads[TestEnum] = Reads {
+        |    case obj: JsObject => obj.value.get(config.discriminator) match {
+        |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
+        |        case a if a == config.typeNaming("A") =>
+        |          JsSuccess(A)
+        |        case b if b == config.typeNaming("B") =>
+        |          JsSuccess(B)
+        |        case c if c == config.typeNaming("C") =>
+        |          JsSuccess(C)
+        |        case _ =>
+        |          JsError("error.invalid")
+        |      }
+        |      case _ => JsError(JsPath \ config.discriminator, "error.missing.path")
+        |    }
+        |    case _ => JsError("error.expected.jsobject")
+        |  }
         |
-        |  given reads: Reads[TestEnum] = Reads.of[String]
-        |    .filter(JsonValidationError("error.invalid"))(labels.contains)
-        |    .map(TestEnum.valueOf)
-        |
-        |  given writes: Writes[TestEnum] = Writes.of[String].contramap(_.toString)
+        |  given writes(using config: JsonConfiguration): Writes[TestEnum] = Writes {
+        |    case A =>
+        |      Json.obj(config.discriminator -> config.typeNaming("A"))
+        |    case B =>
+        |      Json.obj(config.discriminator -> config.typeNaming("B"))
+        |    case C =>
+        |      Json.obj(config.discriminator -> config.typeNaming("C"))
+        |  }
         |
         |  given Format[TestEnum] = Format(reads, writes)
+        |
+        |  given Enumerable[TestEnum] = (value: String) => fromString(value)
         |
         |  def fromString(value: String): Option[TestEnum] =
         |    values.find(_.toString == value)
@@ -160,7 +172,7 @@ class CustomModelSpec extends AnyFlatSpec with Matchers {
       "TestCaseClass",
       List(
         "anInt"         -> FieldType.INT,
-        "aDate"         -> ClassType(classOf[LocalDate].getName),
+        "aDate"         -> ClassType(classOf[LocalDate]),
         "aListOfString" -> ListType(FieldType.STRING)
       )
     )

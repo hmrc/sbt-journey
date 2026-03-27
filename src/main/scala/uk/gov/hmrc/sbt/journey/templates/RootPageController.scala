@@ -26,8 +26,28 @@ object RootPageController {
     rootPage: RootPage
   ): String = {
     val capitalPageName = pascalCase(pageName)
+    val withDefault     = rootPage.withDefaultController
     val interfaceName   = s"${capitalPageName}BaseController"
     val defaultImplName = s"Default${capitalPageName}Controller"
+    val implementedBy =
+      if (!withDefault) ""
+      else s"@ImplementedBy(classOf[$defaultImplName])${System.lineSeparator()}"
+
+    val defaultImpl =
+      if (!withDefault) ""
+      else
+        s"""
+           |@Singleton
+           |class $defaultImplName @Inject() (
+           |  identify: IdentifierAction,
+           |  view: ${rootPage.viewClass},
+           |  override val controllerComponents: MessagesControllerComponents
+           |)(implicit ec: ExecutionContext) extends $interfaceName {
+           |  def onPageLoad: Action[AnyContent] = identify { implicit request =>
+           |    Ok(view())
+           |  }
+           |}
+           |""".stripMargin
 
     s"""package ${basePackage / "controllers"}
        |
@@ -41,21 +61,9 @@ object RootPageController {
        |import javax.inject.{Inject, Singleton}
        |import scala.concurrent.{ExecutionContext, Future}
        |
-       |@ImplementedBy(classOf[$defaultImplName])
-       |trait $interfaceName extends FrontendBaseController with I18nSupport {
+       |${implementedBy}trait $interfaceName extends FrontendBaseController with I18nSupport {
        |  def onPageLoad: Action[AnyContent]
        |}
-       |
-       |@Singleton
-       |class $defaultImplName @Inject() (
-       |  identify: IdentifierAction,
-       |  view: ${rootPage.viewClass},
-       |  override val controllerComponents: MessagesControllerComponents
-       |)(implicit ec: ExecutionContext) extends $interfaceName {
-       |  def onPageLoad: Action[AnyContent] = identify { implicit request =>
-       |    Ok(view())
-       |  }
-       |}
-       |""".stripMargin
+       |$defaultImpl""".stripMargin
   }
 }

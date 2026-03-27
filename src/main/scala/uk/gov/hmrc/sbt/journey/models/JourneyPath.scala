@@ -57,7 +57,7 @@ sealed trait JourneyPath extends Product with Serializable {
       paths match {
         case Nil => acc
         case Root :: tail =>
-          if (acc.isEmpty) acc.append("$") else acc.append(".$"); go(tail, acc)
+          acc.append("$"); go(tail, acc)
         case StringPath(pageKey) :: tail =>
           if (acc.isEmpty) acc.append(pageKey) else acc.append(s".$pageKey"); go(tail, acc)
         case IndexPath(pageKey) :: tail =>

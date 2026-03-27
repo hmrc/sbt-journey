@@ -27,6 +27,7 @@ import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.templates.*
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{kebabCase, packageCase, pascalCase}
 
+import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
 object JourneyPlugin extends AutoPlugin {
@@ -58,6 +59,10 @@ object JourneyPlugin extends AutoPlugin {
     val generateJourneyTests = taskKey[Seq[FileRef]](
       "Generate Play Framework controller tests from a journey.conf file."
     )
+
+    val initialiseJourneyViews = taskKey[Unit](
+      "Initialise view files for each of the journey pages if they don't already exist."
+    )
   }
 
   import autoImport.*
@@ -83,6 +88,11 @@ object JourneyPlugin extends AutoPlugin {
       val baseDir       = resourceManaged.value
       val journeyConfig = journeyConfiguration.value
       generateJourneyRouteFiles(baseDir, journeyConfig)
+    },
+    initialiseJourneyViews := {
+      val baseDir       = sourceDirectory.value
+      val journeyConfig = journeyConfiguration.value
+      initialiseJourneyViewFiles(baseDir, journeyConfig)
     }
   )
 
@@ -149,10 +159,20 @@ object JourneyPlugin extends AutoPlugin {
     val controllerClass =
       if (config.hasPath("controllerClass")) config.getString("controllerClass")
       else s"$basePackage.controllers.${pascalCase(key)}BaseController"
+    val withDefaultController =
+      if (config.hasPath("withDefaultController")) config.getBoolean("withDefaultController")
+      else true
     val viewClass =
       if (config.hasPath("viewClass")) config.getString("viewClass")
       else s"views.html.${pascalCase(key)}View"
-    key -> RootPage(titleKey, headingKey, viewRoute, controllerClass, viewClass)
+    key -> RootPage(
+      titleKey,
+      headingKey,
+      viewRoute,
+      controllerClass,
+      viewClass,
+      withDefaultController
+    )
   }
 
   private[journey] def deserialiseJourneyPage(
@@ -176,9 +196,18 @@ object JourneyPlugin extends AutoPlugin {
     val controllerClass =
       if (config.hasPath("controllerClass")) config.getString("controllerClass")
       else s"$basePackage.controllers.${pascalCase(key)}BaseController"
+    val formProviderClass =
+      if (config.hasPath("formProviderClass")) config.getString("formProviderClass")
+      else s"$basePackage.forms.${pascalCase(key)}BaseFormProvider"
     val viewClass =
       if (config.hasPath("viewClass")) config.getString("viewClass")
       else s"views.html.${pascalCase(key)}View"
+    val withDefaultController =
+      if (config.hasPath("withDefaultController")) config.getBoolean("withDefaultController")
+      else true
+    val withDefaultFormProvider =
+      if (config.hasPath("withDefaultFormProvider")) config.getBoolean("withDefaultFormProvider")
+      else true
     val answerType =
       deserialiseAnswerModel(models, modelsPackage, config.getValue("answerType"))
     key -> JourneyPage(
@@ -188,7 +217,10 @@ object JourneyPlugin extends AutoPlugin {
       viewRoute,
       changeRoute,
       controllerClass,
+      formProviderClass,
       viewClass,
+      withDefaultController,
+      withDefaultFormProvider,
       answerType
     )
   }
@@ -322,6 +354,7 @@ object JourneyPlugin extends AutoPlugin {
     rootPages: Map[String, RootPage],
     models: Map[String, AnswerModel],
     pages: Map[String, JourneyPage],
+    choicePages: mutable.Builder[String, Set[String]],
     value: ConfigValue
   ): List[JourneyPart] = {
     if (value.valueType() == ConfigValueType.LIST) {
@@ -329,9 +362,9 @@ object JourneyPlugin extends AutoPlugin {
         .asInstanceOf[ConfigList]
         .asScala
         .toList
-        .map(deserialiseJourneyPart(rootPages, models, pages, _))
+        .map(deserialiseJourneyPart(rootPages, models, pages, choicePages, _))
     } else {
-      List(deserialiseJourneyPart(rootPages, models, pages, value))
+      List(deserialiseJourneyPart(rootPages, models, pages, choicePages, value))
     }
   }
 
@@ -339,6 +372,7 @@ object JourneyPlugin extends AutoPlugin {
     rootPages: Map[String, RootPage],
     models: Map[String, AnswerModel],
     pages: Map[String, JourneyPage],
+    choicePages: mutable.Builder[String, Set[String]],
     value: ConfigValue
   ): JourneyPart = {
     value match {
@@ -364,9 +398,11 @@ object JourneyPlugin extends AutoPlugin {
           )
         }
 
+        choicePages += choicePage
+
         DoWhilePart(
           choicePage,
-          deserialiseJourneyParts(rootPages, models, pages, config.getValue("do")),
+          deserialiseJourneyParts(rootPages, models, pages, choicePages, config.getValue("do")),
           config.getString("as")
         )
 
@@ -392,9 +428,11 @@ object JourneyPlugin extends AutoPlugin {
           )
         }
 
+        choicePages += choicePage
+
         IfThenPart(
           choicePage,
-          deserialiseJourneyParts(rootPages, models, pages, config.getValue("then")),
+          deserialiseJourneyParts(rootPages, models, pages, choicePages, config.getValue("then")),
           if (config.hasPath("as")) Some(config.getString("as")) else None
         )
 
@@ -424,7 +462,7 @@ object JourneyPlugin extends AutoPlugin {
                   s"The value $enumValue is not one of the cases of enum $enumName"
                 )
               }
-              enumValue -> deserialiseJourneyParts(rootPages, models, pages, journey)
+              enumValue -> deserialiseJourneyParts(rootPages, models, pages, choicePages, journey)
             }
 
             SwitchCasePart(
@@ -496,10 +534,31 @@ object JourneyPlugin extends AutoPlugin {
     val journeyPages =
       pages.map((deserialiseJourneyPage(basePackage, models, modelsPackage, key, _, _)).tupled)
 
-    key -> Journey(
-      journeyPages,
-      parts.map(deserialiseJourneyPart(rootPages, models, journeyPages, _))
-    )
+    val choicePages =
+      Set.newBuilder[String]
+
+    val journeyParts =
+      parts.map(deserialiseJourneyPart(rootPages, models, journeyPages, choicePages, _))
+
+    val updatedJourneyPages = choicePages
+      .result()
+      .map(page =>
+        page -> journeyPages(page).copy(answerType = ClassType(modelsPackage / "Choice"))
+      )
+      .toMap
+
+    journeyParts.lastOption.foreach {
+      case SinglePagePart(pageKey, _) if rootPages.contains(pageKey) =>
+      // This is valid
+      case _ =>
+        throwValidationFailed(
+          s"journeys.$key.journey",
+          config.getList("journey").get(parts.length - 1).origin(),
+          "Expected the last part of the journey to be one of the root pages"
+        )
+    }
+
+    key -> Journey(journeyPages ++ updatedJourneyPages, journeyParts)
   }
 
   private[journey] def deserialiseJourneyConfig(config: Config): JourneyConfig = {
@@ -541,15 +600,25 @@ object JourneyPlugin extends AutoPlugin {
 
     val rootPages = roots.map((deserialiseRootPage(basePackage, _, _)).tupled)
 
+    if (!rootPages.contains(indexPage)) {
+      throwValidationFailed(
+        "indexPage",
+        config.getValue("indexPage").origin(),
+        s"$indexPage is not one of the root pages"
+      )
+    }
+
     val modelsPackage = QualifiedName(basePackage) / "models"
 
+    // Add a "Choice" model for Yes / No questions
+    val choiceModel  = EnumModel("Choice", List("Yes", "No"))
     val answerModels = models.map((deserialiseRootAnswerModel(modelsPackage, models, _, _)).tupled)
 
     JourneyConfig(
       basePackage,
       indexPage,
       rootPages,
-      answerModels,
+      answerModels + ("Choice" -> choiceModel),
       journeys.map(
         (deserialiseJourney(basePackage, rootPages, answerModels, modelsPackage, _, _)).tupled
       )
@@ -616,6 +685,13 @@ object JourneyPlugin extends AutoPlugin {
         journeyPageObjectFile
       }
 
+      val journeyFormProviderFiles = journey.pages.map { case (pageName, page) =>
+        val journeyFormProviderFile =
+          packageFolder / "forms" / s"${pascalCase(pageName)}FormProvider.scala"
+        IO.write(journeyFormProviderFile, FormProvider.render(basePackage, config.models, page))
+        journeyFormProviderFile
+      }
+
       val journeyControllerFiles = journey.pages.map { case (pageName, page) =>
         val journeyPageController =
           packageFolder / "controllers" / s"${pascalCase(pageName)}Controller.scala"
@@ -632,7 +708,9 @@ object JourneyPlugin extends AutoPlugin {
         journeyPageController
       }
 
-      journeyControllerFiles ++ journeyPageObjectFiles ++ journeyModelFiles(journey.journey)
+      journeyControllerFiles ++ journeyPageObjectFiles ++ journeyFormProviderFiles ++ journeyModelFiles(
+        journey.journey
+      )
     }.toList
 
     val modelFiles = config.models.map { case (modelName, model) =>
@@ -641,7 +719,10 @@ object JourneyPlugin extends AutoPlugin {
       modelFile
     }.toList
 
-    rootPageFiles ++ modelFiles ++ journeyFiles
+    val navigatorFile = packageFolder / "navigation" / s"JourneyNavigator.scala"
+    IO.write(navigatorFile, Navigator.render(config))
+
+    rootPageFiles ++ modelFiles ++ journeyFiles :+ navigatorFile
   }
 
   private[journey] def generateJourneyRouteFiles(
@@ -658,5 +739,34 @@ object JourneyPlugin extends AutoPlugin {
     config: JourneyConfig
   ): Seq[FileRef] = {
     Seq.empty
+  }
+
+  private[journey] def initialiseJourneyViewFiles(
+    baseDirectory: File,
+    config: JourneyConfig
+  ): Unit = {
+    val packageFolder = baseDirectory
+    // TODO: Switch to this once we have a better template
+    // val packageFolder = config.basePackage
+    //   .split("\\.")
+    //   .foldLeft(baseDirectory)(_ / _)
+
+    val viewsFolder = packageFolder / "views"
+
+    config.rootPages.foreach { case (pageName, _) =>
+      val viewFile = viewsFolder / s"${pascalCase(pageName)}View.scala.html"
+      if (!viewFile.exists()) {
+        IO.write(viewFile, ViewStub.renderNoForm(pageName))
+      }
+    }
+
+    config.journeys.foreach { case (_, journey) =>
+      journey.pages.foreach { case (pageName, _) =>
+        val viewFile = viewsFolder / s"${pascalCase(pageName)}View.scala.html"
+        if (!viewFile.exists()) {
+          IO.write(viewFile, ViewStub.renderForm(pageName))
+        }
+      }
+    }
   }
 }
