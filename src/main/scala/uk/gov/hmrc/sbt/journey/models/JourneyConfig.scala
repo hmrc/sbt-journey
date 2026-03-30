@@ -17,9 +17,6 @@
 package uk.gov.hmrc.sbt.journey.models
 
 /** The journey configuration of an application.
-  * @param indexPage
-  *   The key of the index page of the application. This can be one of the root pages or one of the
-  *   pages of a journey.
   * @param basePackage
   *   The base package of the application. This is used in the default values for page
   *   configuration. Defaults to <code>uk.gov.hmrc.${servicename}</code>.
@@ -30,7 +27,6 @@ package uk.gov.hmrc.sbt.journey.models
   */
 case class JourneyConfig(
   basePackage: String,
-  indexPage: String,
   rootPages: Map[String, RootPage],
   models: Map[String, AnswerModel],
   journeys: Map[String, Journey]

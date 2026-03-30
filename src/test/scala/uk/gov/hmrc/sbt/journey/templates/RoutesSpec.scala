@@ -50,7 +50,6 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
   def journeyConfig(journey: (String, Journey)) =
     JourneyConfig(
       basePackage.toString,
-      "",
       Map.empty,
       Map.empty,
       Map(journey)
@@ -59,7 +58,6 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
   "Routes.render" should "render routes for root pages" in {
     val config = JourneyConfig(
       basePackage.toString,
-      "index",
       Map("index" -> rootPage("index", "/"), "checkYourAnswers" -> rootPage("checkYourAnswers")),
       Map.empty,
       Map.empty

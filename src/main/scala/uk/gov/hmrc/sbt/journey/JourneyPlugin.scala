@@ -583,8 +583,6 @@ object JourneyPlugin extends AutoPlugin {
   }
 
   private[journey] def deserialiseJourneyConfig(config: Config): JourneyConfig = {
-    val indexPage = config.getString("indexPage")
-
     val basePackage =
       if (config.hasPath("basePackage")) config.getString("basePackage")
       else {
@@ -621,14 +619,6 @@ object JourneyPlugin extends AutoPlugin {
 
     val rootPages = roots.map((deserialiseRootPage(basePackage, _, _)).tupled)
 
-    if (!rootPages.contains(indexPage)) {
-      throwValidationFailed(
-        "indexPage",
-        config.getValue("indexPage").origin(),
-        s"$indexPage is not one of the root pages"
-      )
-    }
-
     val modelsPackage = QualifiedName(basePackage) / "models"
 
     // Add a "Choice" model for Yes / No questions
@@ -637,7 +627,6 @@ object JourneyPlugin extends AutoPlugin {
 
     JourneyConfig(
       basePackage,
-      indexPage,
       rootPages,
       answerModels + ("Choice" -> choiceModel),
       journeys.map(

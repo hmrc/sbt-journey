@@ -30,7 +30,6 @@ class JourneyPluginSpec extends AnyFlatSpec with Matchers {
 
     val expected = JourneyConfig(
       basePackage = "uk.gov.hmrc.pra",
-      indexPage = "index",
       rootPages = Map(
         "index" -> RootPage(
           titleKey = "index.title",
