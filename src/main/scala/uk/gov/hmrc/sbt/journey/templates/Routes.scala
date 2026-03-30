@@ -64,9 +64,9 @@ object Routes {
 
     val journeyPageRoutes = journeyConfig.journeys.flatMap { case (_, journey) =>
       val journeyPages = journey.pages.values.toList.sortBy(_.viewRoute)
-      journeyPages.map { journeyPage =>
-        journeyRoutes(journey, journeyPage)
-      }
+      journeyPages
+        .map(journeyRoutes(journey, _))
+        .filterNot(_.isEmpty)
     }
 
     (rootPageRoutes ++ journeyPageRoutes).mkString(System.lineSeparator() * 2)

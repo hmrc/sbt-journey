@@ -26,7 +26,7 @@ class JourneyPluginSpec extends AnyFlatSpec with Matchers {
   "JourneyPlugin.deserialiseJourneyConfiguration" should "deserialise an example configuration file" in {
     val config = ConfigFactory.parseResources("example.conf").resolve()
 
-    val actual = JourneyPlugin.deserialiseJourneyConfig(config)
+    val actual = JourneyPlugin.deserialiseJourneyConfig(null, config)
 
     val expected = JourneyConfig(
       basePackage = "uk.gov.hmrc.pra",

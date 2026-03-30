@@ -2,7 +2,8 @@ import sbt.*
 
 object LibDependencies {
   val compile: Seq[ModuleID] = Seq(
-    "com.typesafe" % "config" % "1.4.6"
+    "com.typesafe"             % "config"       % "1.4.6",
+    "net.sourceforge.plantuml" % "plantuml-asl" % "1.2026.2" % Optional
   )
 
   val test: Seq[ModuleID] = Seq(

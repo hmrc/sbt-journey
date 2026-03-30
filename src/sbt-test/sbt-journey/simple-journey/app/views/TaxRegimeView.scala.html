@@ -1,10 +1,8 @@
-@import viewmodels.InputWidth._
-
 @this(
     layout: templates.Layout,
     formHelper: FormWithCSRF,
     govukErrorSummary: GovukErrorSummary,
-    govukInput: GovukInput,
+    govukRadios: GovukRadios,
     govukButton: GovukButton
 )
 
@@ -17,12 +15,23 @@
             @govukErrorSummary(ErrorSummaryViewModel(form))
         }
 
-        @govukInput(
-            InputViewModel(
+        @govukRadios(
+            RadiosViewModel(
                 field = form("value"),
-                label = LabelViewModel(messages("taxRegime.heading")).asPageHeading()
+                legend = LegendViewModel(messages("taxRegime.heading")).asPageHeading(),
+                items = List(
+                    RadioItem(
+                        id    = Some("value-sa"),
+                        value = Some("SA"),
+                        content = Text(messages("taxRegime.value.sa"))
+                    ),
+                    RadioItem(
+                        id    = Some("value-vat"),
+                        value = Some("VAT"),
+                        content = Text(messages("taxRegime.value.vat"))
+                    )
+                )
             )
-            .withWidth(Full)
         )
 
         @govukButton(

@@ -85,14 +85,11 @@ serviceDescription.heading = Provide details of the service
 
 taxRegime.title = What is the relevant tax regime for the service?
 taxRegime.heading = What is the relevant tax regime for the service?
+taxRegime.value.sa = SA
+taxRegime.value.vat = VAT
 
 vatInfo.title = Provide some VAT-related thingy
 vatInfo.heading = Provide some VAT-related thingy
-
-whichTaxRegime.title = What is the relevant tax regime for the service?
-whichTaxRegime.heading = What is the relevant tax regime for the service?
-whichTaxRegime.value.sa = SA
-whichTaxRegime.value.vat = VAT
 
 journeyRecovery.continue.title = Sorry, there is a problem with the service
 journeyRecovery.continue.heading = Sorry, there is a problem with the service

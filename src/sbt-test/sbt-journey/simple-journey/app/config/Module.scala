@@ -34,11 +34,11 @@ class Module extends AbstractModule {
     bind(classOf[CipAssessmentPageBaseFormProvider]).to(classOf[DefaultCipAssessmentPageFormProvider])
     bind(classOf[CipAssessmentTicketBaseFormProvider]).to(classOf[DefaultCipAssessmentTicketFormProvider])
     bind(classOf[DataDomainBaseFormProvider]).to(classOf[DefaultDataDomainFormProvider])
-    bind(classOf[SaInfoBaseFormProvider]).to(classOf[DefaultSaInfoFormProvider])
+    // bind(classOf[SaInfoBaseFormProvider]).to(classOf[DefaultSaInfoFormProvider])
     bind(classOf[ServiceDescriptionBaseFormProvider]).to(classOf[DefaultServiceDescriptionFormProvider])
     bind(classOf[ServiceNameBaseFormProvider]).to(classOf[DefaultServiceNameFormProvider])
     bind(classOf[TaxRegimeBaseFormProvider]).to(classOf[DefaultTaxRegimeFormProvider])
-    bind(classOf[VatInfoBaseFormProvider]).to(classOf[DefaultVatInfoFormProvider])
-    bind(classOf[WhichTaxRegimeBaseFormProvider]).to(classOf[DefaultWhichTaxRegimeFormProvider])
+    // bind(classOf[VatInfoBaseFormProvider]).to(classOf[DefaultVatInfoFormProvider])
+    // bind(classOf[WhichTaxRegimeBaseFormProvider]).to(classOf[DefaultWhichTaxRegimeFormProvider])
   }
 }

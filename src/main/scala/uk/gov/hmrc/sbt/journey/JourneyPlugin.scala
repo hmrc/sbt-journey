@@ -17,18 +17,19 @@
 package uk.gov.hmrc.sbt.journey
 
 import com.typesafe.config.*
-import com.typesafe.config.ConfigException.ValidationProblem
 import play.sbt.routes.RoutesCompiler
 import play.sbt.routes.RoutesKeys.*
 import sbt.*
 import sbt.Keys.*
 import sbt.internal.util.complete.Parser
 import sbt.nio.Keys.fileInputs
+import sbt.util.CacheStoreFactory
 import sbtcompat.PluginCompat.*
 import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.templates.*
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{kebabCase, packageCase, pascalCase}
 
+import java.io.{ByteArrayOutputStream, OutputStream}
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
@@ -50,15 +51,19 @@ object JourneyPlugin extends AutoPlugin {
       "The journey.conf configuration file content as a JourneyConfig case class."
     )
 
-    val generateJourney = taskKey[Seq[FileRef]](
+    val generateJourney = taskKey[Seq[File]](
       "Generate Play Framework controller interfaces from a journey.conf file."
     )
 
-    val generateJourneyRoutes = taskKey[Seq[FileRef]](
+    val generateJourneyRoutes = taskKey[Seq[File]](
       "Generate Play Framework routes from a journey.conf file."
     )
 
-    val generateJourneyTests = taskKey[Seq[FileRef]](
+    val generateJourneyResources = taskKey[Seq[File]](
+      "Generate Play Framework resources from a journey.conf file."
+    )
+
+    val generateJourneyTests = taskKey[Seq[File]](
       "Generate Play Framework controller tests from a journey.conf file."
     )
 
@@ -83,13 +88,38 @@ object JourneyPlugin extends AutoPlugin {
     (Space ~ chars("YN")).map { case (_, c) => c == 'Y' }
   }
 
+  def whenConfigChanges(
+    factory: CacheStoreFactory,
+    cachePrefix: String,
+    journeyConfigFile: File
+  )(generateTask: () => Seq[File]): Seq[File] = {
+    // This is absolutely horrific but sbt 2.x promises to make caching easier
+    val lastTracker = Tracked.lastOutput[Unit, Seq[File]](factory.make(s"${cachePrefix}Previous")) {
+      (_, lastFiles) =>
+        val inputTracker =
+          Tracked.inputChanged[HashFileInfo, Seq[File]](factory.make(s"${cachePrefix}Inputs")) {
+            (configChanged, _) =>
+              if (configChanged) generateTask()
+              else lastFiles.getOrElse(generateTask())
+          }
+        inputTracker(FileInfo.hash(journeyConfigFile))
+    }
+
+    lastTracker(())
+  }
+
   def journeySettings: Seq[Setting[?]] = Def.settings(
     sourceGenerators += generateJourney.taskValue,
     routes / sources ++= generateJourneyRoutes.value,
     generateJourney := {
-      val baseDir       = (generateJourney / target).value
-      val journeyConfig = journeyConfiguration.value
-      generateJourneyFiles(baseDir, journeyConfig)
+      val logger            = streams.value.log
+      val factory           = streams.value.cacheStoreFactory
+      val baseDir           = (generateJourney / target).value
+      val journeyConfigFile = (Compile / resourceDirectory).value / "journey.conf"
+      val journeyConfig     = journeyConfiguration.value
+      whenConfigChanges(factory, generateJourney.key.label, journeyConfigFile) { () =>
+        generateJourneyFiles(logger, baseDir, journeyConfig)
+      }
     },
     generateJourney / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
     generateJourney / target := {
@@ -97,21 +127,35 @@ object JourneyPlugin extends AutoPlugin {
     },
     managedSourceDirectories += (generateJourney / target).value,
     generateJourneyRoutes := {
-      val baseDir       = resourceManaged.value
-      val journeyConfig = journeyConfiguration.value
-      generateJourneyRouteFiles(baseDir, journeyConfig)
+      val logger            = streams.value.log
+      val factory           = streams.value.cacheStoreFactory
+      val baseDir           = resourceManaged.value
+      val journeyConfigFile = (Compile / resourceDirectory).value / "journey.conf"
+      val journeyConfig     = journeyConfiguration.value
+      whenConfigChanges(factory, generateJourneyRoutes.key.label, journeyConfigFile) { () =>
+        generateJourneyRouteFiles(logger, baseDir, journeyConfig)
+      }
     },
     generateJourneyRoutes / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
+    generateJourneyResources := {
+      val logger        = streams.value.log
+      val baseDir       = resourceManaged.value
+      val journeyConfig = journeyConfiguration.value
+      generateJourneyResourceFiles(logger, baseDir, journeyConfig)
+    },
+    generateJourneyResources / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
     initialiseJourneyViews := {
+      val logger        = streams.value.log
       val baseDir       = sourceDirectory.value
       val journeyConfig = journeyConfiguration.value
-      initialiseJourneyViewFiles(baseDir, journeyConfig)
+      initialiseJourneyViewFiles(logger, baseDir, journeyConfig)
     },
     overwriteJourneyViews := {
       if (userConfirmation.parsed) {
+        val logger        = streams.value.log
         val baseDir       = sourceDirectory.value
         val journeyConfig = journeyConfiguration.value
-        initialiseJourneyViewFiles(baseDir, journeyConfig, overwrite = true)
+        initialiseJourneyViewFiles(logger, baseDir, journeyConfig, overwrite = true)
       }
     }
   )
@@ -119,9 +163,10 @@ object JourneyPlugin extends AutoPlugin {
   def journeyTestSettings: Seq[Setting[?]] = Def.settings(
     sourceGenerators += generateJourneyTests.taskValue,
     generateJourneyTests := {
+      val logger        = streams.value.log
       val baseDir       = (generateJourneyTests / target).value
       val journeyConfig = journeyConfiguration.value
-      generateJourneyTestFiles(baseDir, journeyConfig)
+      generateJourneyTestFiles(logger, baseDir, journeyConfig)
     },
     generateJourneyTests / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
     generateJourneyTests / target := {
@@ -139,15 +184,14 @@ object JourneyPlugin extends AutoPlugin {
       parsedJourneyConfiguration.value.resolve()
     },
     journeyConfiguration := {
+      val logger = streams.value.log
       val config = resolvedJourneyConfiguration.value
-      deserialiseJourneyConfig(config)
+      deserialiseJourneyConfig(logger, config)
     }
   )
 
-  private def throwValidationFailed(path: String, origin: ConfigOrigin, msg: String): Nothing =
-    throw new ConfigException.ValidationFailed(
-      List(new ValidationProblem(path, origin, msg)).asJava
-    )
+  private def problem(origin: ConfigOrigin, msg: String): JourneyConfigProblem =
+    JourneyConfigProblem(origin, msg)
 
   private def getConfig(configValue: ConfigValue, path: String): Config =
     getObject(configValue, path).toConfig
@@ -200,6 +244,7 @@ object JourneyPlugin extends AutoPlugin {
     basePackage: String,
     models: Map[String, AnswerModel],
     modelsPackage: QualifiedName,
+    errors: mutable.ListBuffer[JourneyConfigProblem],
     journey: String,
     key: String,
     value: ConfigValue
@@ -230,7 +275,7 @@ object JourneyPlugin extends AutoPlugin {
       if (config.hasPath("withDefaultFormProvider")) config.getBoolean("withDefaultFormProvider")
       else true
     val answerType =
-      deserialiseAnswerModel(models, modelsPackage, config.getValue("answerType"))
+      deserialiseAnswerModel(models, modelsPackage, errors, config.getValue("answerType"))
     key -> JourneyPage(
       key,
       titleKey,
@@ -284,32 +329,34 @@ object JourneyPlugin extends AutoPlugin {
   private[journey] def deserialiseAnswerModel(
     models: Map[String, ?],
     modelsPackage: QualifiedName,
+    errors: mutable.ListBuffer[JourneyConfigProblem],
     config: ConfigValue
   ): FieldType = {
     config.valueType() match {
       case ConfigValueType.OBJECT =>
-        val configObject = config.asInstanceOf[ConfigObject]
-        val entries      = configObject.entrySet().asScala.toList
-        val firstEntry   = entries.head
-        val modelName    = firstEntry.getKey
+        val obj        = config.asInstanceOf[ConfigObject]
+        val entries    = obj.entrySet().asScala.toList
+        val firstEntry = entries.head
+        val modelName  = firstEntry.getKey
         if (modelName == "List")
-          ListType(deserialiseAnswerModel(models, modelsPackage, configObject.get(modelName)))
+          ListType(deserialiseAnswerModel(models, modelsPackage, errors, obj.get(modelName)))
         else if (modelName == "Option")
-          OptionType(deserialiseAnswerModel(models, modelsPackage, configObject.get(modelName)))
+          OptionType(deserialiseAnswerModel(models, modelsPackage, errors, obj.get(modelName)))
         else if (modelName == "Set")
-          SetType(deserialiseAnswerModel(models, modelsPackage, configObject.get(modelName)))
+          SetType(deserialiseAnswerModel(models, modelsPackage, errors, obj.get(modelName)))
         else if (modelName == "Array")
-          ArrayType(deserialiseAnswerModel(models, modelsPackage, configObject.get(modelName)))
+          ArrayType(deserialiseAnswerModel(models, modelsPackage, errors, obj.get(modelName)))
         else if (modelName == "Map") {
-          val configList = configObject.toConfig.getList(modelName)
-          val keyModel   = deserialiseAnswerModel(models, modelsPackage, configList.get(0))
-          val valueModel = deserialiseAnswerModel(models, modelsPackage, configList.get(1))
+          val configList = obj.toConfig.getList(modelName)
+          val keyModel   = deserialiseAnswerModel(models, modelsPackage, errors, configList.get(0))
+          val valueModel = deserialiseAnswerModel(models, modelsPackage, errors, configList.get(1))
           MapType(keyModel, valueModel)
         } else {
-          val origin = firstEntry.getValue.origin()
-          sys.error(
-            s"${origin.description()} Expected a configuration object describing a collection type"
+          errors += problem(
+            firstEntry.getValue.origin(),
+            "Expected a configuration object describing a collection type"
           )
+          null
         }
       case ConfigValueType.STRING =>
         val answerTypeString = config.unwrapped().asInstanceOf[String]
@@ -319,16 +366,18 @@ object JourneyPlugin extends AutoPlugin {
         else if (models.contains(answerTypeString)) ClassType(modelsPackage / answerTypeString)
         else ClassType(answerTypeString)
       case _ =>
-        val origin = config.origin()
-        sys.error(
-          s"${origin.description()} Expected either a configuration object describing a custom model or a string describing a known type"
+        errors += problem(
+          config.origin(),
+          "Expected either a configuration object describing a custom model or a string describing a known type"
         )
+        null
     }
   }
 
   private[journey] def deserialiseRootAnswerModel(
     modelsPackage: QualifiedName,
     models: Map[String, ConfigValue],
+    errors: mutable.ListBuffer[JourneyConfigProblem],
     key: String,
     value: ConfigValue
   ) = {
@@ -338,8 +387,7 @@ object JourneyPlugin extends AutoPlugin {
 
         if (entries.contains("default")) {
           val index = entries.indexOf("default")
-          throwValidationFailed(
-            s"models.$key.$index",
+          errors += problem(
             list.get(index).origin(),
             "'default' cannot be used as an enum value as it is reserved for catch-all subjourneys"
           )
@@ -355,19 +403,26 @@ object JourneyPlugin extends AutoPlugin {
               val entries    = fieldConfig.entrySet().asScala.toList
               val firstEntry = entries.head
               val fieldName  = firstEntry.getKey
-              fieldName -> deserialiseAnswerModel(models, modelsPackage, firstEntry.getValue)
-            case other =>
-              val origin = other.origin()
-              sys.error(
-                s"${origin.description()} Expected a configuration object describing a model field"
+              fieldName -> deserialiseAnswerModel(
+                models,
+                modelsPackage,
+                errors,
+                firstEntry.getValue
               )
+            case other =>
+              errors += problem(
+                other.origin(),
+                "Expected a configuration object describing a model field"
+              )
+              null
           }
         )
       case _ =>
-        val origin = value.origin()
-        sys.error(
-          s"${origin.description()} Expected a configuration list describing the fields of a model or the cases of an enumeration at models.$key"
+        errors += problem(
+          value.origin(),
+          "Expected a configuration list describing the fields of a model or the cases of an enumeration"
         )
+        null
     }
   }
 
@@ -375,6 +430,7 @@ object JourneyPlugin extends AutoPlugin {
     rootPages: Map[String, RootPage],
     models: Map[String, AnswerModel],
     pages: Map[String, JourneyPage],
+    errors: mutable.ListBuffer[JourneyConfigProblem],
     choicePages: mutable.Builder[String, Set[String]],
     value: ConfigValue
   ): List[JourneyPart] = {
@@ -383,9 +439,9 @@ object JourneyPlugin extends AutoPlugin {
         .asInstanceOf[ConfigList]
         .asScala
         .toList
-        .map(deserialiseJourneyPart(rootPages, models, pages, choicePages, _))
+        .map(deserialiseJourneyPart(rootPages, models, pages, errors, choicePages, _))
     } else {
-      List(deserialiseJourneyPart(rootPages, models, pages, choicePages, value))
+      List(deserialiseJourneyPart(rootPages, models, pages, errors, choicePages, value))
     }
   }
 
@@ -393,6 +449,7 @@ object JourneyPlugin extends AutoPlugin {
     rootPages: Map[String, RootPage],
     models: Map[String, AnswerModel],
     pages: Map[String, JourneyPage],
+    errors: mutable.ListBuffer[JourneyConfigProblem],
     choicePages: mutable.Builder[String, Set[String]],
     value: ConfigValue
   ): JourneyPart = {
@@ -402,28 +459,27 @@ object JourneyPlugin extends AutoPlugin {
         val choicePage = config.getString("while")
 
         if (!pages.contains(choicePage)) {
-          throwValidationFailed(
-            "while",
-            obj.origin(),
-            s"$choicePage is not one of the journey pages"
-          )
+          errors += problem(obj.origin(), s"$choicePage is not one of the journey pages")
         }
 
-        val answerType = pages(choicePage).answerType
+        val answerType = Option(pages(choicePage).answerType)
 
-        if (answerType != FieldType.BOOLEAN) {
-          throwValidationFailed(
-            "while",
-            obj.origin(),
-            "Expected a choice page with a boolean answerType"
-          )
+        if (!answerType.contains(FieldType.BOOLEAN)) {
+          errors += problem(obj.origin(), "Expected a choice page with a boolean answerType")
         }
 
         choicePages += choicePage
 
         DoWhilePart(
           choicePage,
-          deserialiseJourneyParts(rootPages, models, pages, choicePages, config.getValue("do")),
+          deserialiseJourneyParts(
+            rootPages,
+            models,
+            pages,
+            errors,
+            choicePages,
+            config.getValue("do")
+          ),
           config.getString("as")
         )
 
@@ -432,28 +488,27 @@ object JourneyPlugin extends AutoPlugin {
         val choicePage = config.getString("if")
 
         if (!pages.contains(choicePage)) {
-          throwValidationFailed(
-            "if",
-            obj.origin(),
-            s"$choicePage is not one of the journey pages"
-          )
+          errors += problem(obj.origin(), s"$choicePage is not one of the journey pages")
         }
 
-        val answerType = pages(choicePage).answerType
+        val answerType = Option(pages(choicePage).answerType)
 
-        if (answerType != FieldType.BOOLEAN) {
-          throwValidationFailed(
-            "if",
-            obj.origin(),
-            "Expected a choice page with a boolean answerType"
-          )
+        if (!answerType.contains(FieldType.BOOLEAN)) {
+          errors += problem(obj.origin(), "Expected a choice page with a boolean answerType")
         }
 
         choicePages += choicePage
 
         IfThenPart(
           choicePage,
-          deserialiseJourneyParts(rootPages, models, pages, choicePages, config.getValue("then")),
+          deserialiseJourneyParts(
+            rootPages,
+            models,
+            pages,
+            errors,
+            choicePages,
+            config.getValue("then")
+          ),
           if (config.hasPath("as")) Some(config.getString("as")) else None
         )
 
@@ -462,28 +517,30 @@ object JourneyPlugin extends AutoPlugin {
         val choicePage = config.getString("switch")
 
         if (!pages.contains(choicePage)) {
-          throwValidationFailed(
-            "switch",
-            obj.origin(),
-            s"$choicePage is not one of the journey pages"
-          )
+          errors += problem(obj.origin(), s"$choicePage is not one of the journey pages")
         }
 
-        val answerType  = pages(choicePage).answerType.typeName
-        val answerModel = answerType.flatMap(models.get)
+        val answerType  = Option(pages(choicePage).answerType)
+        val answerModel = answerType.flatMap(_.typeName).flatMap(models.get)
         answerModel match {
           case Some(EnumModel(enumName, cases)) =>
             val caseObject = config.getObject("case")
 
             val subJourneys = caseObject.asScala.toMap.map { case (enumValue, journey) =>
               if (!cases.contains(enumValue)) {
-                throwValidationFailed(
-                  enumValue,
+                errors += problem(
                   caseObject.origin(),
                   s"The value $enumValue is not one of the cases of enum $enumName"
                 )
               }
-              enumValue -> deserialiseJourneyParts(rootPages, models, pages, choicePages, journey)
+              enumValue -> deserialiseJourneyParts(
+                rootPages,
+                models,
+                pages,
+                errors,
+                choicePages,
+                journey
+              )
             }
 
             SwitchCasePart(
@@ -493,42 +550,37 @@ object JourneyPlugin extends AutoPlugin {
             )
 
           case _ =>
-            throwValidationFailed(
-              "switch",
-              obj.origin(),
-              "Expected a choice page with an enum answerType"
-            )
+            errors += problem(obj.origin(), "Expected a choice page with an enum answerType")
+            null
         }
 
       case obj: ConfigObject if obj.containsKey("page") || obj.containsKey("as") =>
         val config  = obj.toConfig
         val pageKey = config.getString("page")
-        if (pages.contains(pageKey) || rootPages.contains(pageKey))
-          SinglePagePart(
-            pageKey,
-            if (config.hasPath("as")) Some(config.getString("as")) else None
-          )
-        else
-          throwValidationFailed(
-            pageKey,
+        if (!pages.contains(pageKey) && !rootPages.contains(pageKey)) {
+          errors += problem(
             value.origin(),
             s"$pageKey is not one of the root pages or journey pages"
           )
+        }
+        SinglePagePart(
+          pageKey,
+          if (config.hasPath("as")) Some(config.getString("as")) else None
+        )
 
       case value: ConfigValue if value.valueType() == ConfigValueType.STRING =>
         val pageKey = value.unwrapped().asInstanceOf[String]
-        if (pages.contains(pageKey) || rootPages.contains(pageKey))
-          SinglePagePart(pageKey, None)
-        else
-          throwValidationFailed(
-            pageKey,
+        if (!pages.contains(pageKey) && !rootPages.contains(pageKey)) {
+          errors += problem(
             value.origin(),
             s"$pageKey is not one of the root pages or journey pages"
           )
+        }
+        SinglePagePart(pageKey, None)
 
       case _ =>
-        val origin = value.origin()
-        sys.error(s"${origin.description()} Unrecognised journey entry")
+        errors += problem(value.origin(), "Unrecognised journey entry")
+        null
     }
   }
 
@@ -537,6 +589,7 @@ object JourneyPlugin extends AutoPlugin {
     rootPages: Map[String, RootPage],
     models: Map[String, AnswerModel],
     modelsPackage: QualifiedName,
+    errors: mutable.ListBuffer[JourneyConfigProblem],
     key: String,
     value: ConfigValue
   ): (String, Journey) = {
@@ -553,13 +606,15 @@ object JourneyPlugin extends AutoPlugin {
       .toList
 
     val journeyPages =
-      pages.map((deserialiseJourneyPage(basePackage, models, modelsPackage, key, _, _)).tupled)
+      pages.map(
+        (deserialiseJourneyPage(basePackage, models, modelsPackage, errors, key, _, _)).tupled
+      )
 
     val choicePages =
       Set.newBuilder[String]
 
     val journeyParts =
-      parts.map(deserialiseJourneyPart(rootPages, models, journeyPages, choicePages, _))
+      parts.map(deserialiseJourneyPart(rootPages, models, journeyPages, errors, choicePages, _))
 
     val updatedJourneyPages = choicePages
       .result()
@@ -572,8 +627,7 @@ object JourneyPlugin extends AutoPlugin {
       case SinglePagePart(pageKey, _) if rootPages.contains(pageKey) =>
       // This is valid
       case _ =>
-        throwValidationFailed(
-          s"journeys.$key.journey",
+        errors += problem(
           config.getList("journey").get(parts.length - 1).origin(),
           "Expected the last part of the journey to be one of the root pages"
         )
@@ -582,7 +636,7 @@ object JourneyPlugin extends AutoPlugin {
     key -> Journey(journeyPages ++ updatedJourneyPages, journeyParts)
   }
 
-  private[journey] def deserialiseJourneyConfig(config: Config): JourneyConfig = {
+  private[journey] def deserialiseJourneyConfig(logger: Logger, config: Config): JourneyConfig = {
     val basePackage =
       if (config.hasPath("basePackage")) config.getString("basePackage")
       else {
@@ -621,24 +675,37 @@ object JourneyPlugin extends AutoPlugin {
 
     val modelsPackage = QualifiedName(basePackage) / "models"
 
+    val errors = mutable.ListBuffer.empty[JourneyConfigProblem]
+
     // Add a "Choice" model for Yes / No questions
-    val choiceModel  = EnumModel("Choice", List("Yes", "No"))
-    val answerModels = models.map((deserialiseRootAnswerModel(modelsPackage, models, _, _)).tupled)
+    val choiceModel = EnumModel("Choice", List("Yes", "No"))
+    val answerModels =
+      models.map((deserialiseRootAnswerModel(modelsPackage, models, errors, _, _)).tupled)
+
+    val journeyConfig = journeys.map(
+      (deserialiseJourney(basePackage, rootPages, answerModels, modelsPackage, errors, _, _)).tupled
+    )
+
+    val errorList = errors.result()
+    errorList.foreach { problem =>
+      logger.err(s"${problem.origin.description()}: ${problem.problem}")
+    }
+
+    if (errorList.nonEmpty) { throw JourneyConfigException }
 
     JourneyConfig(
       basePackage,
       rootPages,
       answerModels + ("Choice" -> choiceModel),
-      journeys.map(
-        (deserialiseJourney(basePackage, rootPages, answerModels, modelsPackage, _, _)).tupled
-      )
+      journeyConfig
     )
   }
 
   private[journey] def generateJourneyFiles(
+    logger: Logger,
     baseDirectory: FileRef,
     config: JourneyConfig
-  ): Seq[FileRef] = {
+  ): Seq[File] = {
     val packageFolder = config.basePackage
       .split("\\.")
       .foldLeft(baseDirectory)(_ / _)
@@ -650,6 +717,7 @@ object JourneyPlugin extends AutoPlugin {
       val rootPageController =
         packageFolder / "controllers" / s"${pascalCase(pageName)}Controller.scala"
       IO.write(rootPageController, RootPageController.render(basePackage, pageName, page))
+      logger.info(s"Generated controller $rootPageController")
       rootPageController
     }.toList
 
@@ -661,6 +729,7 @@ object JourneyPlugin extends AutoPlugin {
           val modelFile        = packageFolder / "models" / s"$modelName.scala"
           val cases = subJourney.mapValues(ModelFields.forParts(modelsPackage, journey, _))
           IO.write(modelFile, JourneyModel.forSwitchCase(modelsPackage, modelName, cases))
+          logger.info(s"Generated journey model $modelFile")
           modelFile +: subJourneyModels
         case IfThenPart(choicePage, subJourney, as) =>
           val subJourneyModels = subJourney.flatMap(syntheticJourneyModels)
@@ -668,6 +737,7 @@ object JourneyPlugin extends AutoPlugin {
           val modelName        = pascalCase(as.getOrElse(choicePage))
           val modelFile        = packageFolder / "models" / s"$modelName.scala"
           IO.write(modelFile, JourneyModel.forIfThen(modelsPackage, modelName, modelFields))
+          logger.info(s"Generated journey model $modelFile")
           modelFile +: subJourneyModels
         case DoWhilePart(_, subJourney, as) =>
           val subJourneyModels = subJourney.flatMap(syntheticJourneyModels)
@@ -679,6 +749,7 @@ object JourneyPlugin extends AutoPlugin {
             val modelName = pascalCase(as)
             val modelFile = packageFolder / "models" / s"$modelName.scala"
             IO.write(modelFile, JourneyModel.forDoWhile(modelsPackage, modelName, modelFields))
+            logger.info(s"Generated journey model $modelFile")
             modelFile +: subJourneyModels
           }
         case SinglePagePart(_, _) =>
@@ -692,6 +763,7 @@ object JourneyPlugin extends AutoPlugin {
         val journeyPageObjectFile =
           packageFolder / "pages" / s"${pascalCase(pageName)}Page.scala"
         IO.write(journeyPageObjectFile, PageObject.render(basePackage, journey, page))
+        logger.info(s"Generated page object $journeyPageObjectFile")
         journeyPageObjectFile
       }
 
@@ -699,6 +771,7 @@ object JourneyPlugin extends AutoPlugin {
         val journeyFormProviderFile =
           packageFolder / "forms" / s"${pascalCase(pageName)}FormProvider.scala"
         IO.write(journeyFormProviderFile, FormProvider.render(basePackage, config.models, page))
+        logger.info(s"Generated form provider $journeyFormProviderFile")
         journeyFormProviderFile
       }
 
@@ -715,6 +788,7 @@ object JourneyPlugin extends AutoPlugin {
             journey
           )
         )
+        logger.info(s"Generated journey controller $journeyPageController")
         journeyPageController
       }
 
@@ -726,32 +800,77 @@ object JourneyPlugin extends AutoPlugin {
     val modelFiles = config.models.map { case (modelName, model) =>
       val modelFile = packageFolder / "models" / s"$modelName.scala"
       IO.write(modelFile, CustomModel.render(basePackage, model))
+      logger.info(s"Generated model file $modelFile")
       modelFile
     }.toList
 
     val navigatorFile = packageFolder / "navigation" / s"JourneyNavigator.scala"
     IO.write(navigatorFile, Navigator.render(config))
+    logger.info(s"Generated navigator $navigatorFile")
 
     rootPageFiles ++ modelFiles ++ journeyFiles :+ navigatorFile
   }
 
   private[journey] def generateJourneyRouteFiles(
+    logger: Logger,
     baseDirectory: FileRef,
     config: JourneyConfig
-  ): Seq[FileRef] = {
+  ): Seq[File] = {
     val journeyRoutes = baseDirectory / "journey.routes"
     IO.write(journeyRoutes, Routes.render(config))
+    logger.info(s"Generated routes file $journeyRoutes")
     Seq(journeyRoutes)
   }
 
-  private[journey] def generateJourneyTestFiles(
+  private[journey] def generateJourneyResourceFiles(
+    logger: Logger,
     baseDirectory: FileRef,
     config: JourneyConfig
-  ): Seq[FileRef] = {
+  ): Seq[File] = {
+    val journeyDiagrams = PlantUml.forConfig(config)
+
+    val journeyTextFiles = journeyDiagrams.map { case (name, diagram) =>
+      val textFile = baseDirectory / s"$name.txt"
+      IO.write(textFile, diagram)
+      logger.info(s"Generated PlantUML source $textFile for journey $name")
+      textFile
+    }.toList
+
+    val journeyDiagramFiles =
+      try {
+        val readerClass  = Class.forName("net.sourceforge.plantuml.SourceStringReader")
+        val readerConstr = readerClass.getDeclaredConstructor(classOf[String])
+        journeyDiagrams.map { case (name, diagram) =>
+          val diagramFile  = baseDirectory / s"$name.png"
+          val reader       = readerConstr.newInstance(diagram)
+          val outputStream = new ByteArrayOutputStream()
+          val outputImage  = readerClass.getDeclaredMethod("outputImage", classOf[OutputStream])
+          outputImage.invoke(reader, outputStream)
+          IO.write(diagramFile, outputStream.toByteArray)
+          logger.info(s"Generated diagram $diagramFile for journey $name")
+          diagramFile
+        }.toList
+      } catch {
+        case _: ClassNotFoundException =>
+          logger.warn(
+            """Couldn't find PlantUML on the classpath. If you wish to generate journey diagrams, add "net.sourceforge.plantuml" % "plantuml-asl" as a dependency in project/build.sbt."""
+          )
+          List.empty
+      }
+
+    journeyTextFiles ++ journeyDiagramFiles
+  }
+
+  private[journey] def generateJourneyTestFiles(
+    logger: Logger,
+    baseDirectory: FileRef,
+    config: JourneyConfig
+  ): Seq[File] = {
     Seq.empty
   }
 
   private[journey] def initialiseJourneyViewFiles(
+    logger: Logger,
     baseDirectory: File,
     config: JourneyConfig,
     overwrite: Boolean = false
@@ -768,6 +887,7 @@ object JourneyPlugin extends AutoPlugin {
       val viewFile = viewsFolder / s"${pascalCase(pageName)}View.scala.html"
       if (overwrite || !viewFile.exists()) {
         IO.write(viewFile, ViewStub.renderNoForm(pageName))
+        logger.info(s"Generated view file $viewFile for page $pageName")
       }
     }
 
@@ -776,6 +896,7 @@ object JourneyPlugin extends AutoPlugin {
         val viewFile = viewsFolder / s"${pascalCase(pageName)}View.scala.html"
         if (overwrite || !viewFile.exists()) {
           IO.write(viewFile, ViewStub.renderForm(config.models, pageName, page))
+          logger.info(s"Generated view file $viewFile for page $pageName")
         }
       }
     }
