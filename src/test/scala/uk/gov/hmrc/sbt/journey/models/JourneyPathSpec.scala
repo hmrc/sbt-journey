@@ -108,7 +108,6 @@ class JourneyPathSpec extends AnyFlatSpec with Matchers {
 
   it should "return a path string representing a compound JourneyPath with a choice path" in {
     val path = Root /
-      StringPath("whichTaxRegime") /
       ChoicePath("whichTaxRegime", "SA") /
       StringPath("saInfo")
 
@@ -128,7 +127,7 @@ class JourneyPathSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "return a path string representing a ChoicePath" in {
-    ChoicePath("whichTaxRegime", "VAT").pathString shouldBe "VAT"
+    ChoicePath("whichTaxRegime", "VAT").pathString shouldBe "whichTaxRegime.VAT"
   }
 
 }

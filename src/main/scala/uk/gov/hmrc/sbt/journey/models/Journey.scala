@@ -48,16 +48,17 @@ case class Journey(pages: Map[String, JourneyPage], journey: List[JourneyPart]) 
           if (choicePage == pageKey) doWhilePath +: subPaths else subPaths
         case IfThenPart(choicePage, subJourney, as) =>
           val choicePageKey = as.getOrElse(choicePage)
+          val choicePath    = acc / ChoicePath(choicePageKey, "Yes")
+          val subPaths      = subJourney.flatMap(go(pageKey, _, choicePath))
           val ifThenPath    = acc / StringPath(choicePageKey)
-          val subPaths      = subJourney.flatMap(go(pageKey, _, ifThenPath))
           if (choicePageKey == pageKey) ifThenPath +: subPaths else subPaths
         case SwitchCasePart(choicePage, subJourneys, as) =>
-          val choicePageKey  = as.getOrElse(choicePage)
-          val choicePagePath = acc / StringPath(choicePageKey)
+          val choicePageKey = as.getOrElse(choicePage)
           val subPaths = subJourneys.flatMap { case (choice, part) =>
-            val choicePath = choicePagePath / ChoicePath(choicePageKey, choice)
+            val choicePath = acc / ChoicePath(choicePageKey, choice)
             part.flatMap(go(pageKey, _, choicePath))
           }.toList
+          val choicePagePath = acc / StringPath(choicePageKey)
           if (choicePageKey == pageKey) choicePagePath +: subPaths else subPaths
       }
 

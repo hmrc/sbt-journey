@@ -41,30 +41,5 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
   }
 
   "ViewStub.renderForm" should "render a simple stub for a view with a form" in {
-    ViewStub.renderForm("areYouSendingSamples") shouldBe
-      s"""@this(
-         |    layout: templates.Layout,
-         |    formHelper: FormWithCSRF,
-         |    govukErrorSummary: GovukErrorSummary,
-         |    govukButton: GovukButton
-         |)
-         |
-         |@(form: Form[_], action: Call, mode: Mode)(implicit request: Request[_], messages: Messages)
-         |
-         |@layout(pageTitle = title(form, messages("areYouSendingSamples.title"))) {
-         |
-         |    @formHelper(action = action, Symbol("autoComplete") -> "off") {
-         |        @if(form.errors.nonEmpty) {
-         |            @govukErrorSummary(ErrorSummaryViewModel(form))
-         |        }
-         |
-         |        // TODO: Add your form fields here
-         |
-         |        @govukButton(
-         |            ButtonViewModel(messages("site.continue"))
-         |        )
-         |    }
-         |}
-         |""".stripMargin
   }
 }

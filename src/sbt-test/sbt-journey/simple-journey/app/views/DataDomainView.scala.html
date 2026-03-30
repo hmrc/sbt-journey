@@ -1,7 +1,10 @@
+@import viewmodels.InputWidth._
+
 @this(
     layout: templates.Layout,
     formHelper: FormWithCSRF,
     govukErrorSummary: GovukErrorSummary,
+    govukInput: GovukInput,
     govukButton: GovukButton
 )
 
@@ -14,7 +17,13 @@
             @govukErrorSummary(ErrorSummaryViewModel(form))
         }
 
-        // TODO: Add your form fields here
+        @govukInput(
+            InputViewModel(
+                field = form("value"),
+                label = LabelViewModel(messages("dataDomain.heading")).asPageHeading()
+            )
+            .withWidth(Full)
+        )
 
         @govukButton(
             ButtonViewModel(messages("site.continue"))

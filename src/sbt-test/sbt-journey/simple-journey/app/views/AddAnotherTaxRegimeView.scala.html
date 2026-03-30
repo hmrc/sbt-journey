@@ -2,6 +2,7 @@
     layout: templates.Layout,
     formHelper: FormWithCSRF,
     govukErrorSummary: GovukErrorSummary,
+    govukRadios: GovukRadios,
     govukButton: GovukButton
 )
 
@@ -14,7 +15,24 @@
             @govukErrorSummary(ErrorSummaryViewModel(form))
         }
 
-        // TODO: Add your form fields here
+        @govukRadios(
+            RadiosViewModel(
+                field = form("value"),
+                legend = LegendViewModel(messages("addAnotherTaxRegime.heading")).asPageHeading(),
+                items = List(
+                    RadioItem(
+                        id    = Some("value-yes"),
+                        value = Some("Yes"),
+                        content = Text(messages("site.yes"))
+                    ),
+                    RadioItem(
+                        id    = Some("value-no"),
+                        value = Some("No"),
+                        content = Text(messages("site.no"))
+                    )
+                )
+            )
+        )
 
         @govukButton(
             ButtonViewModel(messages("site.continue"))

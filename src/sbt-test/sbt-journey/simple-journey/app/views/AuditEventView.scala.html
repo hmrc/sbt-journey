@@ -1,7 +1,11 @@
+@import viewmodels.InputWidth._
+
 @this(
     layout: templates.Layout,
     formHelper: FormWithCSRF,
     govukErrorSummary: GovukErrorSummary,
+    govukInput: GovukInput,
+    govukDateInput: GovukDateInput,
     govukButton: GovukButton
 )
 
@@ -14,7 +18,30 @@
             @govukErrorSummary(ErrorSummaryViewModel(form))
         }
 
-        // TODO: Add your form fields here
+        <h1 class="govuk-heading-xl">@messages("auditEvent.heading")</h1>
+        @govukInput(
+            InputViewModel(
+                field = form("auditType"),
+                label = LabelViewModel(messages("auditEvent.auditType"))
+            )
+            .withWidth(Full)
+        )
+
+        @govukInput(
+            InputViewModel(
+                field = form("description"),
+                label = LabelViewModel(messages("auditEvent.description"))
+            )
+            .withWidth(Full)
+        )
+
+        @govukDateInput(
+            DateViewModel(
+                field  = form("expectedGoLiveDate"),
+                legend = LegendViewModel(messages("auditEvent.expectedGoLiveDate"))
+            )
+            .withHint(HintViewModel(messages("auditEvent.expectedGoLiveDate.hint")))
+        )
 
         @govukButton(
             ButtonViewModel(messages("site.continue"))

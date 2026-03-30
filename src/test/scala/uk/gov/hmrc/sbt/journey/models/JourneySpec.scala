@@ -175,7 +175,7 @@ class JourneySpec extends AnyFlatSpec with Matchers {
 
   it should "return the answer path for a page that is part of an optional add-to-list journey" in {
     val path = Root /
-      StringPath(addATaxRegime.pageKey) /
+      ChoicePath(addATaxRegime.pageKey, "Yes") /
       IndexPath("taxRegimes") /
       StringPath(taxRegime.pageKey)
 
@@ -184,7 +184,6 @@ class JourneySpec extends AnyFlatSpec with Matchers {
 
   it should "return the answer paths for a page that is in one case of a switch-case journey" in {
     val saPath = Root /
-      StringPath(whichTaxRegime.pageKey) /
       ChoicePath(whichTaxRegime.pageKey, "SA") /
       StringPath(saInfo.pageKey)
 
@@ -193,12 +192,10 @@ class JourneySpec extends AnyFlatSpec with Matchers {
 
   it should "return the answer paths for a page that is in multiple cases of a switch-case journey" in {
     val saPath = Root /
-      StringPath(whichTaxRegime.pageKey) /
       ChoicePath(whichTaxRegime.pageKey, "SA") /
       StringPath(contactDetailsPage.pageKey)
 
     val vatPath = Root /
-      StringPath(whichTaxRegime.pageKey) /
       ChoicePath(whichTaxRegime.pageKey, "VAT") /
       StringPath(contactDetailsPage.pageKey)
 

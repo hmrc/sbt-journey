@@ -22,6 +22,7 @@ import play.sbt.routes.RoutesCompiler
 import play.sbt.routes.RoutesKeys.*
 import sbt.*
 import sbt.Keys.*
+import sbt.internal.util.complete.Parser
 import sbtcompat.PluginCompat.*
 import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.templates.*
@@ -63,6 +64,10 @@ object JourneyPlugin extends AutoPlugin {
     val initialiseJourneyViews = taskKey[Unit](
       "Initialise view files for each of the journey pages if they don't already exist."
     )
+
+    val overwriteJourneyViews = inputKey[Unit](
+      "Overwrite the view files for each of the journey pages."
+    )
   }
 
   import autoImport.*
@@ -71,6 +76,11 @@ object JourneyPlugin extends AutoPlugin {
     inConfig(Compile)(journeySettings) ++
       inConfig(Test)(journeyTestSettings) ++
       journeyConfigSettings
+
+  private val userConfirmation: Parser[Boolean] = {
+    import complete.DefaultParsers.*
+    (Space ~ chars("YN")).map { case (_, c) => c == 'Y' }
+  }
 
   def journeySettings: Seq[Setting[?]] = Def.settings(
     sourceGenerators += generateJourney.taskValue,
@@ -93,6 +103,13 @@ object JourneyPlugin extends AutoPlugin {
       val baseDir       = sourceDirectory.value
       val journeyConfig = journeyConfiguration.value
       initialiseJourneyViewFiles(baseDir, journeyConfig)
+    },
+    overwriteJourneyViews := {
+      if (userConfirmation.parsed) {
+        val baseDir       = sourceDirectory.value
+        val journeyConfig = journeyConfiguration.value
+        initialiseJourneyViewFiles(baseDir, journeyConfig, overwrite = true)
+      }
     }
   )
 
@@ -743,7 +760,8 @@ object JourneyPlugin extends AutoPlugin {
 
   private[journey] def initialiseJourneyViewFiles(
     baseDirectory: File,
-    config: JourneyConfig
+    config: JourneyConfig,
+    overwrite: Boolean = false
   ): Unit = {
     val packageFolder = baseDirectory
     // TODO: Switch to this once we have a better template
@@ -755,16 +773,16 @@ object JourneyPlugin extends AutoPlugin {
 
     config.rootPages.foreach { case (pageName, _) =>
       val viewFile = viewsFolder / s"${pascalCase(pageName)}View.scala.html"
-      if (!viewFile.exists()) {
+      if (overwrite || !viewFile.exists()) {
         IO.write(viewFile, ViewStub.renderNoForm(pageName))
       }
     }
 
     config.journeys.foreach { case (_, journey) =>
-      journey.pages.foreach { case (pageName, _) =>
+      journey.pages.foreach { case (pageName, page) =>
         val viewFile = viewsFolder / s"${pascalCase(pageName)}View.scala.html"
-        if (!viewFile.exists()) {
-          IO.write(viewFile, ViewStub.renderForm(pageName))
+        if (overwrite || !viewFile.exists()) {
+          IO.write(viewFile, ViewStub.renderForm(config.models, pageName, page))
         }
       }
     }

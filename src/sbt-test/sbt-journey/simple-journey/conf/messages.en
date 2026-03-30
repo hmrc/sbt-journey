@@ -31,8 +31,68 @@ index.title = simple-journey
 index.heading = simple-journey
 index.guidance = Welcome to your new frontend. Please see the README file for a guide to getting started.
 
+addAnotherAuditEvent.title = Do you want to add another audit event?
+addAnotherAuditEvent.heading = Do you want to add another audit event?
+
+addAnotherAuditSource.title = Do you want to add another audit source?
+addAnotherAuditSource.heading = Do you want to add another audit source?
+
+addAnotherCipAssessmentTicket.title = Do you want to add another CIP Assessment ticket?
+addAnotherCipAssessmentTicket.heading = Do you want to add another CIP Assessment ticket?
+
+addAnotherDataDomain.title = Do you want to add another CIP data domain?
+addAnotherDataDomain.heading = Do you want to add another CIP data domain?
+
+addAnotherTaxRegime.title = Do you want to add another tax regime?
+addAnotherTaxRegime.heading = Do you want to add another tax regime?
+
+addATaxRegime.title = Do you want to add a tax regime?
+addATaxRegime.heading = Do you want to add a tax regime?
+
+auditEvent.title = Provide details of the proposed audit event
+auditEvent.heading = Provide details of the proposed audit event
+auditEvent.auditType = Audit type
+auditEvent.description = Description
+auditEvent.expectedGoLiveDate = Expected go-live date
+auditEvent.expectedGoLiveDate.hint = This is the date when your service will begin producing this audit event.
+
+auditProvider.title = Who is the audit provider?
+auditProvider.heading = Who is the audit provider?
+
+auditSource.title = What is the name of the audit source?
+auditSource.heading = What is the name of the audit source?
+
+cipAssessmentPage.title = What is the Confluence URL of the CIP Assessment page?
+cipAssessmentPage.heading = What is the Confluence URL of the CIP Assessment page?
+
+cipAssessmentTicket.title = What is the JIRA ID of the CIP Assessment ticket?
+cipAssessmentTicket.heading = What is the JIRA ID of the CIP Assessment ticket?
+
+dataDomain.title = What is the CIP data domain?
+dataDomain.heading = What is the CIP data domain?
+
 checkYourAnswers.title = Check your answers
 checkYourAnswers.heading = Check your answers
+
+saInfo.title = Provide some SA-related thingy
+saInfo.heading = Provide some SA-related thingy
+
+serviceName.title = What is the name of the service?
+serviceName.heading = What is the name of the service?
+
+serviceDescription.title = Provide details of the service
+serviceDescription.heading = Provide details of the service
+
+taxRegime.title = What is the relevant tax regime for the service?
+taxRegime.heading = What is the relevant tax regime for the service?
+
+vatInfo.title = Provide some VAT-related thingy
+vatInfo.heading = Provide some VAT-related thingy
+
+whichTaxRegime.title = What is the relevant tax regime for the service?
+whichTaxRegime.heading = What is the relevant tax regime for the service?
+whichTaxRegime.value.sa = SA
+whichTaxRegime.value.vat = VAT
 
 journeyRecovery.continue.title = Sorry, there is a problem with the service
 journeyRecovery.continue.heading = Sorry, there is a problem with the service

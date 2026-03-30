@@ -84,7 +84,7 @@ object JourneyPageController {
           val pageName   = pascalCase(pageKey)
           val pageParams = pageParamsFor(tail.reverse)
           val generator =
-            s"${" " * 6}$pageKey <- request.userAnswers.get(${pageName}Page$pageParams)"
+            s"${" " * 6}$pageKey <- userAnswers.get(${pageName}Page$pageParams)"
           go(tail, generator :: acc)
         case _ :: tail =>
           go(tail, acc)
@@ -99,26 +99,43 @@ object JourneyPageController {
       pageParams: String,
       fetchAnswerGenerators: List[String]
     ): String = {
-      if (path.isIndex) {
+      if (path.isIndex && fetchAnswerGenerators.isEmpty) {
         // TODO: Decide whether to fill this based upon the existing answers
         //  Problem: we can't tell the difference between "No" to add another element and "not filled yet"
         s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
             |    val page = $pageClassName$pageParams
             |    Ok(view(form(), page.submitRoute(mode), mode))
             |  }""".stripMargin
+      } else if (path.isIndex) {
+        s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
+            |    val userAnswers = request.userAnswers${initialiseAnswers(6)}
+            |    val result = for {
+            |${fetchAnswerGenerators.mkString(System.lineSeparator())}
+            |      page = $pageClassName$pageParams
+            |    } yield Ok(view(form(), page.submitRoute(mode), mode))
+            |    result.getOrElse(Redirect(routes.JourneyRecoveryController.onPageLoad()))
+            |  }""".stripMargin
       } else if (fetchAnswerGenerators.isEmpty) {
         s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
             |    val page = $pageClassName$pageParams
-            |    val preparedForm = request.userAnswers${initialiseAnswers(6)}
+            |    val userAnswers = request.userAnswers${initialiseAnswers(6)}
+            |    val preparedForm = userAnswers
             |      .get(page)
             |      .map(form().fill)
             |      .getOrElse(form())
-            |
             |    Ok(view(preparedForm, page.submitRoute(mode), mode))
             |  }""".stripMargin
       } else {
         s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
-            |    ???
+            |    val userAnswers = request.userAnswers${initialiseAnswers(6)}
+            |    val result = for {
+            |${fetchAnswerGenerators.mkString(System.lineSeparator())}
+            |      page = $pageClassName$pageParams
+            |      preparedForm = userAnswers.get(page)
+            |        .map(form().fill)
+            |        .getOrElse(form())
+            |    } yield Ok(view(preparedForm, page.submitRoute(mode), mode))
+            |    result.getOrElse(Redirect(routes.JourneyRecoveryController.onPageLoad()))
             |  }""".stripMargin
       }
     }
@@ -132,6 +149,7 @@ object JourneyPageController {
       if (path.isIndex && fetchAnswerGenerators.isEmpty) {
         s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
             |    val page = $pageClassName$pageParams
+            |    val userAnswers = request.userAnswers${initialiseAnswers(6)}
             |    form().bindFromRequest().fold(
             |      formWithErrors =>
             |        BadRequest(view(formWithErrors, page.submitRoute(mode), mode)),
@@ -141,30 +159,51 @@ object JourneyPageController {
             |  }
             |""".stripMargin
       } else if (path.isIndex) {
-        s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
-            |    ???
+        s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
+            |    val userAnswers = request.userAnswers${initialiseAnswers(6)}
+            |    val result = for {
+            |${fetchAnswerGenerators.mkString(System.lineSeparator())}
+            |      page = $pageClassName$pageParams
+            |    } yield form().bindFromRequest().fold(
+            |      formWithErrors =>
+            |        BadRequest(view(formWithErrors, page.submitRoute(mode), mode)),
+            |      answer =>
+            |        Redirect(navigator.nextPage(page, mode, request.userAnswers, answer))
+            |    )
+            |    result.getOrElse(Redirect(routes.JourneyRecoveryController.onPageLoad()))
             |  }
             |""".stripMargin
       } else if (fetchAnswerGenerators.isEmpty)
         s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
             |    val page = $pageClassName$pageParams
+            |    val userAnswers = request.userAnswers${initialiseAnswers(6)}
             |    form().bindFromRequest().fold(
             |      formWithErrors =>
             |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
-            |      answer => Future.fromTry {
-            |        request
-            |          .userAnswers${initialiseAnswers(10)}
-            |          .set(page, answer)
-            |          .map { updatedAnswers =>
-            |            Redirect(navigator.nextPage(page, mode, updatedAnswers, answer))
-            |          }
-            |      }
+            |      answer =>
+            |        for {
+            |          updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))
+            |          _ <- sessionRepository.set(updatedAnswers)
+            |        } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, answer))
             |    )
             |  }
             |""".stripMargin
       else
         s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
-            |    ???
+            |    val userAnswers = request.userAnswers${initialiseAnswers(6)}
+            |    val result = for {
+            |${fetchAnswerGenerators.mkString(System.lineSeparator())}
+            |      page = $pageClassName$pageParams
+            |    } yield form().bindFromRequest().fold(
+            |      formWithErrors =>
+            |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+            |      answer =>
+            |        for {
+            |          updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))
+            |          _ <- sessionRepository.set(updatedAnswers)
+            |        } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, answer))
+            |    )
+            |    result.getOrElse(Future.successful(Redirect(routes.JourneyRecoveryController.onPageLoad())))
             |  }
             |""".stripMargin
     }
@@ -188,8 +227,10 @@ object JourneyPageController {
     s"""package ${basePackage / "controllers"}
        |
        |import controllers.actions.*  // ${basePackage / "controllers.actions.*"}
+       |import controllers.routes // ${basePackage / "controllers.routes"}
        |import models.Mode // ${basePackage / "models.Mode"}
-       |import models.UserAnswers
+       |import models.UserAnswers // ${basePackage / "models.UserAnswers"}
+       |import repositories.SessionRepository // ${basePackage / "repositories.SessionRepository"}
        |import ${basePackage / "models.*"}
        |import ${basePackage / "forms.*"}
        |import ${basePackage / "navigation.*"}
@@ -215,6 +256,7 @@ object JourneyPageController {
        |  getData: DataRetrievalAction,
        |  requireData: DataRequiredAction,
        |  navigator: JourneyNavigator,
+       |  sessionRepository: SessionRepository,
        |  form: ${formProviderName.parts.last},
        |  view: ${journeyPage.viewClass},
        |  override val controllerComponents: MessagesControllerComponents

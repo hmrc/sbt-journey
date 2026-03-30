@@ -108,8 +108,8 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
 
     Navigator.normalRoutesFor(config) shouldBe
       """    case AddAnotherAuditEventPage(auditEventsIndex) => _ => {
-        |      case true => routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, NormalMode)
-        |      case false => routes.CheckYourAnswersBaseController.onPageLoad
+        |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, NormalMode)
+        |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
         |    }
         |    case AuditEventPage(auditEventsIndex) => _ => _ =>
         |      routes.AddAnotherAuditEventBaseController.onPageLoad(auditEventsIndex, NormalMode)""".stripMargin
@@ -183,8 +183,8 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
 
     Navigator.normalRoutesFor(config) shouldBe
       """    case AddAnotherAuditEventPage(auditEventsIndex) => _ => {
-        |      case true => routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, NormalMode)
-        |      case false => routes.CipAssessmentPageBaseController.onPageLoad(NormalMode)
+        |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, NormalMode)
+        |      case Choice.No  => routes.CipAssessmentPageBaseController.onPageLoad(NormalMode)
         |    }
         |    case AuditEventPage(auditEventsIndex) => _ => _ =>
         |      routes.AddAnotherAuditEventBaseController.onPageLoad(auditEventsIndex, NormalMode)
@@ -275,11 +275,11 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
 
   it should "render navigations between the pages of an if-then journey" in {
     val addATaxRegime =
-      journeyPage("addATaxRegime", FieldType.BOOLEAN)
+      journeyPage("addATaxRegime", ClassType(basePackage / "Choice"))
     val taxRegime =
       journeyPage("taxRegime", FieldType.STRING)
     val addAnotherTaxRegime =
-      journeyPage("addAnotherTaxRegime", FieldType.BOOLEAN)
+      journeyPage("addAnotherTaxRegime", ClassType(basePackage / "Choice"))
 
     val config = journeyConfig(
       rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
@@ -311,18 +311,18 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
         |      case Choice.Yes => routes.TaxRegimeBaseController.onPageLoad(0, NormalMode)
         |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
         |    }
-        |    case AddAnotherTaxRegimePage(taxRegimesIndex) => _ => {
-        |      case true => routes.TaxRegimeBaseController.onPageLoad(taxRegimesIndex + 1, NormalMode)
-        |      case false => routes.CheckYourAnswersBaseController.onPageLoad
+        |    case AddAnotherTaxRegimePage(Choice.Yes,taxRegimesIndex) => _ => {
+        |      case Choice.Yes => routes.TaxRegimeBaseController.onPageLoad(taxRegimesIndex + 1, NormalMode)
+        |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
         |    }
-        |    case TaxRegimePage(taxRegimesIndex) => _ => _ =>
+        |    case TaxRegimePage(Choice.Yes,taxRegimesIndex) => _ => _ =>
         |      routes.AddAnotherTaxRegimeBaseController.onPageLoad(taxRegimesIndex, NormalMode)""".stripMargin
   }
 
   it should "render navigations between the pages of a nested do-while journey" in {
     val auditSource          = journeyPage("auditSource", FieldType.STRING)
     val auditEvent           = journeyPage("auditEvent", FieldType.STRING)
-    val addAnotherAuditEvent = journeyPage("addAnotherAuditEvent", FieldType.BOOLEAN)
+    val addAnotherAuditEvent = journeyPage("addAnotherAuditEvent", ClassType(basePackage / "Choice"))
 
     val config = journeyConfig(
       rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
@@ -352,14 +352,14 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
 
     Navigator.normalRoutesFor(config) shouldBe
       """    case AddAnotherAuditSourcePage(auditSourcesIndex) => _ => {
-        |      case true => routes.AuditSourceBaseController.onPageLoad(auditSourcesIndex + 1, NormalMode)
-        |      case false => routes.CheckYourAnswersBaseController.onPageLoad
+        |      case Choice.Yes => routes.AuditSourceBaseController.onPageLoad(auditSourcesIndex + 1, NormalMode)
+        |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
         |    }
         |    case AuditSourcePage(auditSourcesIndex) => _ => _ =>
         |      routes.AuditEventBaseController.onPageLoad(auditSourcesIndex, 0, NormalMode)
         |    case AddAnotherAuditEventPage(auditSourcesIndex,auditEventsIndex) => _ => {
-        |      case true => routes.AuditEventBaseController.onPageLoad(auditSourcesIndex, auditEventsIndex + 1, NormalMode)
-        |      case false => routes.AddAnotherAuditSourceBaseController.onPageLoad
+        |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditSourcesIndex, auditEventsIndex + 1, NormalMode)
+        |      case Choice.No  => routes.AddAnotherAuditSourceBaseController.onPageLoad
         |    }
         |    case AuditEventPage(auditSourcesIndex,auditEventsIndex) => _ => _ =>
         |      routes.AddAnotherAuditEventBaseController.onPageLoad(auditSourcesIndex, auditEventsIndex, NormalMode)""".stripMargin
@@ -380,15 +380,17 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
         |import _root_.models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import _root_.pages.Page // uk.gov.hmrc.sbtjourneytest.pages.Page
         |import _root_.pages.QuestionPage // uk.gov.hmrc.sbtjourneytest.pages.QuestionPage
+        |import com.google.inject.ImplementedBy
         |import play.api.mvc.Call
         |
         |import javax.inject.{Inject,Singleton}
         |
+        |@ImplementedBy(classOf[DefaultJourneyNavigator])
         |trait JourneyNavigator {
         |  def nextPage(page: Page, mode: Mode, userAnswers: UserAnswers, latestAnswer: page.AnswerType): Call
         |}
         |
-        |class DefaultJourneyNavigator @Inject() () {
+        |class DefaultJourneyNavigator @Inject() () extends JourneyNavigator {
         |  private val normalRoutes: (page: Page) => UserAnswers => page.AnswerType => Call = {
         |
         |  }
@@ -397,7 +399,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
         |
         |  }
         |
-        |  def nextPage(mode: Mode, page: Page, userAnswers: UserAnswers, latestAnswer: page.AnswerType): Call =
+        |  def nextPage(page: Page, mode: Mode, userAnswers: UserAnswers, latestAnswer: page.AnswerType): Call =
         |    mode match {
         |      case NormalMode => normalRoutes(page)(userAnswers)(latestAnswer)
         |      case CheckMode  => checkRoutes(page)(userAnswers)(latestAnswer)

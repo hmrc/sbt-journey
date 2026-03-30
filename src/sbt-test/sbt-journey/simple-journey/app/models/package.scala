@@ -86,7 +86,7 @@ package object models {
 
       oldValue match {
         case oldValue: JsObject =>
-          JsSuccess(oldValue + (key -> newValue))
+          JsSuccess(oldValue.deepMerge(Json.obj(key -> newValue)))
         case _ =>
           JsError(s"cannot set a key on $oldValue")
       }

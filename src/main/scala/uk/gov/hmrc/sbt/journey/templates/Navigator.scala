@@ -104,18 +104,19 @@ object Navigator {
         s"""|    case ${pascalCase(pageKey)}Page${unapplyParams(pages, journeyPath)} => _ => _ =>
             |      routes.${nextPartPage}BaseController.onPageLoad$nextParams""".stripMargin
       )
-    case IfThenPart(choicePage, subJourney, _) =>
+    case IfThenPart(choicePage, subJourney, as) =>
       val firstPage      = pascalCase(subJourney.head.startPage)
       val firstPartPaths = journeyPath.indexPaths ++ subJourney.head.startPageIndexes
       val firstParams    = routeParams(mode, journeyPath.indexPaths, firstPartPaths)
       val nextPartPage   = pascalCase(nextPart.startPage)
       val nextParams     = nextRouteParams(mode, pages, journeyPath, nextPart, nextPath)
+      val choicePath     = journeyPath / ChoicePath(as.getOrElse(choicePage), "Yes")
       val choicePageRoutes =
         s"""    case ${pascalCase(choicePage)}Page${unapplyParams(pages, journeyPath)} => _ => {
            |      case Choice.Yes => routes.${firstPage}BaseController.onPageLoad$firstParams
            |      case Choice.No  => routes.${nextPartPage}BaseController.onPageLoad$nextParams
            |    }""".stripMargin
-      val subJourneyRoutes = routesFor(mode, pages, subJourney, journeyPath, nextPart, nextPath)
+      val subJourneyRoutes = routesFor(mode, pages, subJourney, choicePath, nextPart, nextPath)
       choicePageRoutes :: subJourneyRoutes
     case DoWhilePart(choicePage, subJourney, as) =>
       val indexPath    = journeyPath / IndexPath(as)
@@ -125,8 +126,8 @@ object Navigator {
       val nextParams   = nextRouteParams(mode, pages, indexPath, nextPart, nextPath)
       val choicePageRoutes =
         s"""|    case ${pascalCase(choicePage)}Page${unapplyParams(pages, indexPath)} => _ => {
-            |      case true => routes.${firstPage}BaseController.onPageLoad$firstParams
-            |      case false => routes.${nextPartPage}BaseController.onPageLoad$nextParams
+            |      case Choice.Yes => routes.${firstPage}BaseController.onPageLoad$firstParams
+            |      case Choice.No  => routes.${nextPartPage}BaseController.onPageLoad$nextParams
             |    }""".stripMargin
       val choicePagePart = SinglePagePart(choicePage, None)
       val subJourneyRoutes =
@@ -217,15 +218,17 @@ object Navigator {
        |import _root_.models.UserAnswers // ${basePackage / "models.UserAnswers"}
        |import _root_.pages.Page // ${basePackage / "pages.Page"}
        |import _root_.pages.QuestionPage // ${basePackage / "pages.QuestionPage"}
+       |import com.google.inject.ImplementedBy
        |import play.api.mvc.Call
        |
        |import javax.inject.{Inject,Singleton}
        |
+       |@ImplementedBy(classOf[DefaultJourneyNavigator])
        |trait JourneyNavigator {
        |  def nextPage(page: Page, mode: Mode, userAnswers: UserAnswers, latestAnswer: page.AnswerType): Call
        |}
        |
-       |class DefaultJourneyNavigator @Inject() () {
+       |class DefaultJourneyNavigator @Inject() () extends JourneyNavigator {
        |  private val normalRoutes: (page: Page) => UserAnswers => page.AnswerType => Call = {
        |${normalRoutesFor(config)}
        |  }
@@ -234,7 +237,7 @@ object Navigator {
        |${checkRoutesFor(config)}
        |  }
        |
-       |  def nextPage(mode: Mode, page: Page, userAnswers: UserAnswers, latestAnswer: page.AnswerType): Call =
+       |  def nextPage(page: Page, mode: Mode, userAnswers: UserAnswers, latestAnswer: page.AnswerType): Call =
        |    mode match {
        |      case NormalMode => normalRoutes(page)(userAnswers)(latestAnswer)
        |      case CheckMode  => checkRoutes(page)(userAnswers)(latestAnswer)

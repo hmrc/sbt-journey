@@ -5,7 +5,8 @@ import controllers.actions.{DataRequiredAction, DataRetrievalAction, IdentifierA
 import play.api.i18n.{I18nSupport, MessagesApi}
 import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
 import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendBaseController
-import viewmodels.govuk.summarylist._
+import uk.gov.hmrc.simplejourney.controllers.CheckYourAnswersBaseController
+import viewmodels.govuk.summarylist.*
 import views.html.CheckYourAnswersView
 
 class CheckYourAnswersController @Inject()(
@@ -15,9 +16,9 @@ class CheckYourAnswersController @Inject()(
                                             requireData: DataRequiredAction,
                                             val controllerComponents: MessagesControllerComponents,
                                             view: CheckYourAnswersView
-                                          ) extends FrontendBaseController with I18nSupport {
+                                          ) extends CheckYourAnswersBaseController {
 
-  def onPageLoad(): Action[AnyContent] = (identify andThen getData andThen requireData) {
+  def onPageLoad: Action[AnyContent] = (identify andThen getData andThen requireData) {
     implicit request =>
 
       val list = SummaryListViewModel(

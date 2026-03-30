@@ -57,13 +57,20 @@ sealed trait JourneyPath extends Product with Serializable {
       paths match {
         case Nil => acc
         case Root :: tail =>
-          acc.append("$"); go(tail, acc)
+          acc.append("$")
+          go(tail, acc)
         case StringPath(pageKey) :: tail =>
-          if (acc.isEmpty) acc.append(pageKey) else acc.append(s".$pageKey"); go(tail, acc)
+          if (acc.isEmpty) acc.append(pageKey)
+          else acc.append(s".$pageKey")
+          go(tail, acc)
         case IndexPath(pageKey) :: tail =>
-          if (acc.isEmpty) acc.append(s"$pageKey[]") else acc.append(s".$pageKey[]"); go(tail, acc)
-        case ChoicePath(_, enumCase) :: tail =>
-          if (acc.isEmpty) acc.append(enumCase) else acc.append(s".$enumCase"); go(tail, acc)
+          if (acc.isEmpty) acc.append(s"$pageKey[]")
+          else acc.append(s".$pageKey[]")
+          go(tail, acc)
+        case ChoicePath(pageKey, enumCase) :: tail =>
+          if (acc.isEmpty) acc.append(s"$pageKey.$enumCase")
+          else acc.append(s".$pageKey.$enumCase")
+          go(tail, acc)
       }
 
     go(paths).toString

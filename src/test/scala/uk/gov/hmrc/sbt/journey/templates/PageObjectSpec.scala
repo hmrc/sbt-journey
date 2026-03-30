@@ -173,7 +173,7 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
         |
         |  def unapply(page: SaInfoPage): Option[TaxRegime] =
         |    page.path.path match {
-        |      case KeyPathNode("whichTaxRegime") :: KeyPathNode("SA") :: KeyPathNode("saInfo") :: Nil => Some(TaxRegime.SA)
+        |      case KeyPathNode("whichTaxRegime") :: KeyPathNode(whichTaxRegime) :: KeyPathNode("saInfo") :: Nil => Some(TaxRegime.valueOf(whichTaxRegime))
         |      case _ => None
         |    }
         |}

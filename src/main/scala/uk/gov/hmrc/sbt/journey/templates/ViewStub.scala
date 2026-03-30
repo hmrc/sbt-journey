@@ -16,6 +16,11 @@
 
 package uk.gov.hmrc.sbt.journey.templates
 
+import uk.gov.hmrc.sbt.journey.models.*
+import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.packageCase
+
+import java.time.LocalDate
+
 object ViewStub {
   def renderNoForm(pageName: String): String = {
     s"""@this(
@@ -36,11 +41,213 @@ object ViewStub {
        |""".stripMargin
   }
 
-  def renderForm(pageName: String): String = {
-    s"""@this(
+  def legendFor(pageName: String, fieldName: String): String =
+    if (fieldName == "value")
+      s"""LegendViewModel(messages("$pageName.heading")).asPageHeading()"""
+    else
+      s"""LegendViewModel(messages("$pageName.$fieldName"))"""
+
+  def labelFor(pageName: String, fieldName: String): String =
+    if (fieldName == "value")
+      s"""LabelViewModel(messages("$pageName.heading")).asPageHeading()"""
+    else
+      s"""LabelViewModel(messages("$pageName.$fieldName"))"""
+
+  def importsFor(
+    models: Map[String, AnswerModel],
+    fieldType: FieldType
+  ): List[String] = {
+    fieldType.typeName.flatMap(models.get) match {
+      case Some(EnumModel(_, _)) =>
+        List.empty
+      case Some(CaseClassModel(_, fields)) =>
+        fields.flatMap { case (_, fieldType) =>
+          importsFor(models, fieldType)
+        }
+      case _ =>
+        fieldType match {
+          case PrimitiveType(clazz) if clazz == classOf[Int] =>
+            List("@import viewmodels.InputWidth._")
+          case ClassType(clazz) if clazz == classOf[String].getName =>
+            List("@import viewmodels.InputWidth._")
+          case _ =>
+            List.empty
+        }
+    }
+  }
+
+  def inputsFor(
+    models: Map[String, AnswerModel],
+    fieldType: FieldType
+  ): List[String] = {
+    val p = " " * 4
+    fieldType.typeName.flatMap(models.get) match {
+      case Some(EnumModel(_, _)) =>
+        List(s"${p}govukRadios: GovukRadios,")
+      case Some(CaseClassModel(_, fields)) =>
+        fields.flatMap { case (_, fieldType) =>
+          inputsFor(models, fieldType)
+        }
+      case _ =>
+        fieldType match {
+          case PrimitiveType(clazz) if clazz == classOf[Boolean] =>
+            List(s"${p}govukRadios: GovukRadios,")
+          case PrimitiveType(clazz) if clazz == classOf[Int] =>
+            List(s"${p}govukInput: GovukInput,")
+          case ClassType(clazz) if clazz == classOf[LocalDate].getName =>
+            List(s"${p}govukDateInput: GovukDateInput,")
+          case ClassType(clazz) if clazz == classOf[String].getName =>
+            List(s"${p}govukInput: GovukInput,")
+          case _ =>
+            List.empty
+        }
+    }
+  }
+
+  def fieldsFor(
+    models: Map[String, AnswerModel],
+    pageName: String,
+    enclosing: String,
+    fieldName: String,
+    fieldType: FieldType
+  ): List[String] = {
+    val p           = " " * 8
+    val parentField = if (enclosing.isEmpty) "" else s"$enclosing."
+    fieldType.typeName.flatMap(models.get) match {
+      case Some(EnumModel(enumName, choices)) =>
+        val messagePrefix =
+          if (enumName == "Choice") "site"
+          else s"$pageName.$fieldName"
+
+        val items = choices.map { choice =>
+          val p = " " * 20
+          s"""|${p}RadioItem(
+              |${p}    id    = Some("value-${packageCase(choice)}"),
+              |${p}    value = Some("$choice"),
+              |${p}    content = Text(messages("$messagePrefix.${packageCase(choice)}"))
+              |${p})""".stripMargin
+        }
+
+        val radios =
+          s"""|$p@govukRadios(
+              |$p    RadiosViewModel(
+              |$p        field = form("$parentField$fieldName"),
+              |$p        legend = ${legendFor(pageName, fieldName)},
+              |$p        items = List(
+              |${items.mkString("," + System.lineSeparator())}
+              |$p        )
+              |$p    )
+              |$p)""".stripMargin
+
+        List(radios)
+
+      case Some(CaseClassModel(_, fields)) =>
+        fields.flatMap { case (subFieldName, subFieldType) =>
+          val newEnclosing =
+            if (fieldName == "value") ""
+            else if (enclosing.isEmpty) fieldName
+            else s"$enclosing.$fieldName"
+          fieldsFor(models, pageName, newEnclosing, subFieldName, subFieldType)
+        }
+      case _ =>
+        fieldType match {
+          case PrimitiveType(clazz) if clazz == classOf[Boolean] =>
+            val radios =
+              s"""|$p@govukRadios(
+                  |$p    RadiosViewModel.yesNo(
+                  |$p        field = form("$parentField$fieldName"),
+                  |$p        legend = ${legendFor(pageName, fieldName)},
+                  |$p    )
+                  |$p)""".stripMargin
+
+            List(radios)
+
+          case PrimitiveType(clazz) if clazz == classOf[Int] =>
+            val input =
+              s"""|$p@govukInput(
+                  |$p    InputViewModel(
+                  |$p        field = form("$parentField$fieldName"),
+                  |$p        label = ${labelFor(pageName, fieldName)}
+                  |$p    )
+                  |$p    .asNumeric()
+                  |$p    .withWidth(Fixed10)
+                  |$p)""".stripMargin
+
+            List(input)
+
+          case ClassType(clazz) if clazz == classOf[LocalDate].getName =>
+            val hint =
+              if (fieldName == "value") s"$pageName.hint"
+              else s"$pageName.$fieldName.hint"
+
+            val input =
+              s"""|$p@govukDateInput(
+                  |$p    DateViewModel(
+                  |$p        field  = form("$parentField$fieldName"),
+                  |$p        legend = ${legendFor(pageName, fieldName)}
+                  |$p    )
+                  |$p    .withHint(HintViewModel(messages("$hint")))
+                  |$p)""".stripMargin
+
+            List(input)
+
+          case ClassType(clazz) if clazz == classOf[String].getName =>
+            val input =
+              s"""|$p@govukInput(
+                  |$p    InputViewModel(
+                  |$p        field = form("$parentField$fieldName"),
+                  |$p        label = ${labelFor(pageName, fieldName)}
+                  |$p    )
+                  |$p    .withWidth(Full)
+                  |$p)""".stripMargin
+
+            List(input)
+        }
+    }
+  }
+
+  def renderForm(models: Map[String, AnswerModel], pageName: String, page: JourneyPage): String = {
+    val answerType = page.answerType
+    val fallback   = "        // TODO: Add your form fields here"
+
+    val imports = {
+      val imports = importsFor(models, answerType)
+      if (imports.isEmpty)
+        ""
+      else
+        imports.distinct.mkString(
+          "",
+          System.lineSeparator(),
+          System.lineSeparator() * 2
+        )
+    }
+
+    val inputs = {
+      val inputs = inputsFor(models, answerType)
+      if (inputs.isEmpty)
+        ""
+      else
+        inputs.distinct.mkString(
+          System.lineSeparator(),
+          System.lineSeparator(),
+          ""
+        )
+    }
+
+    val fields =
+      if (!FormProvider.hasMappingsFor(models, answerType))
+        List(fallback)
+      else
+        fieldsFor(models, pageName, "", "value", answerType)
+
+    val heading =
+      if (fields.length == 1) ""
+      else s"""        <h1 class="govuk-heading-xl">@messages("$pageName.heading")</h1>\n"""
+
+      s"""$imports@this(
        |    layout: templates.Layout,
        |    formHelper: FormWithCSRF,
-       |    govukErrorSummary: GovukErrorSummary,
+       |    govukErrorSummary: GovukErrorSummary,$inputs
        |    govukButton: GovukButton
        |)
        |
@@ -53,7 +260,7 @@ object ViewStub {
        |            @govukErrorSummary(ErrorSummaryViewModel(form))
        |        }
        |
-       |        // TODO: Add your form fields here
+       |$heading${fields.mkString(System.lineSeparator() * 2)}
        |
        |        @govukButton(
        |            ButtonViewModel(messages("site.continue"))

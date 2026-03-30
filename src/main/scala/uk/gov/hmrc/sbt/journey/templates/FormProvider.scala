@@ -23,7 +23,10 @@ import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.pascalCase
 import java.time.LocalDate
 
 object FormProvider {
-  private def hasMappingsFor(models: Map[String, AnswerModel], fieldType: FieldType): Boolean = {
+  private[templates] def hasMappingsFor(
+    models: Map[String, AnswerModel],
+    fieldType: FieldType
+  ): Boolean = {
     fieldType.typeName.flatMap(models.get) match {
       case Some(CaseClassModel(_, fields)) =>
         fields.forall { case (_, typ) => hasMappingsFor(models, typ) }
@@ -64,50 +67,62 @@ object FormProvider {
     indent: Int,
     enclosing: String,
     fieldName: String,
+    subFields: List[(String, FieldType)]
+  ): String = subFields
+    .map { case (subFieldName, subFieldType) =>
+      val newEnclosing =
+        if (fieldName == "value") ""
+        else if (enclosing.isEmpty) fieldName
+        else s"$enclosing.$fieldName"
+      mappingsFor(models, pageName, indent, newEnclosing, subFieldName, subFieldType)
+    }
+    .mkString("," + System.lineSeparator())
+
+  private def mappingsFor(
+    models: Map[String, AnswerModel],
+    pageName: String,
+    indent: Int,
+    enclosing: String,
+    fieldName: String,
     fieldType: FieldType
   ): String = {
-    val p        = " " * indent
-    val subField = if (enclosing.isEmpty) "" else s"$enclosing."
+    val p           = " " * indent
+    val parentField = if (enclosing.isEmpty) "" else s"$enclosing."
+    val subField    = if (fieldName == "value") "" else s"$fieldName."
     fieldType.typeName.flatMap(models.get) match {
       case Some(EnumModel(modelName, _)) =>
         s"""|$p"$fieldName" -> enumerable[$modelName](
-            |$p  requiredKey = "$pageName.error.${subField}required",
-            |$p  invalidKey = "$pageName.error.${subField}invalid",
+            |$p  requiredKey = "$pageName.error.$parentField${subField}required",
+            |$p  invalidKey = "$pageName.error.$parentField${subField}invalid",
             |$p)""".stripMargin
       case Some(CaseClassModel(modelName, fields)) =>
         s"""|${p}mapping(
-            |${fields
-             .map { case (fieldName, fieldType) =>
-               val subField = if (enclosing.isEmpty) fieldName else s"$enclosing.$fieldName"
-               mappingsFor(models, pageName, indent + 2, subField, fieldName, fieldType)
-             }
-             .mkString("," + System.lineSeparator())}
+            |${mappingsFor(models, pageName, indent + 2, enclosing, fieldName, fields)}
             |$p)($modelName.apply)(o => Some(Tuple.fromProductTyped(o)))""".stripMargin
       case _ =>
         fieldType match {
           case PrimitiveType(clazz) if clazz == classOf[Boolean] =>
             s"""|$p"$fieldName" -> boolean(
-                |$p  requiredKey = "$pageName.error.${subField}required",
-                |$p  invalidKey = "$pageName.error.${subField}boolean",
+                |$p  requiredKey = "$pageName.error.${parentField}${subField}required",
+                |$p  invalidKey = "$pageName.error.${parentField}${subField}boolean",
                 |$p)""".stripMargin
           case PrimitiveType(clazz) if clazz == classOf[Int] =>
             s"""|$p"$fieldName" -> int(
                 |$p  requiredKey = "$pageName.error.required",
-                |$p  wholeNumberKey = "$pageName.error.${subField}wholeNumber",
-                |$p  nonNumericKey = "$pageName.error.${subField}nonNumeric",
+                |$p  wholeNumberKey = "$pageName.error.${parentField}${subField}wholeNumber",
+                |$p  nonNumericKey = "$pageName.error.${parentField}${subField}nonNumeric",
                 |$p)""".stripMargin
           case ClassType(clazz) if clazz == classOf[LocalDate].getName =>
             s"""|$p"$fieldName" -> localDate(
-                |$p  invalidKey = "$pageName.error.${subField}invalid",
-                |$p  allRequiredKey = "$pageName.error.${subField}required.all",
-                |$p  twoRequiredKey = "$pageName.error.${subField}required.two",
-                |$p  requiredKey = "$pageName.error.${subField}required",
+                |$p  invalidKey = "$pageName.error.${parentField}${subField}invalid",
+                |$p  allRequiredKey = "$pageName.error.${parentField}${subField}required.all",
+                |$p  twoRequiredKey = "$pageName.error.${parentField}${subField}required.two",
+                |$p  requiredKey = "$pageName.error.${parentField}${subField}required",
                 |$p)""".stripMargin
           case ClassType(clazz) if clazz == classOf[String].getName =>
-            s"""$p"$fieldName" -> text("$pageName.error.${subField}required")""".stripMargin
+            s"""$p"$fieldName" -> text("$pageName.error.${parentField}${subField}required")""".stripMargin
         }
     }
-
   }
 
   def render(

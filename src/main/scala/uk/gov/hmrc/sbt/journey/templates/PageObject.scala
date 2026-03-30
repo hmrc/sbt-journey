@@ -61,8 +61,9 @@ object PageObject {
         val indexParam = s"${pageKey}Index"
         go(tail, indexParam :: s""""$pageKey"""" :: acc)
       case ChoicePath(pageKey, _) :: tail =>
+        val stringParam = s""""$pageKey""""
         val choiceParam = s"$pageKey.toString"
-        go(tail, choiceParam :: acc)
+        go(tail, choiceParam :: stringParam :: acc)
       case StringPath(pageKey) :: tail =>
         go(tail, s""""$pageKey"""" :: acc)
       case Root :: tail =>
@@ -98,9 +99,9 @@ object PageObject {
           else acc.reverse.mkString("(", ", ", ")")
         case IndexPath(pageKey) :: tail =>
           go(tail, s"${pageKey}Index" :: acc)
-        case ChoicePath(pageKey, choice) :: tail =>
+        case ChoicePath(pageKey, _) :: tail =>
           val choiceType = ModelFields.fieldType(journey.pages(pageKey).answerType)
-          go(tail, s"$choiceType.$choice" :: acc)
+          go(tail, s"$choiceType.valueOf($pageKey)" :: acc)
         case _ :: tail =>
           go(tail, acc)
       }
@@ -115,8 +116,8 @@ object PageObject {
           acc.reverse.mkString("", " :: ", " :: Nil")
         case IndexPath(pageKey) :: tail =>
           go(tail, s"IdxPathNode(${pageKey}Index)" :: s"""KeyPathNode("$pageKey")""" :: acc)
-        case ChoicePath(_, choice) :: tail =>
-          go(tail, s"""KeyPathNode("$choice")""" :: acc)
+        case ChoicePath(pageKey, _) :: tail =>
+          go(tail, s"""KeyPathNode("$pageKey") :: KeyPathNode($pageKey)""" :: acc)
         case StringPath(pageKey) :: tail =>
           go(tail, s"""KeyPathNode("$pageKey")""" :: acc)
         case Root :: tail =>
