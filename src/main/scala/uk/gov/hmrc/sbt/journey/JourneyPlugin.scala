@@ -23,6 +23,7 @@ import play.sbt.routes.RoutesKeys.*
 import sbt.*
 import sbt.Keys.*
 import sbt.internal.util.complete.Parser
+import sbt.nio.Keys.fileInputs
 import sbtcompat.PluginCompat.*
 import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.templates.*
@@ -90,15 +91,17 @@ object JourneyPlugin extends AutoPlugin {
       val journeyConfig = journeyConfiguration.value
       generateJourneyFiles(baseDir, journeyConfig)
     },
-    generateJourney / target := crossTarget.value / "journey" / Defaults.nameForSrc(
-      configuration.value.name
-    ),
+    generateJourney / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
+    generateJourney / target := {
+      crossTarget.value / "journey" / Defaults.nameForSrc(configuration.value.name)
+    },
     managedSourceDirectories += (generateJourney / target).value,
     generateJourneyRoutes := {
       val baseDir       = resourceManaged.value
       val journeyConfig = journeyConfiguration.value
       generateJourneyRouteFiles(baseDir, journeyConfig)
     },
+    generateJourneyRoutes / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
     initialiseJourneyViews := {
       val baseDir       = sourceDirectory.value
       val journeyConfig = journeyConfiguration.value
@@ -115,15 +118,16 @@ object JourneyPlugin extends AutoPlugin {
 
   def journeyTestSettings: Seq[Setting[?]] = Def.settings(
     sourceGenerators += generateJourneyTests.taskValue,
-    generateJourneyTests / target := crossTarget.value / "journey" / Defaults.nameForSrc(
-      configuration.value.name
-    ),
-    managedSourceDirectories += (generateJourneyTests / target).value,
     generateJourneyTests := {
       val baseDir       = (generateJourneyTests / target).value
       val journeyConfig = journeyConfiguration.value
       generateJourneyTestFiles(baseDir, journeyConfig)
-    }
+    },
+    generateJourneyTests / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
+    generateJourneyTests / target := {
+      crossTarget.value / "journey" / Defaults.nameForSrc(configuration.value.name)
+    },
+    managedSourceDirectories += (generateJourneyTests / target).value
   )
 
   def journeyConfigSettings: Seq[Setting[?]] = Def.settings(
