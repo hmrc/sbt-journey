@@ -59,7 +59,7 @@ object JourneyPlugin extends AutoPlugin {
       "Generate Play Framework routes from a journey.conf file."
     )
 
-    val generateJourneyResources = taskKey[Seq[File]](
+    val generateJourneyDiagrams = taskKey[Seq[File]](
       "Generate Play Framework resources from a journey.conf file."
     )
 
@@ -88,26 +88,6 @@ object JourneyPlugin extends AutoPlugin {
     (Space ~ chars("YN")).map { case (_, c) => c == 'Y' }
   }
 
-  def whenConfigChanges(
-    factory: CacheStoreFactory,
-    cachePrefix: String,
-    journeyConfigFile: File
-  )(generateTask: () => Seq[File]): Seq[File] = {
-    // This is absolutely horrific but sbt 2.x promises to make caching easier
-    val lastTracker = Tracked.lastOutput[Unit, Seq[File]](factory.make(s"${cachePrefix}Previous")) {
-      (_, lastFiles) =>
-        val inputTracker =
-          Tracked.inputChanged[HashFileInfo, Seq[File]](factory.make(s"${cachePrefix}Inputs")) {
-            (configChanged, _) =>
-              if (configChanged) generateTask()
-              else lastFiles.getOrElse(generateTask())
-          }
-        inputTracker(FileInfo.hash(journeyConfigFile))
-    }
-
-    lastTracker(())
-  }
-
   def journeySettings: Seq[Setting[?]] = Def.settings(
     sourceGenerators += generateJourney.taskValue,
     routes / sources ++= generateJourneyRoutes.value,
@@ -117,7 +97,7 @@ object JourneyPlugin extends AutoPlugin {
       val baseDir           = (generateJourney / target).value
       val journeyConfigFile = (Compile / resourceDirectory).value / "journey.conf"
       val journeyConfig     = journeyConfiguration.value
-      whenConfigChanges(factory, generateJourney.key.label, journeyConfigFile) { () =>
+      whenConfigChanges(factory, journeyConfigFile, generateJourney.key.label) { () =>
         generateJourneyFiles(logger, baseDir, journeyConfig)
       }
     },
@@ -132,18 +112,18 @@ object JourneyPlugin extends AutoPlugin {
       val baseDir           = resourceManaged.value
       val journeyConfigFile = (Compile / resourceDirectory).value / "journey.conf"
       val journeyConfig     = journeyConfiguration.value
-      whenConfigChanges(factory, generateJourneyRoutes.key.label, journeyConfigFile) { () =>
+      whenConfigChanges(factory, journeyConfigFile, generateJourneyRoutes.key.label) { () =>
         generateJourneyRouteFiles(logger, baseDir, journeyConfig)
       }
     },
     generateJourneyRoutes / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
-    generateJourneyResources := {
+    generateJourneyDiagrams := {
       val logger        = streams.value.log
       val baseDir       = resourceManaged.value
       val journeyConfig = journeyConfiguration.value
-      generateJourneyResourceFiles(logger, baseDir, journeyConfig)
+      generateJourneyDiagramFiles(logger, baseDir, journeyConfig)
     },
-    generateJourneyResources / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
+    generateJourneyDiagrams / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
     initialiseJourneyViews := {
       val logger        = streams.value.log
       val baseDir       = sourceDirectory.value
@@ -701,6 +681,28 @@ object JourneyPlugin extends AutoPlugin {
     )
   }
 
+  def whenConfigChanges(
+    factory: CacheStoreFactory,
+    configFile: File,
+    cachePrefix: String
+  )(generateTask: () => Seq[File]): Seq[File] = {
+    val lastOutputCache = factory.make(s"${cachePrefix}Previous")
+    val inputCache      = factory.make(s"${cachePrefix}Inputs")
+
+    // Track the last set of output files so that we can use it as our output when nothing has changed
+    val lastTracker = Tracked.lastOutput[Unit, Seq[File]](lastOutputCache) { (_, lastFiles) =>
+      // Track the journey config file so that we can regenerate on configuration changes
+      val inputTracker = Tracked.inputChanged(inputCache) { (configChanged, _: HashFileInfo) =>
+        if (configChanged) generateTask()
+        else lastFiles.getOrElse(generateTask())
+      }
+
+      inputTracker(FileInfo.hash(configFile))
+    }
+
+    lastTracker(())
+  }
+
   private[journey] def generateJourneyFiles(
     logger: Logger,
     baseDirectory: FileRef,
@@ -822,7 +824,7 @@ object JourneyPlugin extends AutoPlugin {
     Seq(journeyRoutes)
   }
 
-  private[journey] def generateJourneyResourceFiles(
+  private[journey] def generateJourneyDiagramFiles(
     logger: Logger,
     baseDirectory: FileRef,
     config: JourneyConfig
