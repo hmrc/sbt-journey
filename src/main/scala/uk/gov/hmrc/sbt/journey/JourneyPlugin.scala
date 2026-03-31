@@ -97,7 +97,8 @@ object JourneyPlugin extends AutoPlugin {
       val baseDir           = (generateJourney / target).value
       val journeyConfigFile = (Compile / resourceDirectory).value / "journey.conf"
       val journeyConfig     = journeyConfiguration.value
-      whenConfigChanges(factory, journeyConfigFile) { () =>
+      whenConfigChanges(factory, journeyConfigFile) { lastFiles =>
+        cleanJourneyFiles(lastFiles)
         generateJourneyFiles(logger, baseDir, journeyConfig)
       }
     },
@@ -112,14 +113,15 @@ object JourneyPlugin extends AutoPlugin {
       val baseDir           = resourceManaged.value
       val journeyConfigFile = (Compile / resourceDirectory).value / "journey.conf"
       val journeyConfig     = journeyConfiguration.value
-      whenConfigChanges(factory, journeyConfigFile) { () =>
+      whenConfigChanges(factory, journeyConfigFile) { lastFiles =>
+        cleanJourneyRouteFiles(lastFiles)
         generateJourneyRouteFiles(logger, baseDir, journeyConfig)
       }
     },
     generateJourneyRoutes / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
     generateJourneyDiagrams := {
       val logger        = streams.value.log
-      val baseDir       = resourceManaged.value
+      val baseDir       = baseDirectory.value
       val journeyConfig = journeyConfiguration.value
       generateJourneyDiagramFiles(logger, baseDir, journeyConfig)
     },
@@ -684,7 +686,7 @@ object JourneyPlugin extends AutoPlugin {
   def whenConfigChanges(
     factory: CacheStoreFactory,
     configFile: File
-  )(generateTask: () => Seq[File]): Seq[File] = {
+  )(generateTask: Option[Seq[File]] => Seq[File]): Seq[File] = {
     val lastOutputCache = factory.make("lastOutput")
     val outputCache     = factory.make("outputs")
     val inputCache      = factory.make("inputs")
@@ -697,8 +699,8 @@ object JourneyPlugin extends AutoPlugin {
         val inputTracker = Tracked.inputChanged(inputCache) { (configChanged, _: HashFileInfo) =>
           val outputsRemoved = changeReport.removed.nonEmpty
           val outputsChanged = changeReport.modified.nonEmpty
-          if (configChanged || outputsRemoved || outputsChanged) generateTask()
-          else lastFiles.getOrElse(generateTask())
+          if (configChanged || outputsRemoved || outputsChanged) generateTask(lastFiles)
+          else lastFiles.getOrElse(generateTask(lastFiles))
         }
 
         inputTracker(FileInfo.hash(configFile))
@@ -706,6 +708,10 @@ object JourneyPlugin extends AutoPlugin {
     }
 
     lastTracker(())
+  }
+
+  private[journey] def cleanJourneyFiles(lastFiles: Option[Seq[File]]): Unit = {
+    lastFiles.foreach(IO.delete)
   }
 
   private[journey] def generateJourneyFiles(
@@ -816,6 +822,10 @@ object JourneyPlugin extends AutoPlugin {
     logger.info(s"Generated navigator $navigatorFile")
 
     rootPageFiles ++ modelFiles ++ journeyFiles :+ navigatorFile
+  }
+
+  private[journey] def cleanJourneyRouteFiles(lastFiles: Option[Seq[File]]): Unit = {
+    lastFiles.foreach(IO.delete)
   }
 
   private[journey] def generateJourneyRouteFiles(
