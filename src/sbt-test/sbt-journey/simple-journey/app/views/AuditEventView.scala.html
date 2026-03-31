@@ -21,7 +21,7 @@
         <h1 class="govuk-heading-xl">@messages("auditEvent.heading")</h1>
         @govukInput(
             InputViewModel(
-                field = form("auditType"),
+                field = form("value.auditType"),
                 label = LabelViewModel(messages("auditEvent.auditType"))
             )
             .withWidth(Full)
@@ -29,7 +29,7 @@
 
         @govukInput(
             InputViewModel(
-                field = form("description"),
+                field = form("value.description"),
                 label = LabelViewModel(messages("auditEvent.description"))
             )
             .withWidth(Full)
@@ -37,10 +37,18 @@
 
         @govukDateInput(
             DateViewModel(
-                field  = form("expectedGoLiveDate"),
+                field  = form("value.expectedGoLiveDate"),
                 legend = LegendViewModel(messages("auditEvent.expectedGoLiveDate"))
             )
             .withHint(HintViewModel(messages("auditEvent.expectedGoLiveDate.hint")))
+        )
+
+        @govukDateInput(
+            DateViewModel(
+                field  = form("value.expectedDecommissioningDate"),
+                legend = LegendViewModel(messages("auditEvent.expectedDecommissioningDate"))
+            )
+            .withHint(HintViewModel(messages("auditEvent.expectedDecommissioningDate.hint")))
         )
 
         @govukButton(

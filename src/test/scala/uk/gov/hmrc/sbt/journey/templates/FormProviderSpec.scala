@@ -248,7 +248,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
         |  with Mappings {
         |
         |  def apply()(using messages: Messages): Form[AuditEvent] = Form(
-        |    mapping(
+        |    "value" -> mapping(
         |      "auditType" -> text("auditEvent.error.auditType.required"),
         |      "description" -> text("auditEvent.error.description.required"),
         |      "expectedGoLiveDate" -> localDate(

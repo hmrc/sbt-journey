@@ -15,6 +15,5 @@
   * However it isn't common practice in the rest of HMRC Digital
   * It could be done just for controllers rather than the entire application
 * Use `String#indent` rather than padding vars once we're on the right JDK everywhere
-* Add support for `Option[_]` fields in generated views and form providers via `optional` mappings
 * More testing around nested models and form binding
 * More testing around reuse of pages in different "forks" of a journey

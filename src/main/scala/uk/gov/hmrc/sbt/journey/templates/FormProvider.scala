@@ -33,10 +33,14 @@ object FormProvider {
       case Some(EnumModel(_, _)) => true
       case _ =>
         fieldType match {
+          case OptionType(fieldType) =>
+            hasMappingsFor(models, fieldType)
           case PrimitiveType(clazz) =>
             Set[Class[? <: AnyVal]](classOf[Int], classOf[Boolean]).contains(clazz)
           case ClassType(clazz) =>
-            Set(classOf[LocalDate].getName, classOf[String].getName).contains(clazz)
+            Set(classOf[LocalDate], classOf[BigDecimal], classOf[String])
+              .map(_.getName)
+              .contains(clazz)
           case _ => false
         }
     }
@@ -70,11 +74,19 @@ object FormProvider {
     subFields: List[(String, FieldType)]
   ): String = subFields
     .map { case (subFieldName, subFieldType) =>
+      val p = " " * indent
       val newEnclosing =
         if (fieldName == "value") ""
         else if (enclosing.isEmpty) fieldName
         else s"$enclosing.$fieldName"
-      mappingsFor(models, pageName, indent, newEnclosing, subFieldName, subFieldType)
+      s"""$p"$subFieldName" -> ${mappingsFor(
+          models,
+          pageName,
+          indent,
+          newEnclosing,
+          subFieldName,
+          subFieldType
+        )}"""
     }
     .mkString("," + System.lineSeparator())
 
@@ -91,36 +103,44 @@ object FormProvider {
     val subField    = if (fieldName == "value") "" else s"$fieldName."
     fieldType.typeName.flatMap(models.get) match {
       case Some(EnumModel(modelName, _)) =>
-        s"""|$p"$fieldName" -> enumerable[$modelName](
+        s"""|enumerable[$modelName](
             |$p  requiredKey = "$pageName.error.$parentField${subField}required",
             |$p  invalidKey = "$pageName.error.$parentField${subField}invalid",
             |$p)""".stripMargin
       case Some(CaseClassModel(modelName, fields)) =>
-        s"""|${p}mapping(
+        s"""|mapping(
             |${mappingsFor(models, pageName, indent + 2, enclosing, fieldName, fields)}
             |$p)($modelName.apply)(o => Some(Tuple.fromProductTyped(o)))""".stripMargin
       case _ =>
         fieldType match {
           case PrimitiveType(clazz) if clazz == classOf[Boolean] =>
-            s"""|$p"$fieldName" -> boolean(
+            s"""|boolean(
                 |$p  requiredKey = "$pageName.error.${parentField}${subField}required",
                 |$p  invalidKey = "$pageName.error.${parentField}${subField}boolean",
                 |$p)""".stripMargin
           case PrimitiveType(clazz) if clazz == classOf[Int] =>
-            s"""|$p"$fieldName" -> int(
+            s"""|int(
                 |$p  requiredKey = "$pageName.error.required",
                 |$p  wholeNumberKey = "$pageName.error.${parentField}${subField}wholeNumber",
                 |$p  nonNumericKey = "$pageName.error.${parentField}${subField}nonNumeric",
                 |$p)""".stripMargin
           case ClassType(clazz) if clazz == classOf[LocalDate].getName =>
-            s"""|$p"$fieldName" -> localDate(
+            s"""|localDate(
                 |$p  invalidKey = "$pageName.error.${parentField}${subField}invalid",
                 |$p  allRequiredKey = "$pageName.error.${parentField}${subField}required.all",
                 |$p  twoRequiredKey = "$pageName.error.${parentField}${subField}required.two",
                 |$p  requiredKey = "$pageName.error.${parentField}${subField}required",
                 |$p)""".stripMargin
+          case ClassType(clazz) if clazz == classOf[BigDecimal].getName =>
+            s"""|currency(
+                |$p  requiredKey = "$pageName.error.required",
+                |$p  invalidNumericKey = "$pageName.error.${parentField}${subField}invalidNumeric",
+                |$p  nonNumericKey = "$pageName.error.${parentField}${subField}nonNumeric",
+                |$p)""".stripMargin
           case ClassType(clazz) if clazz == classOf[String].getName =>
-            s"""$p"$fieldName" -> text("$pageName.error.${parentField}${subField}required")""".stripMargin
+            s"""text("$pageName.error.${parentField}${subField}required")""".stripMargin
+          case OptionType(fieldType) =>
+            s"optional(${mappingsFor(models, pageName, indent, enclosing, fieldName, fieldType)})"
         }
     }
   }
@@ -147,7 +167,7 @@ object FormProvider {
     s"""package $formsPackage
        |
        |import play.api.data.Form
-       |import play.api.data.Forms.mapping
+       |import play.api.data.Forms.{mapping,optional}
        |import _root_.forms.mappings.Mappings // ${basePackage / "forms.mappings.Mappings"}
        |$imports
        |
@@ -163,7 +183,7 @@ object FormProvider {
               |  with Mappings {
               |
               |  def apply()$applyParams: Form[$fieldType] = Form(
-              |${mappingsFor(models, pageName, indent = 4, "", "value", answerType)}
+              |    "value" -> ${mappingsFor(models, pageName, indent = 4, "", "value", answerType)}
               |  )
               |}""".stripMargin
       }

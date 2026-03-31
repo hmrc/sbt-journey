@@ -305,6 +305,7 @@ object JourneyPlugin extends AutoPlugin {
     classOf[java.time.ZoneOffset],
     classOf[scala.concurrent.duration.Duration],
     classOf[scala.concurrent.duration.FiniteDuration],
+    classOf[scala.math.BigDecimal],
     classOf[java.util.concurrent.TimeUnit]
   ).map(clazz => clazz.getSimpleName -> ClassType(clazz.getName)).toMap
 

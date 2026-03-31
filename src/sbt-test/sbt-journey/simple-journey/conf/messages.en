@@ -55,6 +55,8 @@ auditEvent.auditType = Audit type
 auditEvent.description = Description
 auditEvent.expectedGoLiveDate = Expected go-live date
 auditEvent.expectedGoLiveDate.hint = This is the date when your service will begin producing this audit event.
+auditEvent.expectedDecommissioningDate = Expected decommissioning date
+auditEvent.expectedDecommissioningDate.hint = This is the date when your service will stop producing this audit event.
 
 auditProvider.title = Who is the audit provider?
 auditProvider.heading = Who is the audit provider?

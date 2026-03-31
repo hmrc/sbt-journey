@@ -68,8 +68,12 @@ object ViewStub {
         fieldType match {
           case PrimitiveType(clazz) if clazz == classOf[Int] =>
             List("@import viewmodels.InputWidth._")
+          case ClassType(clazz) if clazz == classOf[BigDecimal].getName =>
+            List("@import viewmodels.InputWidth._")
           case ClassType(clazz) if clazz == classOf[String].getName =>
             List("@import viewmodels.InputWidth._")
+          case OptionType(fieldType) =>
+            importsFor(models, fieldType)
           case _ =>
             List.empty
         }
@@ -96,8 +100,12 @@ object ViewStub {
             List(s"${p}govukInput: GovukInput,")
           case ClassType(clazz) if clazz == classOf[LocalDate].getName =>
             List(s"${p}govukDateInput: GovukDateInput,")
+          case ClassType(clazz) if clazz == classOf[BigDecimal].getName =>
+            List(s"${p}govukInput: GovukInput,")
           case ClassType(clazz) if clazz == classOf[String].getName =>
             List(s"${p}govukInput: GovukInput,")
+          case OptionType(fieldType) =>
+            inputsFor(models, fieldType)
           case _ =>
             List.empty
         }
@@ -144,13 +152,15 @@ object ViewStub {
       case Some(CaseClassModel(_, fields)) =>
         fields.flatMap { case (subFieldName, subFieldType) =>
           val newEnclosing =
-            if (fieldName == "value") ""
-            else if (enclosing.isEmpty) fieldName
+            if (enclosing.isEmpty) fieldName
             else s"$enclosing.$fieldName"
           fieldsFor(models, pageName, newEnclosing, subFieldName, subFieldType)
         }
       case _ =>
         fieldType match {
+          case OptionType(fieldType) =>
+            fieldsFor(models, pageName, enclosing, fieldName, fieldType)
+
           case PrimitiveType(clazz) if clazz == classOf[Boolean] =>
             val radios =
               s"""|$p@govukRadios(
@@ -187,6 +197,19 @@ object ViewStub {
                   |$p        legend = ${legendFor(pageName, fieldName)}
                   |$p    )
                   |$p    .withHint(HintViewModel(messages("$hint")))
+                  |$p)""".stripMargin
+
+            List(input)
+
+          case ClassType(clazz) if clazz == classOf[BigDecimal].getName =>
+            val input =
+              s"""|$p@govukInput(
+                  |$p    InputViewModel(
+                  |$p        field = form("$parentField$fieldName"),
+                  |$p        label = ${labelFor(pageName, fieldName)}
+                  |$p    )
+                  |$p    .withPrefix(PrefixOrSuffix(content = "£"))
+                  |$p    .withWidth(Fixed10)
                   |$p)""".stripMargin
 
             List(input)
