@@ -97,7 +97,7 @@ object JourneyPlugin extends AutoPlugin {
       val baseDir           = (generateJourney / target).value
       val journeyConfigFile = (Compile / resourceDirectory).value / "journey.conf"
       val journeyConfig     = journeyConfiguration.value
-      whenConfigChanges(factory, journeyConfigFile, generateJourney.key.label) { () =>
+      whenConfigChanges(factory, journeyConfigFile) { () =>
         generateJourneyFiles(logger, baseDir, journeyConfig)
       }
     },
@@ -112,7 +112,7 @@ object JourneyPlugin extends AutoPlugin {
       val baseDir           = resourceManaged.value
       val journeyConfigFile = (Compile / resourceDirectory).value / "journey.conf"
       val journeyConfig     = journeyConfiguration.value
-      whenConfigChanges(factory, journeyConfigFile, generateJourneyRoutes.key.label) { () =>
+      whenConfigChanges(factory, journeyConfigFile) { () =>
         generateJourneyRouteFiles(logger, baseDir, journeyConfig)
       }
     },
@@ -683,21 +683,26 @@ object JourneyPlugin extends AutoPlugin {
 
   def whenConfigChanges(
     factory: CacheStoreFactory,
-    configFile: File,
-    cachePrefix: String
+    configFile: File
   )(generateTask: () => Seq[File]): Seq[File] = {
-    val lastOutputCache = factory.make(s"${cachePrefix}Previous")
-    val inputCache      = factory.make(s"${cachePrefix}Inputs")
+    val lastOutputCache = factory.make("lastOutput")
+    val outputCache     = factory.make("outputs")
+    val inputCache      = factory.make("inputs")
 
     // Track the last set of output files so that we can use it as our output when nothing has changed
     val lastTracker = Tracked.lastOutput[Unit, Seq[File]](lastOutputCache) { (_, lastFiles) =>
-      // Track the journey config file so that we can regenerate on configuration changes
-      val inputTracker = Tracked.inputChanged(inputCache) { (configChanged, _: HashFileInfo) =>
-        if (configChanged) generateTask()
-        else lastFiles.getOrElse(generateTask())
-      }
+      // Track the output so that we can regenerate if anything is modified or removed
+      Tracked.diffOutputs(outputCache, FileInfo.lastModified) { changeReport =>
+        // Track the journey config file so that we can regenerate on configuration changes
+        val inputTracker = Tracked.inputChanged(inputCache) { (configChanged, _: HashFileInfo) =>
+          val outputsRemoved = changeReport.removed.nonEmpty
+          val outputsChanged = changeReport.modified.nonEmpty
+          if (configChanged || outputsRemoved || outputsChanged) generateTask()
+          else lastFiles.getOrElse(generateTask())
+        }
 
-      inputTracker(FileInfo.hash(configFile))
+        inputTracker(FileInfo.hash(configFile))
+      }(_.toSet)
     }
 
     lastTracker(())
