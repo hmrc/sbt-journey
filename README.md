@@ -67,6 +67,7 @@ play.modules.enabled += "<your service's base package>.config.DefaultFormProvide
 > [!NOTE]
 > This module configures the default form provider implementations to be used in your application.
 > Once you are ready to implement your own form validation you should disable this module.
+> You can use the `initialiseJourneyForms` [task](#tasks) to help you with this.
 
 Compile your project:
 
@@ -312,7 +313,7 @@ There are five different kinds of journey part. In all the following examples, t
 
   Once they have completed the relevant subjourney parts for their choice then they proceed to the next part in the outer journey.
 
-### Commands
+### Tasks
 
 This plugin contributes several sbt tasks once it is enabled:
 

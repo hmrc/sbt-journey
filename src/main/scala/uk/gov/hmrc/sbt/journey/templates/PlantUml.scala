@@ -26,7 +26,7 @@ object PlantUml {
         s"""|${p}repeat
             |${forParts(subJourney, indent + 2).mkString(System.lineSeparator())}
             |${p}repeat while ($choicePage) is (Yes) not (No)""".stripMargin
-      case SwitchCasePart(choicePage, subJourneys, as) =>
+      case SwitchCasePart(choicePage, subJourneys, _) =>
         val cases = subJourneys.map { case (name, parts) =>
           s"""|${p}case ($name)
               |${forParts(parts, indent + 2)}""".stripMargin

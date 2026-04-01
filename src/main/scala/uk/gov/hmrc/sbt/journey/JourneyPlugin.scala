@@ -841,6 +841,7 @@ object JourneyPlugin extends AutoPlugin {
     config: JourneyConfig
   ): Seq[File] = {
     val journeyDiagrams = PlantUml.forConfig(config)
+    val journeyMermaidText = Mermaid.forConfig(config)
 
     val journeyTextFiles = journeyDiagrams.map { case (name, diagram) =>
       val textFile = baseDirectory / s"$name.txt"
@@ -848,6 +849,13 @@ object JourneyPlugin extends AutoPlugin {
       logger.info(s"Generated PlantUML source $textFile for journey $name")
       textFile
     }.toList
+
+    val journeyMdFiles = journeyMermaidText.map { case (name, diagram) =>
+      val mdFile = baseDirectory / s"$name.md"
+      IO.write(mdFile, diagram)
+      logger.info(s"Generated Mermaid source $mdFile for journey $name")
+      mdFile
+    }
 
     val journeyDiagramFiles =
       try {
@@ -871,7 +879,7 @@ object JourneyPlugin extends AutoPlugin {
           List.empty
       }
 
-    journeyTextFiles ++ journeyDiagramFiles
+    journeyTextFiles ++ journeyMdFiles ++ journeyDiagramFiles
   }
 
   private[journey] def generateJourneyTestFiles(
