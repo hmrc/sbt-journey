@@ -10,10 +10,13 @@
   * Added passthrough to `journey.Routes` in `prod.routes`
 * Rework the generated code to make use of the package structure
 * Implement switch-case else / default functionality?
-* Consider whether to use the `journeys.<journey name>` to build a sub-package structure (i.e. fractal application structure)
+* Consider whether to use the `journeys.<journey name>` to build a sub-package structure
+  * e.g. uk.gov.hmrc.<service>.{controllers,forms,pages}.<journey>
+  * Could even consider using a fractal application structure (e.g. uk.gov.hmrc.<service>.<journey>.{controllers,forms,pages})
   * This would lessen the chance of reverse routes collisions
   * However it isn't common practice in the rest of HMRC Digital
   * It could be done just for controllers rather than the entire application
-* Use `String#indent` rather than padding vars once we're on the right JDK everywhere
+  * If we don't do this, implement validation to warn users about potential class name collisions (e.g. same page name, different journey).
+* Use `String#indent` rather than padding vars once we're on JDK12+ everywhere. At the moment we can't do this because sbt-settings sets `-java-output-version` to 11.
 * More testing around nested models and form binding
 * More testing around reuse of pages in different "forks" of a journey
