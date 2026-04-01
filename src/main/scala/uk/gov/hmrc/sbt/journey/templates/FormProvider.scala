@@ -233,4 +233,34 @@ object FormProvider {
        |}
        |""".stripMargin
   }
+
+  def module(config: JourneyConfig): String = {
+    val basePackage   = QualifiedName(config.basePackage)
+    val configPackage = basePackage / "config"
+    val indent        = " " * 4
+
+    val bindings = config.journeys.flatMap { case (_, journey) =>
+      journey.pages.flatMap { case (pageName, page) =>
+        val baseProvider    = s"${pascalCase(pageName)}BaseFormProvider"
+        val defaultProvider = s"Default${pascalCase(pageName)}FormProvider"
+        val hasMappings     = FormProvider.hasMappingsFor(config.models, page.answerType)
+        if (page.withDefaultFormProvider && hasMappings)
+          List(s"${indent}bind(classOf[$baseProvider]).to(classOf[$defaultProvider])")
+        else
+          List.empty
+      }
+    }
+
+    s"""package $configPackage
+       |
+       |import com.google.inject.AbstractModule
+       |import ${basePackage / "forms.*"}
+       |
+       |class DefaultFormProvidersModule extends AbstractModule {
+       |  override def configure(): Unit = {
+       |${bindings.mkString(System.lineSeparator())}
+       |  }
+       |}
+       |""".stripMargin
+  }
 }

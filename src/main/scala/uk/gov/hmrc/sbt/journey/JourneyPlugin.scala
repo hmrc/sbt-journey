@@ -795,10 +795,15 @@ object JourneyPlugin extends AutoPlugin {
         journeyPageController
       }
 
+      val defaultProvidersModuleFile = packageFolder / "config" / "DefaultFormProvidersModule.scala"
+      IO.write(defaultProvidersModuleFile, FormProvider.module(config))
+      logger.info(s"Generated form providers module $defaultProvidersModuleFile")
+
       journeyControllerFiles ++
         journeyPageObjectFiles ++
         journeyFormProviderFiles ++
-        journeyModelFiles(journey.journey)
+        journeyModelFiles(journey.journey) ++
+        Seq(defaultProvidersModuleFile)
     }.toList
 
     val modelFiles = config.models.map { case (modelName, model) =>

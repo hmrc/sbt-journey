@@ -27,6 +27,14 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
 
   val basePackage = QualifiedName("uk.gov.hmrc.sbtjourneytest")
 
+  def journeyConfig(journey: (String, Journey)) =
+    JourneyConfig(
+      basePackage.toString,
+      Map.empty,
+      Map.empty,
+      Map(journey)
+    )
+
   def journeyPage(pageKey: String, answerType: FieldType, withDefaultFormProvider: Boolean = true) =
     JourneyPage(
       pageKey,
@@ -664,6 +672,47 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
         |      "expectedGoLiveDayOfWeek" -> ??? /* TODO: There are no default mappings for DayOfWeek */
         |    )(AuditEvent.apply)(o => Some(Tuple.fromProductTyped(o)))
         |  )
+        |}
+        |""".stripMargin
+  }
+
+  "FormProvider.module" should "generate a Guice module that binds default form providers" in {
+    val cipAssessmentTicket =
+      journeyPage("cipAssessmentTicket", FieldType.STRING)
+    val cipAssessmentPage =
+      journeyPage("cipAssessmentPage", FieldType.STRING)
+
+    // Pages without default form provider implementations should be skipped
+    val serviceUrlPage =
+      journeyPage("serviceUrl", FieldType.STRING, withDefaultFormProvider = false)
+
+    // Pages with unsupported answer types should be skipped
+    val whichDayOfWeek =
+      journeyPage("whichDayOfWeek", ClassType(classOf[DayOfWeek]))
+
+    FormProvider.module(
+      journeyConfig(
+        "submission" -> Journey(
+          pages = Map(
+            "cipAssessmentTicket" -> cipAssessmentTicket,
+            "cipAssessmentPage"   -> cipAssessmentPage,
+            "serviceUrl"          -> serviceUrlPage,
+            "whichDayOfWeek"      -> whichDayOfWeek
+          ),
+          journey = List.empty
+        )
+      )
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.config
+        |
+        |import com.google.inject.AbstractModule
+        |import uk.gov.hmrc.sbtjourneytest.forms.*
+        |
+        |class DefaultFormProvidersModule extends AbstractModule {
+        |  override def configure(): Unit = {
+        |    bind(classOf[CipAssessmentTicketBaseFormProvider]).to(classOf[DefaultCipAssessmentTicketFormProvider])
+        |    bind(classOf[CipAssessmentPageBaseFormProvider]).to(classOf[DefaultCipAssessmentPageFormProvider])
+        |  }
         |}
         |""".stripMargin
   }
