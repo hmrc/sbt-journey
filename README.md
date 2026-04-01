@@ -320,6 +320,7 @@ This plugin contributes several sbt tasks once it is enabled:
 * `overwriteJourneyViews <Y/N>` - Identical to the above task except that it overwrites any existing templates for your pages.
 * `initialiseJourneyForms`      - Creates a form provider class for each of the journey `pages` in your application that does not have such a class already.
 * `overwriteJourneyForms <Y/N>` - Identical to the above task except that it overwrites any existing form provider classes for your pages.
+* `generateJourneyDiagrams`     - Generates PlantUML source code describing the structure of each of your `journeys`. If you have configured a PlantUML dependency, it also generates PNG images.
 
 ## How it works
 
