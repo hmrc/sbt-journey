@@ -58,6 +58,16 @@ Execute the `initialiseJourneyViews` task:
 $ sbt initialiseJourneyViews
 ```
 
+Add the `DefaultFormProvidersModule` to your `application.conf`:
+
+```hocon
+play.modules.enabled += "<your service's base package>.config.DefaultFormProvidersModule"
+```
+
+> [!NOTE]
+> This module configures the default form provider implementations to be used in your application.
+> Once you are ready to implement your own form validation you should disable this module.
+
 Compile your project:
 
 ```console
@@ -96,6 +106,8 @@ An empty **sbt-journey** configuration looks as follows:
 ```hocon
 serviceName: <your service name>
 
+basePackage: <your service's base package>
+
 rootPages {}
 
 models {}
@@ -104,6 +116,12 @@ journeys {}
 ```
 
 The `serviceName` property declares the name of the service. You should use the `appName` from your [application.conf](https://www.playframework.com/documentation/3.0.x/ConfigFile#Configuration-file-syntax-and-features).
+
+The `basePackage` property declares the base package for the service.
+
+You should provide either `serviceName` or `basePackage`. If you provide `serviceName`, the `basePackage` will default to `uk.gov.hmrc.<lower case service name>`.
+
+The `serviceName` is only used to configure the base package, so if you provide `basePackage`, it isn't needed.
 
 The `rootPages` property declares the pages of your application which aren't part of a specific user journey and which don't require the user to submit an answer.
 
