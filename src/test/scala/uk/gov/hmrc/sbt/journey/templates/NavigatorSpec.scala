@@ -55,28 +55,32 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       Map(journey)
     )
 
-  "Navigator.normalRoutes" should "render navigations between the pages of a linear journey" in {
+  "Navigator.normalRoutesFor" should "render navigations between the pages of a linear journey" in {
     val cipAssessmentTicket =
       journeyPage("cipAssessmentTicket", FieldType.STRING)
     val cipAssessmentPage =
       journeyPage("cipAssessmentPage", FieldType.STRING)
 
     val config = journeyConfig(
-      "cipAssessment" -> Journey(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "cipAssessment" -> Journey(
         pages = Map(
           "cipAssessmentTicket" -> cipAssessmentTicket,
           "cipAssessmentPage"   -> cipAssessmentPage
         ),
         journey = List(
           SinglePagePart("cipAssessmentTicket", None),
-          SinglePagePart("cipAssessmentPage", None)
+          SinglePagePart("cipAssessmentPage", None),
+          SinglePagePart("checkYourAnswers", None)
         )
       )
     )
 
     Navigator.normalRoutesFor(config) shouldBe
       """    case CipAssessmentTicketPage => _ => _ =>
-        |      routes.CipAssessmentPageBaseController.onPageLoad(NormalMode)""".stripMargin
+        |      routes.CipAssessmentPageBaseController.onPageLoad(NormalMode)
+        |    case CipAssessmentPagePage => _ => _ =>
+        |      routes.CheckYourAnswersBaseController.onPageLoad""".stripMargin
   }
 
   it should "render navigations between the pages of a do-while journey" in {
@@ -139,14 +143,21 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
             "addAnotherAuditEvent",
             List(SinglePagePart("auditEvent", None)),
             "auditEvents"
-          )
+          ),
+          SinglePagePart("checkYourAnswers", None)
         )
       )
     )
 
     Navigator.normalRoutesFor(config) shouldBe
       """    case CipAssessmentPagePage => _ => _ =>
-        |      routes.AuditEventBaseController.onPageLoad(0, NormalMode)""".stripMargin
+        |      routes.AuditEventBaseController.onPageLoad(0, NormalMode)
+        |    case AddAnotherAuditEventPage(auditEventsIndex) => _ => {
+        |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, NormalMode)
+        |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
+        |    }
+        |    case AuditEventPage(auditEventsIndex) => _ => _ =>
+        |      routes.AddAnotherAuditEventBaseController.onPageLoad(auditEventsIndex, NormalMode)""".stripMargin
   }
 
   it should "render a navigation from a do-while journey to a single journey page" in {
@@ -175,7 +186,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
             "auditEvents"
           ),
           SinglePagePart("cipAssessmentPage", None),
-          SinglePagePart("checkYourAnswers", None),
+          SinglePagePart("checkYourAnswers", None)
         )
       )
     )
@@ -221,14 +232,25 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
               )
             ),
             "auditSources"
-          )
+          ),
+          SinglePagePart("checkYourAnswers", None)
         )
       )
     )
 
     Navigator.normalRoutesFor(config) shouldBe
       """    case CipAssessmentPagePage => _ => _ =>
-        |      routes.AuditEventBaseController.onPageLoad(0, 0, NormalMode)""".stripMargin
+        |      routes.AuditEventBaseController.onPageLoad(0, 0, NormalMode)
+        |    case AddAnotherAuditSourcePage(auditSourcesIndex) => _ => {
+        |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditSourcesIndex + 1, NormalMode)
+        |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
+        |    }
+        |    case AddAnotherAuditEventPage(auditSourcesIndex,auditEventsIndex) => _ => {
+        |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditSourcesIndex, auditEventsIndex + 1, NormalMode)
+        |      case Choice.No  => routes.AddAnotherAuditSourceBaseController.onPageLoad(auditSourcesIndex, NormalMode)
+        |    }
+        |    case AuditEventPage(auditSourcesIndex,auditEventsIndex) => _ => _ =>
+        |      routes.AddAnotherAuditEventBaseController.onPageLoad(auditSourcesIndex, auditEventsIndex, NormalMode)""".stripMargin
   }
 
   it should "render navigations between the pages of a switch-case journey" in {
@@ -319,9 +341,12 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render navigations between the pages of a nested do-while journey" in {
-    val auditSource          = journeyPage("auditSource", FieldType.STRING)
-    val auditEvent           = journeyPage("auditEvent", FieldType.STRING)
-    val addAnotherAuditEvent = journeyPage("addAnotherAuditEvent", ClassType(basePackage / "Choice"))
+    val auditSource = journeyPage("auditSource", FieldType.STRING)
+    val auditEvent  = journeyPage("auditEvent", FieldType.STRING)
+    val addAnotherAuditSource =
+      journeyPage("addAnotherAuditSource", ClassType(basePackage / "Choice"))
+    val addAnotherAuditEvent =
+      journeyPage("addAnotherAuditEvent", ClassType(basePackage / "Choice"))
 
     val config = journeyConfig(
       rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
@@ -329,6 +354,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
         pages = Map(
           "auditEvent"           -> auditEvent,
           "auditSource"          -> auditSource,
+          "addAnotherAuditSource" -> addAnotherAuditSource,
           "addAnotherAuditEvent" -> addAnotherAuditEvent
         ),
         journey = List(
@@ -358,10 +384,345 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
         |      routes.AuditEventBaseController.onPageLoad(auditSourcesIndex, 0, NormalMode)
         |    case AddAnotherAuditEventPage(auditSourcesIndex,auditEventsIndex) => _ => {
         |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditSourcesIndex, auditEventsIndex + 1, NormalMode)
-        |      case Choice.No  => routes.AddAnotherAuditSourceBaseController.onPageLoad
+        |      case Choice.No  => routes.AddAnotherAuditSourceBaseController.onPageLoad(auditSourcesIndex, NormalMode)
         |    }
         |    case AuditEventPage(auditSourcesIndex,auditEventsIndex) => _ => _ =>
         |      routes.AddAnotherAuditEventBaseController.onPageLoad(auditSourcesIndex, auditEventsIndex, NormalMode)""".stripMargin
+  }
+
+  "Navigator.checkRoutesFor" should "render navigations between the pages of a linear journey" in {
+    val cipAssessmentTicket =
+      journeyPage("cipAssessmentTicket", FieldType.STRING)
+    val cipAssessmentPage =
+      journeyPage("cipAssessmentPage", FieldType.STRING)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "cipAssessment" -> Journey(
+        pages = Map(
+          "cipAssessmentTicket" -> cipAssessmentTicket,
+          "cipAssessmentPage"   -> cipAssessmentPage
+        ),
+        journey = List(
+          SinglePagePart("cipAssessmentTicket", None),
+          SinglePagePart("cipAssessmentPage", None),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    Navigator.checkRoutesFor(config) shouldBe
+      """    case CipAssessmentTicketPage => _ => _ =>
+        |      routes.CheckYourAnswersBaseController.onPageLoad
+        |    case CipAssessmentPagePage => _ => _ =>
+        |      routes.CheckYourAnswersBaseController.onPageLoad""".stripMargin
+  }
+
+  it should "render navigations between the pages of a do-while journey" in {
+    val auditEvent = journeyPage("auditEvent", FieldType.STRING)
+
+    val addAnotherAuditEvent = journeyPage(
+      "addAnotherAuditEvent",
+      FieldType.BOOLEAN
+    )
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "auditEvents" -> Journey(
+        pages = Map(
+          "auditEvent"           -> auditEvent,
+          "addAnotherAuditEvent" -> addAnotherAuditEvent
+        ),
+        journey = List(
+          DoWhilePart(
+            "addAnotherAuditEvent",
+            List(SinglePagePart("auditEvent", None)),
+            "auditEvents"
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    Navigator.checkRoutesFor(config) shouldBe
+      """    case AddAnotherAuditEventPage(auditEventsIndex) => _ => {
+        |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, CheckMode)
+        |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
+        |    }
+        |    case AuditEventPage(auditEventsIndex) => _ => _ =>
+        |      routes.AddAnotherAuditEventBaseController.onPageLoad(auditEventsIndex, CheckMode)""".stripMargin
+  }
+
+  it should "render a navigation from a single journey page to a do-while journey" in {
+    val cipAssessmentPage =
+      journeyPage("cipAssessmentPage", FieldType.STRING)
+
+    val auditEvent = journeyPage("auditEvent", FieldType.STRING)
+
+    val addAnotherAuditEvent = journeyPage(
+      "addAnotherAuditEvent",
+      FieldType.BOOLEAN
+    )
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "auditEvents" -> Journey(
+        pages = Map(
+          "auditEvent"           -> auditEvent,
+          "addAnotherAuditEvent" -> addAnotherAuditEvent,
+          "cipAssessmentPage"    -> cipAssessmentPage
+        ),
+        journey = List(
+          SinglePagePart("cipAssessmentPage", None),
+          DoWhilePart(
+            "addAnotherAuditEvent",
+            List(SinglePagePart("auditEvent", None)),
+            "auditEvents"
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    Navigator.checkRoutesFor(config) shouldBe
+      """    case CipAssessmentPagePage => _ => _ =>
+        |      routes.CheckYourAnswersBaseController.onPageLoad
+        |    case AddAnotherAuditEventPage(auditEventsIndex) => _ => {
+        |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, CheckMode)
+        |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
+        |    }
+        |    case AuditEventPage(auditEventsIndex) => _ => _ =>
+        |      routes.AddAnotherAuditEventBaseController.onPageLoad(auditEventsIndex, CheckMode)""".stripMargin
+  }
+
+  it should "render a navigation from a do-while journey to a single journey page" in {
+    val cipAssessmentPage =
+      journeyPage("cipAssessmentPage", FieldType.STRING)
+
+    val auditEvent = journeyPage("auditEvent", FieldType.STRING)
+
+    val addAnotherAuditEvent = journeyPage(
+      "addAnotherAuditEvent",
+      FieldType.BOOLEAN
+    )
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "auditEvents" -> Journey(
+        pages = Map(
+          "auditEvent"           -> auditEvent,
+          "addAnotherAuditEvent" -> addAnotherAuditEvent,
+          "cipAssessmentPage"    -> cipAssessmentPage
+        ),
+        journey = List(
+          DoWhilePart(
+            "addAnotherAuditEvent",
+            List(SinglePagePart("auditEvent", None)),
+            "auditEvents"
+          ),
+          SinglePagePart("cipAssessmentPage", None),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    Navigator.checkRoutesFor(config) shouldBe
+      """    case AddAnotherAuditEventPage(auditEventsIndex) => _ => {
+        |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, CheckMode)
+        |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
+        |    }
+        |    case AuditEventPage(auditEventsIndex) => _ => _ =>
+        |      routes.AddAnotherAuditEventBaseController.onPageLoad(auditEventsIndex, CheckMode)
+        |    case CipAssessmentPagePage => _ => _ =>
+        |      routes.CheckYourAnswersBaseController.onPageLoad""".stripMargin
+  }
+
+  it should "render a navigation from a single journey page to a nested do-while journey" in {
+    val cipAssessmentPage =
+      journeyPage("cipAssessmentPage", FieldType.STRING)
+
+    val auditEvent = journeyPage("auditEvent", FieldType.STRING)
+
+    val addAnotherAuditSource = journeyPage("addAnotherAuditSource", FieldType.BOOLEAN)
+    val addAnotherAuditEvent  = journeyPage("addAnotherAuditEvent", FieldType.BOOLEAN)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "auditEvents" -> Journey(
+        pages = Map(
+          "auditEvent"            -> auditEvent,
+          "addAnotherAuditEvent"  -> addAnotherAuditEvent,
+          "addAnotherAuditSource" -> addAnotherAuditSource,
+          "cipAssessmentPage"     -> cipAssessmentPage
+        ),
+        journey = List(
+          SinglePagePart("cipAssessmentPage", None),
+          DoWhilePart(
+            "addAnotherAuditSource",
+            List(
+              DoWhilePart(
+                "addAnotherAuditEvent",
+                List(SinglePagePart("auditEvent", None)),
+                "auditEvents"
+              )
+            ),
+            "auditSources"
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    Navigator.checkRoutesFor(config) shouldBe
+      """    case CipAssessmentPagePage => _ => _ =>
+        |      routes.CheckYourAnswersBaseController.onPageLoad
+        |    case AddAnotherAuditSourcePage(auditSourcesIndex) => _ => {
+        |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditSourcesIndex + 1, CheckMode)
+        |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
+        |    }
+        |    case AddAnotherAuditEventPage(auditSourcesIndex,auditEventsIndex) => _ => {
+        |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditSourcesIndex, auditEventsIndex + 1, CheckMode)
+        |      case Choice.No  => routes.AddAnotherAuditSourceBaseController.onPageLoad(auditSourcesIndex, CheckMode)
+        |    }
+        |    case AuditEventPage(auditSourcesIndex,auditEventsIndex) => _ => _ =>
+        |      routes.AddAnotherAuditEventBaseController.onPageLoad(auditSourcesIndex, auditEventsIndex, CheckMode)""".stripMargin
+  }
+
+  it should "render navigations between the pages of a switch-case journey" in {
+    val whichTaxRegime =
+      journeyPage("whichTaxRegime", ClassType(basePackage / "models" / "TaxRegime"))
+    val vatInfo =
+      journeyPage("vatInfo", FieldType.STRING)
+    val saInfo =
+      journeyPage("saInfo", FieldType.STRING)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whichTaxRegime" -> Journey(
+        pages = Map(
+          "whichTaxRegime" -> whichTaxRegime,
+          "saInfo"         -> saInfo,
+          "vatInfo"        -> vatInfo
+        ),
+        journey = List(
+          SwitchCasePart(
+            "whichTaxRegime",
+            Map(
+              "SA"  -> List(SinglePagePart("saInfo", None)),
+              "VAT" -> List(SinglePagePart("vatInfo", None))
+            ),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    Navigator.checkRoutesFor(config) shouldBe
+      """    case WhichTaxRegimePage => _ => {
+        |      case TaxRegime.SA => routes.SaInfoBaseController.onPageLoad(CheckMode)
+        |      case TaxRegime.VAT => routes.VatInfoBaseController.onPageLoad(CheckMode)
+        |    }
+        |    case SaInfoPage(TaxRegime.SA) => _ => _ =>
+        |      routes.CheckYourAnswersBaseController.onPageLoad
+        |    case VatInfoPage(TaxRegime.VAT) => _ => _ =>
+        |      routes.CheckYourAnswersBaseController.onPageLoad""".stripMargin
+  }
+
+  it should "render navigations between the pages of an if-then journey" in {
+    val addATaxRegime =
+      journeyPage("addATaxRegime", ClassType(basePackage / "Choice"))
+    val taxRegime =
+      journeyPage("taxRegime", FieldType.STRING)
+    val addAnotherTaxRegime =
+      journeyPage("addAnotherTaxRegime", ClassType(basePackage / "Choice"))
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whichTaxRegime" -> Journey(
+        pages = Map(
+          "addATaxRegime"       -> addATaxRegime,
+          "taxRegime"           -> taxRegime,
+          "addAnotherTaxRegime" -> addAnotherTaxRegime
+        ),
+        journey = List(
+          IfThenPart(
+            addATaxRegime.pageKey,
+            List(
+              DoWhilePart(
+                addAnotherTaxRegime.pageKey,
+                List(SinglePagePart(taxRegime.pageKey, None)),
+                "taxRegimes"
+              )
+            ),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    Navigator.checkRoutesFor(config) shouldBe
+      """    case AddATaxRegimePage => _ => {
+        |      case Choice.Yes => routes.TaxRegimeBaseController.onPageLoad(0, CheckMode)
+        |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
+        |    }
+        |    case AddAnotherTaxRegimePage(Choice.Yes,taxRegimesIndex) => _ => {
+        |      case Choice.Yes => routes.TaxRegimeBaseController.onPageLoad(taxRegimesIndex + 1, CheckMode)
+        |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
+        |    }
+        |    case TaxRegimePage(Choice.Yes,taxRegimesIndex) => _ => _ =>
+        |      routes.AddAnotherTaxRegimeBaseController.onPageLoad(taxRegimesIndex, CheckMode)""".stripMargin
+  }
+
+  it should "render navigations between the pages of a nested do-while journey" in {
+    val auditSource = journeyPage("auditSource", FieldType.STRING)
+    val auditEvent  = journeyPage("auditEvent", FieldType.STRING)
+    val addAnotherAuditSource =
+      journeyPage("addAnotherAuditSource", ClassType(basePackage / "Choice"))
+    val addAnotherAuditEvent =
+      journeyPage("addAnotherAuditEvent", ClassType(basePackage / "Choice"))
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "auditSources" -> Journey(
+        pages = Map(
+          "auditEvent"           -> auditEvent,
+          "auditSource"          -> auditSource,
+          "addAnotherAuditSource" -> addAnotherAuditSource,
+          "addAnotherAuditEvent" -> addAnotherAuditEvent
+        ),
+        journey = List(
+          DoWhilePart(
+            "addAnotherAuditSource",
+            List(
+              SinglePagePart("auditSource", None),
+              DoWhilePart(
+                "addAnotherAuditEvent",
+                List(SinglePagePart("auditEvent", None)),
+                "auditEvents"
+              )
+            ),
+            "auditSources"
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    Navigator.checkRoutesFor(config) shouldBe
+      """    case AddAnotherAuditSourcePage(auditSourcesIndex) => _ => {
+        |      case Choice.Yes => routes.AuditSourceBaseController.onPageLoad(auditSourcesIndex + 1, CheckMode)
+        |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
+        |    }
+        |    case AuditSourcePage(auditSourcesIndex) => _ => _ =>
+        |      routes.AuditEventBaseController.onPageLoad(auditSourcesIndex, 0, CheckMode)
+        |    case AddAnotherAuditEventPage(auditSourcesIndex,auditEventsIndex) => _ => {
+        |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditSourcesIndex, auditEventsIndex + 1, CheckMode)
+        |      case Choice.No  => routes.AddAnotherAuditSourceBaseController.onPageLoad(auditSourcesIndex, CheckMode)
+        |    }
+        |    case AuditEventPage(auditSourcesIndex,auditEventsIndex) => _ => _ =>
+        |      routes.AddAnotherAuditEventBaseController.onPageLoad(auditSourcesIndex, auditEventsIndex, CheckMode)""".stripMargin
   }
 
   "Navigator.render" should "render a Navigator interface and default implementation" in {

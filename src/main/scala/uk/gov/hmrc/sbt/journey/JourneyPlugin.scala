@@ -74,6 +74,14 @@ object JourneyPlugin extends AutoPlugin {
     val overwriteJourneyViews = inputKey[Unit](
       "Overwrite the view files for each of the journey pages."
     )
+
+    val initialiseJourneyForms = taskKey[Unit](
+      "Initialise form providers for each of the journey pages if they don't already exist."
+    )
+
+    val overwriteJourneyForms = inputKey[Unit](
+      "Overwrite the form providers for each of the journey pages."
+    )
   }
 
   import autoImport.*
@@ -138,6 +146,20 @@ object JourneyPlugin extends AutoPlugin {
         val baseDir       = sourceDirectory.value
         val journeyConfig = journeyConfiguration.value
         initialiseJourneyViewFiles(logger, baseDir, journeyConfig, overwrite = true)
+      }
+    },
+    initialiseJourneyForms := {
+      val logger        = streams.value.log
+      val baseDir       = sourceDirectory.value
+      val journeyConfig = journeyConfiguration.value
+      initialiseJourneyFormFiles(logger, baseDir, journeyConfig)
+    },
+    overwriteJourneyForms := {
+      if (userConfirmation.parsed) {
+        val logger        = streams.value.log
+        val baseDir       = sourceDirectory.value
+        val journeyConfig = journeyConfiguration.value
+        initialiseJourneyFormFiles(logger, baseDir, journeyConfig, overwrite = true)
       }
     }
   )
@@ -274,39 +296,14 @@ object JourneyPlugin extends AutoPlugin {
   }
 
   private val primitives = Set[Class[? <: AnyVal]](
-    classOf[Byte],
-    classOf[Short],
     classOf[Int],
-    classOf[Long],
-    classOf[Float],
-    classOf[Double],
-    classOf[Char],
     classOf[Boolean]
   ).map(clazz => clazz.getSimpleName -> PrimitiveType(clazz)).toMap
 
   private val builtIns = Set[Class[? <: AnyRef]](
     classOf[String],
-    classOf[Exception],
-    classOf[Throwable],
-    classOf[java.time.DayOfWeek],
-    classOf[java.time.Instant],
     classOf[java.time.LocalDate],
-    classOf[java.time.LocalDateTime],
-    classOf[java.time.LocalTime],
-    classOf[java.time.Month],
-    classOf[java.time.MonthDay],
-    classOf[java.time.OffsetDateTime],
-    classOf[java.time.OffsetTime],
-    classOf[java.time.Period],
-    classOf[java.time.Year],
-    classOf[java.time.YearMonth],
-    classOf[java.time.ZonedDateTime],
-    classOf[java.time.ZoneId],
-    classOf[java.time.ZoneOffset],
-    classOf[scala.concurrent.duration.Duration],
-    classOf[scala.concurrent.duration.FiniteDuration],
-    classOf[scala.math.BigDecimal],
-    classOf[java.util.concurrent.TimeUnit]
+    classOf[scala.math.BigDecimal]
   ).map(clazz => clazz.getSimpleName -> ClassType(clazz.getName)).toMap
 
   private[journey] def deserialiseAnswerModel(
@@ -321,19 +318,8 @@ object JourneyPlugin extends AutoPlugin {
         val entries    = obj.entrySet().asScala.toList
         val firstEntry = entries.head
         val modelName  = firstEntry.getKey
-        if (modelName == "List")
-          ListType(deserialiseAnswerModel(models, modelsPackage, errors, obj.get(modelName)))
-        else if (modelName == "Option")
+        if (modelName == "Option") {
           OptionType(deserialiseAnswerModel(models, modelsPackage, errors, obj.get(modelName)))
-        else if (modelName == "Set")
-          SetType(deserialiseAnswerModel(models, modelsPackage, errors, obj.get(modelName)))
-        else if (modelName == "Array")
-          ArrayType(deserialiseAnswerModel(models, modelsPackage, errors, obj.get(modelName)))
-        else if (modelName == "Map") {
-          val configList = obj.toConfig.getList(modelName)
-          val keyModel   = deserialiseAnswerModel(models, modelsPackage, errors, configList.get(0))
-          val valueModel = deserialiseAnswerModel(models, modelsPackage, errors, configList.get(1))
-          MapType(keyModel, valueModel)
         } else {
           errors += problem(
             firstEntry.getValue.origin(),
@@ -448,7 +434,7 @@ object JourneyPlugin extends AutoPlugin {
         val answerType = Option(pages(choicePage).answerType)
 
         if (!answerType.contains(FieldType.BOOLEAN)) {
-          errors += problem(obj.origin(), "Expected a choice page with a boolean answerType")
+          errors += problem(obj.origin(), "Expected a choice page with a Boolean answerType")
         }
 
         choicePages += choicePage
@@ -477,7 +463,7 @@ object JourneyPlugin extends AutoPlugin {
         val answerType = Option(pages(choicePage).answerType)
 
         if (!answerType.contains(FieldType.BOOLEAN)) {
-          errors += problem(obj.origin(), "Expected a choice page with a boolean answerType")
+          errors += problem(obj.origin(), "Expected a choice page with a Boolean answerType")
         }
 
         choicePages += choicePage
@@ -784,7 +770,10 @@ object JourneyPlugin extends AutoPlugin {
       val journeyFormProviderFiles = journey.pages.map { case (pageName, page) =>
         val journeyFormProviderFile =
           packageFolder / "forms" / s"${pascalCase(pageName)}FormProvider.scala"
-        IO.write(journeyFormProviderFile, FormProvider.render(basePackage, config.models, page))
+        IO.write(
+          journeyFormProviderFile,
+          FormProvider.baseProvider(basePackage, config.models, page)
+        )
         logger.info(s"Generated form provider $journeyFormProviderFile")
         journeyFormProviderFile
       }
@@ -806,9 +795,10 @@ object JourneyPlugin extends AutoPlugin {
         journeyPageController
       }
 
-      journeyControllerFiles ++ journeyPageObjectFiles ++ journeyFormProviderFiles ++ journeyModelFiles(
-        journey.journey
-      )
+      journeyControllerFiles ++
+        journeyPageObjectFiles ++
+        journeyFormProviderFiles ++
+        journeyModelFiles(journey.journey)
     }.toList
 
     val modelFiles = config.models.map { case (modelName, model) =>
@@ -906,6 +896,8 @@ object JourneyPlugin extends AutoPlugin {
       if (overwrite || !viewFile.exists()) {
         IO.write(viewFile, ViewStub.renderNoForm(pageName))
         logger.info(s"Generated view file $viewFile for page $pageName")
+      } else {
+        logger.warn(s"Skipping view file $viewFile because it already exists")
       }
     }
 
@@ -913,8 +905,38 @@ object JourneyPlugin extends AutoPlugin {
       journey.pages.foreach { case (pageName, page) =>
         val viewFile = viewsFolder / s"${pascalCase(pageName)}View.scala.html"
         if (overwrite || !viewFile.exists()) {
-          IO.write(viewFile, ViewStub.renderForm(config.models, pageName, page))
+          IO.write(viewFile, ViewStub.renderForm(config.models, page))
           logger.info(s"Generated view file $viewFile for page $pageName")
+        } else {
+          logger.warn(s"Skipping view file $viewFile because it already exists")
+        }
+      }
+    }
+  }
+
+  private[journey] def initialiseJourneyFormFiles(
+    logger: Logger,
+    baseDirectory: File,
+    config: JourneyConfig,
+    overwrite: Boolean = false
+  ): Unit = {
+    val packageFolder = baseDirectory
+    // TODO: Switch to this once we have a better template
+    // val packageFolder = config.basePackage
+    //   .split("\\.")
+    //   .foldLeft(baseDirectory)(_ / _)
+
+    val formsFolder = packageFolder / "forms"
+    val basePackage = QualifiedName(config.basePackage)
+
+    config.journeys.foreach { case (_, journey) =>
+      journey.pages.foreach { case (pageName, page) =>
+        val formFile = formsFolder / s"${pascalCase(pageName)}FormProvider.scala"
+        if (overwrite || !formFile.exists()) {
+          IO.write(formFile, FormProvider.providerStub(basePackage, config.models, page))
+          logger.info(s"Generated form provider $formFile for page $pageName")
+        } else {
+          logger.warn(s"Skipping form provider $formFile because it already exists")
         }
       }
     }

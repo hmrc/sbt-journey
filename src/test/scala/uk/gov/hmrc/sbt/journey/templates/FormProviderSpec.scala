@@ -27,22 +27,23 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
 
   val basePackage = QualifiedName("uk.gov.hmrc.sbtjourneytest")
 
-  def journeyPage(pageKey: String, answerType: FieldType) = JourneyPage(
-    pageKey,
-    s"$pageKey.title",
-    s"$pageKey.heading",
-    s"/${kebabCase(pageKey)}",
-    s"/change-${kebabCase(pageKey)}",
-    (basePackage / "controllers" / s"Default${pascalCase(pageKey)}Controller").toString,
-    (basePackage / "forms" / s"Default${pascalCase(pageKey)}FormProvider").toString,
-    s"views.html.${pascalCase(pageKey)}View",
-    withDefaultController = true,
-    withDefaultFormProvider = true,
-    answerType
-  )
+  def journeyPage(pageKey: String, answerType: FieldType, withDefaultFormProvider: Boolean = true) =
+    JourneyPage(
+      pageKey,
+      s"$pageKey.title",
+      s"$pageKey.heading",
+      s"/${kebabCase(pageKey)}",
+      s"/change-${kebabCase(pageKey)}",
+      (basePackage / "controllers" / s"Default${pascalCase(pageKey)}Controller").toString,
+      (basePackage / "forms" / s"Default${pascalCase(pageKey)}FormProvider").toString,
+      s"views.html.${pascalCase(pageKey)}View",
+      withDefaultController = true,
+      withDefaultFormProvider,
+      answerType
+    )
 
-  "FormProvider.render" should "render a form provider for a String page" in {
-    FormProvider.render(
+  "FormProvider.baseProvider" should "render a form provider for a String page" in {
+    FormProvider.baseProvider(
       basePackage,
       Map.empty,
       journeyPage("serviceUrl", FieldType.STRING)
@@ -50,7 +51,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.mapping
+        |import play.api.data.Forms.{mapping,optional}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |
         |
@@ -69,8 +70,27 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
         |""".stripMargin
   }
 
+  it should "render a form provider without a default implementation if requested" in {
+    FormProvider.baseProvider(
+      basePackage,
+      Map.empty,
+      journeyPage("areYouSendingSamples", FieldType.BOOLEAN, withDefaultFormProvider = false)
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |
+        |
+        |trait AreYouSendingSamplesBaseFormProvider {
+        |  def apply(): Form[Boolean]
+        |}
+        |""".stripMargin
+  }
+
   it should "render a form provider for a Boolean page" in {
-    FormProvider.render(
+    FormProvider.baseProvider(
       basePackage,
       Map.empty,
       journeyPage("areYouSendingSamples", FieldType.BOOLEAN)
@@ -78,7 +98,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.mapping
+        |import play.api.data.Forms.{mapping,optional}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |
         |
@@ -101,7 +121,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for an Int page" in {
-    FormProvider.render(
+    FormProvider.baseProvider(
       basePackage,
       Map.empty,
       journeyPage("howManySamples", FieldType.INT)
@@ -109,7 +129,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.mapping
+        |import play.api.data.Forms.{mapping,optional}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |
         |
@@ -132,8 +152,40 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
         |""".stripMargin
   }
 
+  it should "render a form provider for a BigDecimal page" in {
+    FormProvider.baseProvider(
+      basePackage,
+      Map.empty,
+      journeyPage("whatIsTheValuation", ClassType(classOf[BigDecimal]))
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |import scala.math.BigDecimal
+        |
+        |trait WhatIsTheValuationBaseFormProvider {
+        |  def apply(): Form[BigDecimal]
+        |}
+        |
+        |class DefaultWhatIsTheValuationFormProvider
+        |  extends WhatIsTheValuationBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply(): Form[BigDecimal] = Form(
+        |    "value" -> currency(
+        |      requiredKey = "whatIsTheValuation.error.required",
+        |      invalidNumericKey = "whatIsTheValuation.error.invalidNumeric",
+        |      nonNumericKey = "whatIsTheValuation.error.nonNumeric",
+        |    )
+        |  )
+        |}
+        |""".stripMargin
+  }
+
   it should "render a form provider for a LocalDate page" in {
-    FormProvider.render(
+    FormProvider.baseProvider(
       basePackage,
       Map.empty,
       journeyPage("whenDidYouSendSamples", ClassType(classOf[LocalDate]))
@@ -141,7 +193,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.mapping
+        |import play.api.data.Forms.{mapping,optional}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import java.time.LocalDate
         |import play.api.i18n.Messages
@@ -166,8 +218,42 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
         |""".stripMargin
   }
 
+  it should "render a form provider for an optional LocalDate page" in {
+    FormProvider.baseProvider(
+      basePackage,
+      Map.empty,
+      journeyPage("whenDidYouSendSamples", OptionType(ClassType(classOf[LocalDate])))
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |import java.time.LocalDate
+        |import play.api.i18n.Messages
+        |
+        |trait WhenDidYouSendSamplesBaseFormProvider {
+        |  def apply()(using messages: Messages): Form[Option[LocalDate]]
+        |}
+        |
+        |class DefaultWhenDidYouSendSamplesFormProvider
+        |  extends WhenDidYouSendSamplesBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply()(using messages: Messages): Form[Option[LocalDate]] = Form(
+        |    "value" -> optional(localDate(
+        |      invalidKey = "whenDidYouSendSamples.error.invalid",
+        |      allRequiredKey = "whenDidYouSendSamples.error.required.all",
+        |      twoRequiredKey = "whenDidYouSendSamples.error.required.two",
+        |      requiredKey = "whenDidYouSendSamples.error.required",
+        |    ))
+        |  )
+        |}
+        |""".stripMargin
+  }
+
   it should "render a form provider for an unsupported type but provide no default implementation" in {
-    FormProvider.render(
+    FormProvider.baseProvider(
       basePackage,
       Map.empty,
       journeyPage("whichDayOfWeek", ClassType(classOf[DayOfWeek]))
@@ -175,7 +261,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.mapping
+        |import play.api.data.Forms.{mapping,optional}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import java.time.DayOfWeek
         |
@@ -186,7 +272,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for an enum model" in {
-    FormProvider.render(
+    FormProvider.baseProvider(
       basePackage,
       Map("Choice" -> EnumModel("Choice", List("Yes", "No"))),
       journeyPage("areYouSendingSamples", ClassType(basePackage / "Choice"))
@@ -194,7 +280,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.mapping
+        |import play.api.data.Forms.{mapping,optional}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import uk.gov.hmrc.sbtjourneytest.Choice
         |
@@ -217,15 +303,16 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for a case class model" in {
-    FormProvider.render(
+    FormProvider.baseProvider(
       basePackage,
       Map(
         "AuditEvent" -> CaseClassModel(
           "AuditEvent",
           List(
-            "auditType"          -> FieldType.STRING,
-            "description"        -> FieldType.STRING,
-            "expectedGoLiveDate" -> ClassType(classOf[LocalDate])
+            "auditType"                   -> FieldType.STRING,
+            "description"                 -> FieldType.STRING,
+            "expectedGoLiveDate"          -> ClassType(classOf[LocalDate]),
+            "expectedDecommissioningDate" -> OptionType(ClassType(classOf[LocalDate]))
           )
         )
       ),
@@ -234,7 +321,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.mapping
+        |import play.api.data.Forms.{mapping,optional}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import uk.gov.hmrc.sbtjourneytest.AuditEvent
         |import play.api.i18n.Messages
@@ -256,7 +343,325 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
         |        allRequiredKey = "auditEvent.error.expectedGoLiveDate.required.all",
         |        twoRequiredKey = "auditEvent.error.expectedGoLiveDate.required.two",
         |        requiredKey = "auditEvent.error.expectedGoLiveDate.required",
-        |      )
+        |      ),
+        |      "expectedDecommissioningDate" -> optional(localDate(
+        |        invalidKey = "auditEvent.error.expectedDecommissioningDate.invalid",
+        |        allRequiredKey = "auditEvent.error.expectedDecommissioningDate.required.all",
+        |        twoRequiredKey = "auditEvent.error.expectedDecommissioningDate.required.two",
+        |        requiredKey = "auditEvent.error.expectedDecommissioningDate.required",
+        |      ))
+        |    )(AuditEvent.apply)(o => Some(Tuple.fromProductTyped(o)))
+        |  )
+        |}
+        |""".stripMargin
+  }
+
+  "FormProvider.providerStub" should "render a form provider for a String page" in {
+    FormProvider.providerStub(
+      basePackage,
+      Map.empty,
+      journeyPage("serviceUrl", FieldType.STRING)
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |
+        |
+        |class ServiceUrlFormProvider
+        |  extends ServiceUrlBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply(): Form[String] = Form(
+        |    "value" -> text("serviceUrl.error.required")
+        |  )
+        |}
+        |""".stripMargin
+  }
+
+  it should "render a form provider for a Boolean page" in {
+    FormProvider.providerStub(
+      basePackage,
+      Map.empty,
+      journeyPage("areYouSendingSamples", FieldType.BOOLEAN)
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |
+        |
+        |class AreYouSendingSamplesFormProvider
+        |  extends AreYouSendingSamplesBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply(): Form[Boolean] = Form(
+        |    "value" -> boolean(
+        |      requiredKey = "areYouSendingSamples.error.required",
+        |      invalidKey = "areYouSendingSamples.error.boolean",
+        |    )
+        |  )
+        |}
+        |""".stripMargin
+  }
+
+  it should "render a form provider for an Int page" in {
+    FormProvider.providerStub(
+      basePackage,
+      Map.empty,
+      journeyPage("howManySamples", FieldType.INT)
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |
+        |
+        |class HowManySamplesFormProvider
+        |  extends HowManySamplesBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply(): Form[Int] = Form(
+        |    "value" -> int(
+        |      requiredKey = "howManySamples.error.required",
+        |      wholeNumberKey = "howManySamples.error.wholeNumber",
+        |      nonNumericKey = "howManySamples.error.nonNumeric",
+        |    )
+        |  )
+        |}
+        |""".stripMargin
+  }
+
+  it should "render a form provider for a BigDecimal page" in {
+    FormProvider.providerStub(
+      basePackage,
+      Map.empty,
+      journeyPage("whatIsTheValuation", ClassType(classOf[BigDecimal]))
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |import scala.math.BigDecimal
+        |
+        |class WhatIsTheValuationFormProvider
+        |  extends WhatIsTheValuationBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply(): Form[BigDecimal] = Form(
+        |    "value" -> currency(
+        |      requiredKey = "whatIsTheValuation.error.required",
+        |      invalidNumericKey = "whatIsTheValuation.error.invalidNumeric",
+        |      nonNumericKey = "whatIsTheValuation.error.nonNumeric",
+        |    )
+        |  )
+        |}
+        |""".stripMargin
+  }
+  it should "render a form provider for a LocalDate page" in {
+    FormProvider.providerStub(
+      basePackage,
+      Map.empty,
+      journeyPage("whenDidYouSendSamples", ClassType(classOf[LocalDate]))
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |import java.time.LocalDate
+        |import play.api.i18n.Messages
+        |
+        |class WhenDidYouSendSamplesFormProvider
+        |  extends WhenDidYouSendSamplesBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply()(using messages: Messages): Form[LocalDate] = Form(
+        |    "value" -> localDate(
+        |      invalidKey = "whenDidYouSendSamples.error.invalid",
+        |      allRequiredKey = "whenDidYouSendSamples.error.required.all",
+        |      twoRequiredKey = "whenDidYouSendSamples.error.required.two",
+        |      requiredKey = "whenDidYouSendSamples.error.required",
+        |    )
+        |  )
+        |}
+        |""".stripMargin
+  }
+
+  it should "render a form provider for an optional LocalDate page" in {
+    FormProvider.providerStub(
+      basePackage,
+      Map.empty,
+      journeyPage("whenDidYouSendSamples", OptionType(ClassType(classOf[LocalDate])))
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |import java.time.LocalDate
+        |import play.api.i18n.Messages
+        |
+        |class WhenDidYouSendSamplesFormProvider
+        |  extends WhenDidYouSendSamplesBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply()(using messages: Messages): Form[Option[LocalDate]] = Form(
+        |    "value" -> optional(localDate(
+        |      invalidKey = "whenDidYouSendSamples.error.invalid",
+        |      allRequiredKey = "whenDidYouSendSamples.error.required.all",
+        |      twoRequiredKey = "whenDidYouSendSamples.error.required.two",
+        |      requiredKey = "whenDidYouSendSamples.error.required",
+        |    ))
+        |  )
+        |}
+        |""".stripMargin
+  }
+
+  it should "render a form provider for an unsupported type but provide no default mappings" in {
+    FormProvider.providerStub(
+      basePackage,
+      Map.empty,
+      journeyPage("whichDayOfWeek", ClassType(classOf[DayOfWeek]))
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |import java.time.DayOfWeek
+        |
+        |class WhichDayOfWeekFormProvider
+        |  extends WhichDayOfWeekBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply(): Form[DayOfWeek] = Form(
+        |    "value" -> ??? /* TODO: There are no default mappings for DayOfWeek */
+        |  )
+        |}
+        |""".stripMargin
+  }
+
+  it should "render a form provider for an enum model" in {
+    FormProvider.providerStub(
+      basePackage,
+      Map("Choice" -> EnumModel("Choice", List("Yes", "No"))),
+      journeyPage("areYouSendingSamples", ClassType(basePackage / "Choice"))
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |import uk.gov.hmrc.sbtjourneytest.Choice
+        |
+        |class AreYouSendingSamplesFormProvider
+        |  extends AreYouSendingSamplesBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply(): Form[Choice] = Form(
+        |    "value" -> enumerable[Choice](
+        |      requiredKey = "areYouSendingSamples.error.required",
+        |      invalidKey = "areYouSendingSamples.error.invalid",
+        |    )
+        |  )
+        |}
+        |""".stripMargin
+  }
+
+  it should "render a form provider for a case class model" in {
+    FormProvider.providerStub(
+      basePackage,
+      Map(
+        "AuditEvent" -> CaseClassModel(
+          "AuditEvent",
+          List(
+            "auditType"                   -> FieldType.STRING,
+            "description"                 -> FieldType.STRING,
+            "expectedGoLiveDate"          -> ClassType(classOf[LocalDate]),
+            "expectedDecommissioningDate" -> OptionType(ClassType(classOf[LocalDate]))
+          )
+        )
+      ),
+      journeyPage("auditEvent", ClassType(basePackage / "AuditEvent"))
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |import uk.gov.hmrc.sbtjourneytest.AuditEvent
+        |import play.api.i18n.Messages
+        |
+        |class AuditEventFormProvider
+        |  extends AuditEventBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply()(using messages: Messages): Form[AuditEvent] = Form(
+        |    "value" -> mapping(
+        |      "auditType" -> text("auditEvent.error.auditType.required"),
+        |      "description" -> text("auditEvent.error.description.required"),
+        |      "expectedGoLiveDate" -> localDate(
+        |        invalidKey = "auditEvent.error.expectedGoLiveDate.invalid",
+        |        allRequiredKey = "auditEvent.error.expectedGoLiveDate.required.all",
+        |        twoRequiredKey = "auditEvent.error.expectedGoLiveDate.required.two",
+        |        requiredKey = "auditEvent.error.expectedGoLiveDate.required",
+        |      ),
+        |      "expectedDecommissioningDate" -> optional(localDate(
+        |        invalidKey = "auditEvent.error.expectedDecommissioningDate.invalid",
+        |        allRequiredKey = "auditEvent.error.expectedDecommissioningDate.required.all",
+        |        twoRequiredKey = "auditEvent.error.expectedDecommissioningDate.required.two",
+        |        requiredKey = "auditEvent.error.expectedDecommissioningDate.required",
+        |      ))
+        |    )(AuditEvent.apply)(o => Some(Tuple.fromProductTyped(o)))
+        |  )
+        |}
+        |""".stripMargin
+  }
+
+  it should "render a form provider for a case class model with an unsupported field type" in {
+    FormProvider.providerStub(
+      basePackage,
+      Map(
+        "AuditEvent" -> CaseClassModel(
+          "AuditEvent",
+          List(
+            "auditType"               -> FieldType.STRING,
+            "description"             -> FieldType.STRING,
+            "expectedGoLiveDate"      -> ClassType(classOf[LocalDate]),
+            "expectedGoLiveDayOfWeek" -> ClassType(classOf[DayOfWeek])
+          )
+        )
+      ),
+      journeyPage("auditEvent", ClassType(basePackage / "AuditEvent"))
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |import uk.gov.hmrc.sbtjourneytest.AuditEvent
+        |import play.api.i18n.Messages
+        |
+        |class AuditEventFormProvider
+        |  extends AuditEventBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply()(using messages: Messages): Form[AuditEvent] = Form(
+        |    "value" -> mapping(
+        |      "auditType" -> text("auditEvent.error.auditType.required"),
+        |      "description" -> text("auditEvent.error.description.required"),
+        |      "expectedGoLiveDate" -> localDate(
+        |        invalidKey = "auditEvent.error.expectedGoLiveDate.invalid",
+        |        allRequiredKey = "auditEvent.error.expectedGoLiveDate.required.all",
+        |        twoRequiredKey = "auditEvent.error.expectedGoLiveDate.required.two",
+        |        requiredKey = "auditEvent.error.expectedGoLiveDate.required",
+        |      ),
+        |      "expectedGoLiveDayOfWeek" -> ??? /* TODO: There are no default mappings for DayOfWeek */
         |    )(AuditEvent.apply)(o => Some(Tuple.fromProductTyped(o)))
         |  )
         |}

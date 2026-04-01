@@ -96,9 +96,8 @@ class ImportsSpec extends AnyFlatSpec with Matchers {
 
   "Imports.importedSymbols" should "collect imported symbols from field types" in {
     Imports.importedSymbols(
-      MapType(FieldType.STRING, ClassType(classOf[DateTimeFormatter]))
+      ListType(ClassType(classOf[DateTimeFormatter]))
     ) shouldBe Map(
-      JavaLangPrefix                 -> Set("String"),
       List("java", "time", "format") -> Set("DateTimeFormatter")
     )
   }
@@ -108,13 +107,9 @@ class ImportsSpec extends AnyFlatSpec with Matchers {
       List(
         "startDateTime" -> OptionType(ClassType(classOf[Instant])),
         "endDate"       -> OptionType(ClassType(classOf[LocalDate])),
-        "formatters" -> MapType(
-          FieldType.STRING,
-          ClassType(classOf[DateTimeFormatter])
-        )
+        "formatters" -> ListType(ClassType(classOf[DateTimeFormatter]))
       )
     ) shouldBe Map(
-      JavaLangPrefix                 -> Set("String"),
       JavaTimePrefix                 -> Set("LocalDate", "Instant"),
       List("java", "time", "format") -> Set("DateTimeFormatter")
     )

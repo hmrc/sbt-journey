@@ -42,9 +42,11 @@ object Imports {
       .collect {
         case (prefix, types) if needsImport(currentPackage, prefix) =>
           val packagePrefix =
-            prefix.mkString("", ".", ".")
+            if (prefix.isEmpty) "_root_."
+            else prefix.mkString("", ".", ".")
           val symbols =
-            if (types.size == 1) types.head else types.toList.sorted.mkString("{", ",", "}")
+            if (types.size == 1) types.head
+            else types.toList.sorted.mkString("{", ",", "}")
           s"import $packagePrefix$symbols"
       }
 
@@ -87,11 +89,8 @@ object Imports {
 
   private def collectClassTypes(fieldType: FieldType): Set[ClassType] = {
     def find(typ: FieldType): Set[ClassType] = typ match {
-      case MapType(keys, values)    => find(keys) ++ find(values)
-      case ArrayType(elements)      => find(elements)
       case ListType(elements)       => find(elements)
       case OptionType(elements)     => find(elements)
-      case SetType(elements)        => find(elements)
       case classType @ ClassType(_) => Set(classType)
       case SyntheticClassType(_, _) => Set.empty
       case PrimitiveType(_)         => Set.empty

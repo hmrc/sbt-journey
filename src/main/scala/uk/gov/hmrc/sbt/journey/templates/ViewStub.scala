@@ -225,13 +225,20 @@ object ViewStub {
                   |$p)""".stripMargin
 
             List(input)
+
+          case _ =>
+            val inputType = ModelFields.fieldType(fieldType)
+            val input =
+              s"""|$p@* TODO: Add an input for "$parentField$fieldName" - there is no default input for $inputType fields *@"""
+
+            List(input)
         }
     }
   }
 
-  def renderForm(models: Map[String, AnswerModel], pageName: String, page: JourneyPage): String = {
+  def renderForm(models: Map[String, AnswerModel], page: JourneyPage): String = {
+    val pageName = page.pageKey
     val answerType = page.answerType
-    val fallback   = "        // TODO: Add your form fields here"
 
     val imports = {
       val imports = importsFor(models, answerType)
@@ -257,15 +264,12 @@ object ViewStub {
         )
     }
 
-    val fields =
-      if (!FormProvider.hasMappingsFor(models, answerType))
-        List(fallback)
-      else
-        fieldsFor(models, pageName, "", "value", answerType)
+    val fields = fieldsFor(models, pageName, "", "value", answerType)
 
     val heading =
       if (fields.length == 1) ""
-      else s"""        <h1 class="govuk-heading-xl">@messages("$pageName.heading")</h1>\n"""
+      else
+        s"""        <h1 class="govuk-heading-xl">@messages("$pageName.heading")</h1>${System.lineSeparator()}"""
 
       s"""$imports@this(
        |    layout: templates.Layout,

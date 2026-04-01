@@ -49,11 +49,8 @@ object ModelFields {
     parts.flatMap(forPart(modelsPackage, journey, _))
 
   def fieldType(typ: FieldType): String = typ match {
-    case MapType(keys, values)       => s"Map[${fieldType(keys)}, ${fieldType(values)}]"
-    case ArrayType(elements)         => s"Array[${fieldType(elements)}]"
     case ListType(elements)          => s"List[${fieldType(elements)}]"
     case OptionType(elements)        => s"Option[${fieldType(elements)}]"
-    case SetType(elements)           => s"Set[${fieldType(elements)}]"
     case PrimitiveType(clazz)        => capitalise(clazz.getSimpleName)
     case ClassType(clazz)            => clazz.split("\\.").last
     case SyntheticClassType(_, name) => name

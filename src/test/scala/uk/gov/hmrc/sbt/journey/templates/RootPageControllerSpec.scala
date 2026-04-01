@@ -63,4 +63,35 @@ class RootPageControllerSpec extends AnyFlatSpec with Matchers {
         |}
         |""".stripMargin
   }
+
+  it should "provide no default controller implementation if requested" in {
+    val basePackage = QualifiedName("uk.gov.hmrc.sbtjourneytest")
+
+    val rootPage = RootPage(
+      titleKey = "beforeYouStart.title",
+      headingKey = "beforeYouStart.heading",
+      viewRoute = "before-you-start",
+      controllerClass = (basePackage / "controllers" / "DefaultBeforeYouStartController").toString,
+      viewClass = "views.html.BeforeYouStartView",
+      withDefaultController = false
+    )
+
+    RootPageController.render(basePackage, "beforeYouStart", rootPage) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.controllers
+        |
+        |import controllers.actions.* // uk.gov.hmrc.sbtjourneytest.controllers.actions.*
+        |
+        |import play.api.i18n.I18nSupport
+        |import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
+        |import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendBaseController
+        |
+        |import com.google.inject.ImplementedBy
+        |import javax.inject.{Inject, Singleton}
+        |import scala.concurrent.{ExecutionContext, Future}
+        |
+        |trait BeforeYouStartBaseController extends FrontendBaseController with I18nSupport {
+        |  def onPageLoad: Action[AnyContent]
+        |}
+        |""".stripMargin
+  }
 }

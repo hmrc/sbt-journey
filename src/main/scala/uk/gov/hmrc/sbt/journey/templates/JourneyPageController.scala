@@ -30,6 +30,7 @@ object JourneyPageController {
     journey: Journey
   ): String = {
     val capitalPageName = pascalCase(pageName)
+    val withDefault     = journeyPage.withDefaultController
     val interfaceName   = s"${capitalPageName}BaseController"
 
     val defaultImplName  = s"Default${capitalPageName}Controller"
@@ -44,7 +45,7 @@ object JourneyPageController {
 
     def initialiseAnswers(indent: Int) =
       if (requiresData) ""
-      else s"\n|${" " * indent}.getOrElse(UserAnswers(request.userId))"
+      else s"${System.lineSeparator()}|${" " * indent}.getOrElse(UserAnswers(request.userId))"
 
     def onPageLoadDeclFor(indexParam: String): String = {
       s"  def onPageLoad(${indexParam}mode: Mode): Action[AnyContent]"
@@ -224,6 +225,32 @@ object JourneyPageController {
       }
       .unzip
 
+    val implementedBy =
+      if (!withDefault) ""
+      else s"@ImplementedBy(classOf[$defaultImplName])${System.lineSeparator()}"
+
+    val defaultImpl =
+      if (!withDefault) ""
+      else
+        s"""
+           |@Singleton
+           |class $defaultImplName @Inject() (
+           |  identify: IdentifierAction,
+           |  getData: DataRetrievalAction,
+           |  requireData: DataRequiredAction,
+           |  navigator: JourneyNavigator,
+           |  sessionRepository: SessionRepository,
+           |  form: ${formProviderName.parts.last},
+           |  view: ${journeyPage.viewClass},
+           |  override val controllerComponents: MessagesControllerComponents
+           |)(implicit ec: ExecutionContext) extends $interfaceName {
+           |
+           |${onPageLoadImpls.mkString(System.lineSeparator() * 2)}
+           |
+           |${onSubmitImpls.mkString(System.lineSeparator() * 2)}
+           |}
+           |""".stripMargin
+
     s"""package ${basePackage / "controllers"}
        |
        |import controllers.actions.*  // ${basePackage / "controllers.actions.*"}
@@ -244,29 +271,11 @@ object JourneyPageController {
        |import javax.inject.{Inject, Singleton}
        |import scala.concurrent.{ExecutionContext, Future}
        |
-       |@ImplementedBy(classOf[$defaultImplName])
-       |trait $interfaceName extends FrontendBaseController with I18nSupport {
+       |${implementedBy}trait $interfaceName extends FrontendBaseController with I18nSupport {
        |${onPageLoadDecls.mkString(System.lineSeparator())}
        |${onSubmitDecls.mkString(System.lineSeparator())}
        |}
-       |
-       |@Singleton
-       |class $defaultImplName @Inject() (
-       |  identify: IdentifierAction,
-       |  getData: DataRetrievalAction,
-       |  requireData: DataRequiredAction,
-       |  navigator: JourneyNavigator,
-       |  sessionRepository: SessionRepository,
-       |  form: ${formProviderName.parts.last},
-       |  view: ${journeyPage.viewClass},
-       |  override val controllerComponents: MessagesControllerComponents
-       |)(implicit ec: ExecutionContext) extends $interfaceName {
-       |
-       |${onPageLoadImpls.mkString(System.lineSeparator() * 2)}
-       |
-       |${onSubmitImpls.mkString(System.lineSeparator() * 2)}
-       |}
-       |""".stripMargin
+       |$defaultImpl""".stripMargin
   }
 
 }

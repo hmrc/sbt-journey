@@ -26,22 +26,10 @@ sealed abstract class FieldType extends Product with Serializable {
 }
 
 object FieldType {
-  val BYTE    = PrimitiveType(classOf[Byte])
-  val SHORT   = PrimitiveType(classOf[Short])
   val INT     = PrimitiveType(classOf[Int])
-  val LONG    = PrimitiveType(classOf[Long])
-  val FLOAT   = PrimitiveType(classOf[Float])
-  val DOUBLE  = PrimitiveType(classOf[Double])
-  val CHAR    = PrimitiveType(classOf[Char])
   val BOOLEAN = PrimitiveType(classOf[Boolean])
   val STRING  = ClassType(classOf[String])
 }
-
-/** An array answer.
-  * @param elements
-  *   the element type of the array.
-  */
-case class ArrayType(elements: FieldType) extends FieldType
 
 /** A list answer.
   * @param elements
@@ -54,20 +42,6 @@ case class ListType(elements: FieldType) extends FieldType
   *   the element type of the option.
   */
 case class OptionType(elements: FieldType) extends FieldType
-
-/** A set answer.
-  * @param elements
-  *   the element type of the set.
-  */
-case class SetType(elements: FieldType) extends FieldType
-
-/** A map answer.
-  * @param keys
-  *   the key type of the map.
-  * @param values
-  *   the value type of the map.
-  */
-case class MapType(keys: FieldType, values: FieldType) extends FieldType
 
 /** A primitive type answer.
   * @param clazz

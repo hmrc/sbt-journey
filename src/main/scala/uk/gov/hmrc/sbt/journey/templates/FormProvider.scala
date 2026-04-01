@@ -23,7 +23,7 @@ import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.pascalCase
 import java.time.LocalDate
 
 object FormProvider {
-  private[templates] def hasMappingsFor(
+  private def hasMappingsFor(
     models: Map[String, AnswerModel],
     fieldType: FieldType
   ): Boolean = {
@@ -54,6 +54,9 @@ object FormProvider {
       // The fieldType itself is LocalDate
       case ClassType(clazz) if clazz == classOf[LocalDate].getName =>
         true
+      // It's an optional LocalDate
+      case OptionType(fieldType) =>
+        hasLocalDateField(models, fieldType)
       case _ =>
         // It's a model which has a LocalDate field
         models
@@ -141,11 +144,60 @@ object FormProvider {
             s"""text("$pageName.error.${parentField}${subField}required")""".stripMargin
           case OptionType(fieldType) =>
             s"optional(${mappingsFor(models, pageName, indent, enclosing, fieldName, fieldType)})"
+          case _ =>
+            s"??? /* TODO: There are no default mappings for ${ModelFields.fieldType(fieldType)} */"
         }
     }
   }
 
-  def render(
+  def baseProvider(
+    basePackage: QualifiedName,
+    models: Map[String, AnswerModel],
+    journeyPage: JourneyPage
+  ): String = {
+    val formsPackage = basePackage / "forms"
+    val pageName     = journeyPage.pageKey
+    val answerType   = journeyPage.answerType
+    val withDefault  = journeyPage.withDefaultFormProvider
+    val fieldType    = ModelFields.fieldType(answerType)
+
+    val answerImports   = Imports.importedSymbols(answerType)
+    val usesLocalDate   = hasLocalDateField(models, answerType)
+    val messagesImports = if (usesLocalDate) Map(PlayI18nPrefix -> Set("Messages")) else Map.empty
+    val imports =
+      Imports.importsFor(formsPackage, answerImports ++ messagesImports, addFormatImports = false)
+
+    // The localDate form Mapping requires Messages
+    val applyParams = if (usesLocalDate) "(using messages: Messages)" else ""
+
+    val defaultImpl =
+      if (!withDefault || !hasMappingsFor(models, answerType)) ""
+      else
+        s"""
+           |class Default${pascalCase(pageName)}FormProvider
+           |  extends ${pascalCase(pageName)}BaseFormProvider
+           |  with Mappings {
+           |
+           |  def apply()$applyParams: Form[$fieldType] = Form(
+           |    "value" -> ${mappingsFor(models, pageName, indent = 4, "", "value", answerType)}
+           |  )
+           |}
+           |""".stripMargin
+
+    s"""package $formsPackage
+       |
+       |import play.api.data.Form
+       |import play.api.data.Forms.{mapping,optional}
+       |import _root_.forms.mappings.Mappings // ${basePackage / "forms.mappings.Mappings"}
+       |$imports
+       |
+       |trait ${pascalCase(pageName)}BaseFormProvider {
+       |  def apply()$applyParams: Form[$fieldType]
+       |}
+       |$defaultImpl""".stripMargin
+  }
+
+  def providerStub(
     basePackage: QualifiedName,
     models: Map[String, AnswerModel],
     journeyPage: JourneyPage
@@ -171,22 +223,14 @@ object FormProvider {
        |import _root_.forms.mappings.Mappings // ${basePackage / "forms.mappings.Mappings"}
        |$imports
        |
-       |trait ${pascalCase(pageName)}BaseFormProvider {
-       |  def apply()$applyParams: Form[$fieldType]
-       |}${
-        if (!hasMappingsFor(models, answerType)) ""
-        else
-          s"""|
-              |
-              |class Default${pascalCase(pageName)}FormProvider
-              |  extends ${pascalCase(pageName)}BaseFormProvider
-              |  with Mappings {
-              |
-              |  def apply()$applyParams: Form[$fieldType] = Form(
-              |    "value" -> ${mappingsFor(models, pageName, indent = 4, "", "value", answerType)}
-              |  )
-              |}""".stripMargin
-      }
+       |class ${pascalCase(pageName)}FormProvider
+       |  extends ${pascalCase(pageName)}BaseFormProvider
+       |  with Mappings {
+       |
+       |  def apply()$applyParams: Form[$fieldType] = Form(
+       |    "value" -> ${mappingsFor(models, pageName, indent = 4, "", "value", answerType)}
+       |  )
+       |}
        |""".stripMargin
   }
 }
