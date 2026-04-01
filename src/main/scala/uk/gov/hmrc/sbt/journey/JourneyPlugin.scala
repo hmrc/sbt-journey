@@ -52,19 +52,19 @@ object JourneyPlugin extends AutoPlugin {
     )
 
     val generateJourney = taskKey[Seq[File]](
-      "Generate Play Framework controller interfaces from a journey.conf file."
+      "Generate journey code from a journey.conf file."
     )
 
     val generateJourneyRoutes = taskKey[Seq[File]](
-      "Generate Play Framework routes from a journey.conf file."
+      "Generate journey routes from a journey.conf file."
     )
 
     val generateJourneyDiagrams = taskKey[Seq[File]](
-      "Generate Play Framework resources from a journey.conf file."
+      "Generate PlantUML diagrams from a journey.conf file."
     )
 
     val generateJourneyTests = taskKey[Seq[File]](
-      "Generate Play Framework controller tests from a journey.conf file."
+      "Generate journey tests from a journey.conf file."
     )
 
     val initialiseJourneyViews = taskKey[Unit](
