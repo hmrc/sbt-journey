@@ -59,7 +59,6 @@ object JourneyPageController extends Template {
 
   def fetchAnswerGeneratorsFor(path: JourneyPath): List[String] = {
     @tailrec def go(paths: List[PathAtom], acc: List[String] = Nil): List[String] = paths match {
-      case Nil                            => acc.reverse
       case ChoicePath(pageKey, _) :: tail =>
         // The page params for the prefix of this choice path should give
         // us all the params for the associated choice page
@@ -70,6 +69,8 @@ object JourneyPageController extends Template {
         go(tail, generator :: acc)
       case _ :: tail =>
         go(tail, acc)
+      case Nil =>
+        acc.reverse
     }
 
     // Process the path in reverse so that we can see the prefix of each path as "tail"
@@ -198,7 +199,7 @@ object JourneyPageController extends Template {
     requiresData: Boolean,
     journey: Journey,
     pageName: String,
-    journeyPage: JourneyPage,
+    journeyPage: JourneyPage
   ): String = {
     val capitalPageName = pascalCase(pageName)
     val withDefault     = journeyPage.withDefaultController
