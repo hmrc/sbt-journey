@@ -1,5 +1,6 @@
 ## TODOs
 
+* Fix the `Reads` instances for generated journey models which contain `List`s.
 * Rework the hmrc-frontend-scaffold.g8 template to use init_service package structure or create a new template
 * Special care needs to be taken to preserve the changes to the frontend-scaffold:
   * Changed `RichJsObject` to use `deepMerge`, preserving nested answers
