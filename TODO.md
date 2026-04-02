@@ -20,3 +20,5 @@
 * Use `String#indent` rather than padding vars once we're on JDK12+ everywhere. At the moment we can't do this because sbt-settings sets `-java-output-version` to 11.
 * More testing around nested models and form binding
 * More testing around reuse of pages in different "forks" of a journey
+* Add support for `onRemove` / `onDelete` endpoints for add-to-list journeys
+* Migrate to using the `Imports` functionality rather than hardcoded imports as much as possible?

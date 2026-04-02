@@ -28,7 +28,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
     s"$pageKey.title",
     s"$pageKey.heading",
     if (viewRoute.isEmpty) s"/${kebabCase(pageKey)}" else viewRoute,
-    (basePackage / "controllers" / s"Default${pascalCase(pageKey)}Controller").toString,
+    (basePackage / "controllers" / s"${pascalCase(pageKey)}BaseController").toString,
     s"views.html.${pascalCase(pageKey)}View",
     withDefaultController = true
   )
@@ -39,8 +39,8 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
     s"$pageKey.heading",
     s"/${kebabCase(pageKey)}",
     s"/change-${kebabCase(pageKey)}",
-    (basePackage / "controllers" / s"Default${pascalCase(pageKey)}Controller").toString,
-    (basePackage / "forms" / s"Default${pascalCase(pageKey)}FormProvider").toString,
+    (basePackage / "controllers" / s"${pascalCase(pageKey)}BaseController").toString,
+    (basePackage / "forms" / s"${pascalCase(pageKey)}BaseFormProvider").toString,
     s"views.html.${pascalCase(pageKey)}View",
     withDefaultController = true,
     withDefaultFormProvider = true,

@@ -145,8 +145,7 @@ object JourneyPageController extends Template {
           |      answer =>
           |        Redirect(navigator.nextPage(page, mode, request.userAnswers, answer))
           |    )
-          |  }
-          |""".stripMargin
+          |  }""".stripMargin
     } else if (path.isIndex) {
       s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
           |    val userAnswers = request.userAnswers${initialiseAnswers(requiresData, 6)}
@@ -160,8 +159,7 @@ object JourneyPageController extends Template {
           |        Redirect(navigator.nextPage(page, mode, request.userAnswers, answer))
           |    )
           |    result.getOrElse(Redirect(routes.JourneyRecoveryController.onPageLoad()))
-          |  }
-          |""".stripMargin
+          |  }""".stripMargin
     } else if (answerGenerators.isEmpty)
       s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
           |    val page = $pageClassName$pageParams
@@ -175,8 +173,7 @@ object JourneyPageController extends Template {
           |          _ <- sessionRepository.set(updatedAnswers)
           |        } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, answer))
           |    )
-          |  }
-          |""".stripMargin
+          |  }""".stripMargin
     else
       s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
           |    val userAnswers = request.userAnswers${initialiseAnswers(requiresData, 6)}
@@ -193,8 +190,7 @@ object JourneyPageController extends Template {
           |        } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, answer))
           |    )
           |    result.getOrElse(Future.successful(Redirect(routes.JourneyRecoveryController.onPageLoad())))
-          |  }
-          |""".stripMargin
+          |  }""".stripMargin
   }
 
   def render(

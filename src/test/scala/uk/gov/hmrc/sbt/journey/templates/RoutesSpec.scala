@@ -28,7 +28,7 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
     s"$pageKey.title",
     s"$pageKey.heading",
     if (viewRoute.isEmpty) s"/${kebabCase(pageKey)}" else viewRoute,
-    (basePackage / "controllers" / s"Default${pascalCase(pageKey)}Controller").toString,
+    (basePackage / "controllers" / s"${pascalCase(pageKey)}BaseController").toString,
     s"views.html.${pascalCase(pageKey)}View",
     withDefaultController = true
   )
@@ -39,8 +39,8 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
     s"$pageKey.heading",
     s"/${kebabCase(pageKey)}",
     s"/change-${kebabCase(pageKey)}",
-    (basePackage / "controllers" / s"Default${pascalCase(pageKey)}Controller").toString,
-    (basePackage / "forms" / s"Default${pascalCase(pageKey)}FormProvider").toString,
+    (basePackage / "controllers" / s"${pascalCase(pageKey)}BaseController").toString,
+    (basePackage / "forms" / s"${pascalCase(pageKey)}BaseFormProvider").toString,
     s"views.html.${pascalCase(pageKey)}View",
     withDefaultController = true,
     withDefaultFormProvider = true,
@@ -64,9 +64,9 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
     )
 
     Routes.render(config) shouldBe
-      """GET  /  uk.gov.hmrc.sbtjourneytest.controllers.DefaultIndexController.onPageLoad
+      """GET  /  uk.gov.hmrc.sbtjourneytest.controllers.IndexBaseController.onPageLoad
         |
-        |GET  /check-your-answers  uk.gov.hmrc.sbtjourneytest.controllers.DefaultCheckYourAnswersController.onPageLoad""".stripMargin
+        |GET  /check-your-answers  uk.gov.hmrc.sbtjourneytest.controllers.CheckYourAnswersBaseController.onPageLoad""".stripMargin
   }
 
   it should "render routes for a single journey page" in {
@@ -83,10 +83,10 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
     )
 
     Routes.render(config) shouldBe
-      """GET  /contact-details         uk.gov.hmrc.sbtjourneytest.controllers.DefaultContactDetailsController.onPageLoad(mode: Mode = NormalMode)
-        |POST /contact-details         uk.gov.hmrc.sbtjourneytest.controllers.DefaultContactDetailsController.onSubmit(mode: Mode = NormalMode)
-        |GET  /change-contact-details  uk.gov.hmrc.sbtjourneytest.controllers.DefaultContactDetailsController.onPageLoad(mode: Mode = CheckMode)
-        |POST /change-contact-details  uk.gov.hmrc.sbtjourneytest.controllers.DefaultContactDetailsController.onSubmit(mode: Mode = CheckMode)""".stripMargin
+      """GET  /contact-details         uk.gov.hmrc.sbtjourneytest.controllers.ContactDetailsBaseController.onPageLoad(mode: Mode = NormalMode)
+        |POST /contact-details         uk.gov.hmrc.sbtjourneytest.controllers.ContactDetailsBaseController.onSubmit(mode: Mode = NormalMode)
+        |GET  /change-contact-details  uk.gov.hmrc.sbtjourneytest.controllers.ContactDetailsBaseController.onPageLoad(mode: Mode = CheckMode)
+        |POST /change-contact-details  uk.gov.hmrc.sbtjourneytest.controllers.ContactDetailsBaseController.onSubmit(mode: Mode = CheckMode)""".stripMargin
   }
 
   it should "render routes with index parameters for a subjourney page of a do-while journey" in {
@@ -115,15 +115,15 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
 
 
     Routes.render(config) shouldBe
-      """GET  /audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.DefaultAddAnotherAuditEventController.onPageLoad(auditEvents: Int, mode: Mode = NormalMode)
-        |POST /audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.DefaultAddAnotherAuditEventController.onSubmit(auditEvents: Int, mode: Mode = NormalMode)
-        |GET  /audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.DefaultAddAnotherAuditEventController.onPageLoad(auditEvents: Int, mode: Mode = CheckMode)
-        |POST /audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.DefaultAddAnotherAuditEventController.onSubmit(auditEvents: Int, mode: Mode = CheckMode)
+      """GET  /audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onPageLoad(auditEvents: Int, mode: Mode = NormalMode)
+        |POST /audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onSubmit(auditEvents: Int, mode: Mode = NormalMode)
+        |GET  /audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onPageLoad(auditEvents: Int, mode: Mode = CheckMode)
+        |POST /audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onSubmit(auditEvents: Int, mode: Mode = CheckMode)
         |
-        |GET  /audit-events/:auditEvents/audit-event         uk.gov.hmrc.sbtjourneytest.controllers.DefaultAuditEventController.onPageLoad(auditEvents: Int, mode: Mode = NormalMode)
-        |POST /audit-events/:auditEvents/audit-event         uk.gov.hmrc.sbtjourneytest.controllers.DefaultAuditEventController.onSubmit(auditEvents: Int, mode: Mode = NormalMode)
-        |GET  /audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.DefaultAuditEventController.onPageLoad(auditEvents: Int, mode: Mode = CheckMode)
-        |POST /audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.DefaultAuditEventController.onSubmit(auditEvents: Int, mode: Mode = CheckMode)""".stripMargin
+        |GET  /audit-events/:auditEvents/audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onPageLoad(auditEvents: Int, mode: Mode = NormalMode)
+        |POST /audit-events/:auditEvents/audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onSubmit(auditEvents: Int, mode: Mode = NormalMode)
+        |GET  /audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onPageLoad(auditEvents: Int, mode: Mode = CheckMode)
+        |POST /audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onSubmit(auditEvents: Int, mode: Mode = CheckMode)""".stripMargin
   }
 
   it should "render non-parameterised routes for subjourney pages of switch-case journeys" in {
@@ -155,20 +155,20 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
     )
 
     Routes.render(config) shouldBe
-      """GET  /sa-info         uk.gov.hmrc.sbtjourneytest.controllers.DefaultSaInfoController.onPageLoad(mode: Mode = NormalMode)
-        |POST /sa-info         uk.gov.hmrc.sbtjourneytest.controllers.DefaultSaInfoController.onSubmit(mode: Mode = NormalMode)
-        |GET  /change-sa-info  uk.gov.hmrc.sbtjourneytest.controllers.DefaultSaInfoController.onPageLoad(mode: Mode = CheckMode)
-        |POST /change-sa-info  uk.gov.hmrc.sbtjourneytest.controllers.DefaultSaInfoController.onSubmit(mode: Mode = CheckMode)
+      """GET  /sa-info         uk.gov.hmrc.sbtjourneytest.controllers.SaInfoBaseController.onPageLoad(mode: Mode = NormalMode)
+        |POST /sa-info         uk.gov.hmrc.sbtjourneytest.controllers.SaInfoBaseController.onSubmit(mode: Mode = NormalMode)
+        |GET  /change-sa-info  uk.gov.hmrc.sbtjourneytest.controllers.SaInfoBaseController.onPageLoad(mode: Mode = CheckMode)
+        |POST /change-sa-info  uk.gov.hmrc.sbtjourneytest.controllers.SaInfoBaseController.onSubmit(mode: Mode = CheckMode)
         |
-        |GET  /vat-info         uk.gov.hmrc.sbtjourneytest.controllers.DefaultVatInfoController.onPageLoad(mode: Mode = NormalMode)
-        |POST /vat-info         uk.gov.hmrc.sbtjourneytest.controllers.DefaultVatInfoController.onSubmit(mode: Mode = NormalMode)
-        |GET  /change-vat-info  uk.gov.hmrc.sbtjourneytest.controllers.DefaultVatInfoController.onPageLoad(mode: Mode = CheckMode)
-        |POST /change-vat-info  uk.gov.hmrc.sbtjourneytest.controllers.DefaultVatInfoController.onSubmit(mode: Mode = CheckMode)
+        |GET  /vat-info         uk.gov.hmrc.sbtjourneytest.controllers.VatInfoBaseController.onPageLoad(mode: Mode = NormalMode)
+        |POST /vat-info         uk.gov.hmrc.sbtjourneytest.controllers.VatInfoBaseController.onSubmit(mode: Mode = NormalMode)
+        |GET  /change-vat-info  uk.gov.hmrc.sbtjourneytest.controllers.VatInfoBaseController.onPageLoad(mode: Mode = CheckMode)
+        |POST /change-vat-info  uk.gov.hmrc.sbtjourneytest.controllers.VatInfoBaseController.onSubmit(mode: Mode = CheckMode)
         |
-        |GET  /which-tax-regime         uk.gov.hmrc.sbtjourneytest.controllers.DefaultWhichTaxRegimeController.onPageLoad(mode: Mode = NormalMode)
-        |POST /which-tax-regime         uk.gov.hmrc.sbtjourneytest.controllers.DefaultWhichTaxRegimeController.onSubmit(mode: Mode = NormalMode)
-        |GET  /change-which-tax-regime  uk.gov.hmrc.sbtjourneytest.controllers.DefaultWhichTaxRegimeController.onPageLoad(mode: Mode = CheckMode)
-        |POST /change-which-tax-regime  uk.gov.hmrc.sbtjourneytest.controllers.DefaultWhichTaxRegimeController.onSubmit(mode: Mode = CheckMode)""".stripMargin
+        |GET  /which-tax-regime         uk.gov.hmrc.sbtjourneytest.controllers.WhichTaxRegimeBaseController.onPageLoad(mode: Mode = NormalMode)
+        |POST /which-tax-regime         uk.gov.hmrc.sbtjourneytest.controllers.WhichTaxRegimeBaseController.onSubmit(mode: Mode = NormalMode)
+        |GET  /change-which-tax-regime  uk.gov.hmrc.sbtjourneytest.controllers.WhichTaxRegimeBaseController.onPageLoad(mode: Mode = CheckMode)
+        |POST /change-which-tax-regime  uk.gov.hmrc.sbtjourneytest.controllers.WhichTaxRegimeBaseController.onSubmit(mode: Mode = CheckMode)""".stripMargin
   }
 
   it should "render routes with multiple index parameters for subjourney pages of nested do-while journeys" in {
@@ -201,19 +201,19 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
     )
 
     Routes.render(config) shouldBe
-      """GET  /audit-sources/:auditSources/audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.DefaultAddAnotherAuditEventController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
-        |POST /audit-sources/:auditSources/audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.DefaultAddAnotherAuditEventController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
-        |GET  /audit-sources/:auditSources/audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.DefaultAddAnotherAuditEventController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
-        |POST /audit-sources/:auditSources/audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.DefaultAddAnotherAuditEventController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+      """GET  /audit-sources/:auditSources/audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+        |POST /audit-sources/:auditSources/audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+        |GET  /audit-sources/:auditSources/audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+        |POST /audit-sources/:auditSources/audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
         |
-        |GET  /audit-sources/:auditSources/audit-events/:auditEvents/audit-event         uk.gov.hmrc.sbtjourneytest.controllers.DefaultAuditEventController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
-        |POST /audit-sources/:auditSources/audit-events/:auditEvents/audit-event         uk.gov.hmrc.sbtjourneytest.controllers.DefaultAuditEventController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
-        |GET  /audit-sources/:auditSources/audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.DefaultAuditEventController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
-        |POST /audit-sources/:auditSources/audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.DefaultAuditEventController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+        |GET  /audit-sources/:auditSources/audit-events/:auditEvents/audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+        |POST /audit-sources/:auditSources/audit-events/:auditEvents/audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+        |GET  /audit-sources/:auditSources/audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+        |POST /audit-sources/:auditSources/audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
         |
-        |GET  /audit-sources/:auditSources/audit-source         uk.gov.hmrc.sbtjourneytest.controllers.DefaultAuditSourceController.onPageLoad(auditSources: Int, mode: Mode = NormalMode)
-        |POST /audit-sources/:auditSources/audit-source         uk.gov.hmrc.sbtjourneytest.controllers.DefaultAuditSourceController.onSubmit(auditSources: Int, mode: Mode = NormalMode)
-        |GET  /audit-sources/:auditSources/change-audit-source  uk.gov.hmrc.sbtjourneytest.controllers.DefaultAuditSourceController.onPageLoad(auditSources: Int, mode: Mode = CheckMode)
-        |POST /audit-sources/:auditSources/change-audit-source  uk.gov.hmrc.sbtjourneytest.controllers.DefaultAuditSourceController.onSubmit(auditSources: Int, mode: Mode = CheckMode)""".stripMargin
+        |GET  /audit-sources/:auditSources/audit-source         uk.gov.hmrc.sbtjourneytest.controllers.AuditSourceBaseController.onPageLoad(auditSources: Int, mode: Mode = NormalMode)
+        |POST /audit-sources/:auditSources/audit-source         uk.gov.hmrc.sbtjourneytest.controllers.AuditSourceBaseController.onSubmit(auditSources: Int, mode: Mode = NormalMode)
+        |GET  /audit-sources/:auditSources/change-audit-source  uk.gov.hmrc.sbtjourneytest.controllers.AuditSourceBaseController.onPageLoad(auditSources: Int, mode: Mode = CheckMode)
+        |POST /audit-sources/:auditSources/change-audit-source  uk.gov.hmrc.sbtjourneytest.controllers.AuditSourceBaseController.onSubmit(auditSources: Int, mode: Mode = CheckMode)""".stripMargin
   }
 }
