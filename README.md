@@ -4,6 +4,18 @@
 
 It generates code in the style of the [hmrc-frontend-scaffold](https://github.com/hmrc/hmrc-frontend-scaffold.g8) project based upon journey definitions in a journey configuration file.
 
+It generates code for:
+* Controllers
+* Forms
+* Models
+* Page objects
+* A journey navigator
+* A routes file
+
+Interfaces are generated for controllers, forms, and the journey navigator so that you can provide your own implementations.
+
+It can also initialise stub view templates and forms for each of the journey pages as a starting point.
+
 It's intended to help teams to develop an initial skeleton for public-facing services quickly and to get out of the way once it's no longer useful.
 
 ## Installation
@@ -73,6 +85,14 @@ Compile your project:
 
 ```console
 $ sbt compile
+```
+
+Now add the generated routes file to your `prod.routes` file:
+
+```diff
+->         /<microservice name>            app.Routes
++->        /<microservice name>            journey.Routes
+->         /                               health.Routes
 ```
 
 After making changes to the configuration, you can create view templates for any new pages with the `initialiseJourneyViews` task. Existing view template files will not be overwritten.
