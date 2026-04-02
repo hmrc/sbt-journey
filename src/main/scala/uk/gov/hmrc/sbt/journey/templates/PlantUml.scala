@@ -18,13 +18,13 @@ package uk.gov.hmrc.sbt.journey.templates
 
 import uk.gov.hmrc.sbt.journey.models.*
 
-object PlantUml {
+object PlantUml extends Template {
   private def forParts(parts: List[JourneyPart], indent: Int = 0): List[String] = {
     val p = " " * indent
     parts.map {
       case DoWhilePart(choicePage, subJourney, _) =>
         s"""|${p}repeat
-            |${forParts(subJourney, indent + 2).mkString(System.lineSeparator())}
+            |${forParts(subJourney, indent + 2).mkString(NL)}
             |${p}repeat while ($choicePage) is (Yes) not (No)""".stripMargin
       case SwitchCasePart(choicePage, subJourneys, _) =>
         val cases = subJourneys.map { case (name, parts) =>
@@ -32,11 +32,11 @@ object PlantUml {
               |${forParts(parts, indent + 2)}""".stripMargin
         }
         s"""|${p}switch ($choicePage)
-            |${cases.mkString(System.lineSeparator())}
+            |${cases.mkString(NL)}
             |${p}endswitch""".stripMargin
       case IfThenPart(choicePage, subJourney, _) =>
         s"""|${p}if ($choicePage) then (Yes)
-            |${forParts(subJourney, indent + 2).mkString(System.lineSeparator())}
+            |${forParts(subJourney, indent + 2).mkString(NL)}
             |${p}endif""".stripMargin
       case SinglePagePart(pageKey, _) =>
         s"$p:$pageKey;"
@@ -46,7 +46,7 @@ object PlantUml {
   private def forJourney(journey: Journey): String = {
     s"""|@startuml
         |start
-        |${forParts(journey.journey).mkString(System.lineSeparator())}
+        |${forParts(journey.journey).mkString(NL)}
         |end
         |@enduml""".stripMargin
   }

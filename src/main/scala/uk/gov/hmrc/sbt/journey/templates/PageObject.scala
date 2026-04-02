@@ -19,31 +19,21 @@ package uk.gov.hmrc.sbt.journey.templates
 import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, pascalCase}
 
-import scala.annotation.tailrec
-
-object PageObject {
-  private def applyParams(journey: Journey, path: JourneyPath): List[String] = {
-    @tailrec def params(paths: List[PathAtom], acc: List[String] = Nil): List[String] =
-      paths match {
-        case Nil =>
-          acc.reverse
-        case IndexPath(pageKey) :: tail =>
-          val indexParam = s"${camelCase(pageKey)}Index: Int"
-          params(tail, indexParam :: acc)
-        case ChoicePath(pageKey, _) :: tail =>
-          val choiceType  = ModelFields.fieldType(journey.pages(pageKey).answerType)
-          val choiceParam = s"$pageKey: $choiceType"
-          params(tail, choiceParam :: acc)
-        case _ :: tail =>
-          params(tail, acc)
-      }
-
-    params(path.paths)
-  }
+object PageObject extends Template {
+  private def applyParams(journey: Journey, path: JourneyPath): List[String] =
+    path.paths.collect {
+      case IndexPath(pageKey) =>
+        s"${camelCase(pageKey)}Index: Int"
+      case ChoicePath(pageKey, _) =>
+        val answerType = journey.pages(pageKey).answerType
+        val choiceType = ModelFields.fieldType(answerType)
+        s"$pageKey: $choiceType"
+    }
 
   private def submitRouteFor(pageName: String, path: JourneyPath): String = {
     val indexPaths = path.indexPaths
-    if (indexPaths.isEmpty) s"routes.${pageName}BaseController.onSubmit"
+    if (indexPaths.isEmpty)
+      s"routes.${pageName}BaseController.onSubmit"
     else
       path.indexPaths
         .map(idx => s"${camelCase(idx.pageKey)}Index")
@@ -54,78 +44,59 @@ object PageObject {
         )
   }
 
-  private def jsPathFor(path: JourneyPath): String = {
-    @tailrec def go(paths: List[PathAtom], acc: List[String] = Nil): String = paths match {
-      case Nil => acc.reverse.mkString(" \\ ")
-      case IndexPath(pageKey) :: tail =>
-        val indexParam = s"${pageKey}Index"
-        go(tail, indexParam :: s""""$pageKey"""" :: acc)
-      case ChoicePath(pageKey, _) :: tail =>
-        val stringParam = s""""$pageKey""""
-        val choiceParam = s"$pageKey.toString"
-        go(tail, choiceParam :: stringParam :: acc)
-      case StringPath(pageKey) :: tail =>
-        go(tail, s""""$pageKey"""" :: acc)
-      case Root :: tail =>
-        go(tail, "JsPath" :: acc)
-    }
-
-    go(path.paths)
-  }
+  private def jsPathFor(path: JourneyPath): String =
+    path.paths
+      .flatMap {
+        case IndexPath(pageKey) =>
+          List(s""""$pageKey"""", s"${pageKey}Index")
+        case ChoicePath(pageKey, _) =>
+          List(s""""$pageKey"""", s"$pageKey.toString")
+        case StringPath(pageKey) =>
+          List(s""""$pageKey"""")
+        case Root =>
+          List("JsPath")
+      }
+      .mkString(" \\ ")
 
   private def unapplyTypeFor(journey: Journey, path: JourneyPath): String = {
-    @tailrec def go(paths: List[PathAtom], acc: List[String] = Nil): String =
-      paths match {
-        case Nil =>
-          if (acc.length == 1) acc.head
-          else acc.reverse.mkString("(", ", ", ")")
-        case IndexPath(_) :: tail =>
-          go(tail, "Int" :: acc)
-        case ChoicePath(pageKey, _) :: tail =>
-          val choiceType = ModelFields.fieldType(journey.pages(pageKey).answerType)
-          go(tail, choiceType :: acc)
-        case _ :: tail =>
-          go(tail, acc)
-      }
+    val paths = path.paths.collect {
+      case IndexPath(_) => "Int"
+      case ChoicePath(pageKey, _) =>
+        val answerType = journey.pages(pageKey).answerType
+        ModelFields.fieldType(answerType)
+    }
 
-    go(path.paths)
+    if (paths.length == 1) paths.head
+    else paths.mkString("(", ", ", ")")
   }
 
   private def unapplyResultFor(journey: Journey, path: JourneyPath): String = {
-    @tailrec def go(paths: List[PathAtom], acc: List[String] = Nil): String =
-      paths match {
-        case Nil =>
-          if (acc.length == 1) acc.head
-          else acc.reverse.mkString("(", ", ", ")")
-        case IndexPath(pageKey) :: tail =>
-          go(tail, s"${pageKey}Index" :: acc)
-        case ChoicePath(pageKey, _) :: tail =>
-          val choiceType = ModelFields.fieldType(journey.pages(pageKey).answerType)
-          go(tail, s"$choiceType.valueOf($pageKey)" :: acc)
-        case _ :: tail =>
-          go(tail, acc)
-      }
+    val paths = path.paths.collect {
+      case IndexPath(pageKey) =>
+        s"${pageKey}Index"
+      case ChoicePath(pageKey, _) =>
+        val answerType = journey.pages(pageKey).answerType
+        val choiceType = ModelFields.fieldType(answerType)
+        s"$choiceType.valueOf($pageKey)"
+    }
 
-    go(path.paths)
+    if (paths.length == 1) paths.head
+    else paths.mkString("(", ", ", ")")
   }
 
-  private def jsPathNodesFor(path: JourneyPath): String = {
-    @tailrec def go(paths: List[PathAtom], acc: List[String] = Nil): String =
-      paths match {
-        case Nil =>
-          acc.reverse.mkString("", " :: ", " :: Nil")
-        case IndexPath(pageKey) :: tail =>
-          go(tail, s"IdxPathNode(${pageKey}Index)" :: s"""KeyPathNode("$pageKey")""" :: acc)
-        case ChoicePath(pageKey, _) :: tail =>
-          go(tail, s"""KeyPathNode("$pageKey") :: KeyPathNode($pageKey)""" :: acc)
-        case StringPath(pageKey) :: tail =>
-          go(tail, s"""KeyPathNode("$pageKey")""" :: acc)
-        case Root :: tail =>
-          go(tail, acc)
+  private def jsPathNodesFor(path: JourneyPath): String =
+    path.paths
+      .flatMap {
+        case IndexPath(pageKey) =>
+          List(s"""KeyPathNode("$pageKey")""", s"IdxPathNode(${pageKey}Index)")
+        case ChoicePath(pageKey, _) =>
+          List(s"""KeyPathNode("$pageKey")""", s"KeyPathNode($pageKey)")
+        case StringPath(pageKey) =>
+          List(s"""KeyPathNode("$pageKey")""")
+        case _ =>
+          List.empty
       }
-
-    go(path.paths)
-  }
+      .mkString("", " :: ", " :: Nil")
 
   def applyMethod(pageName: String, journey: Journey, path: JourneyPath): String = {
     val params       = applyParams(journey, path)
@@ -187,9 +158,9 @@ object PageObject {
          |""".stripMargin
     } else {
       val applyMethods =
-        overloads.map(applyMethod(capitalPageName, journey, _)).mkString(System.lineSeparator())
+        overloads.map(applyMethod(capitalPageName, journey, _)).mkString(NL)
       val unapplyMethods =
-        overloads.map(unapplyMethod(capitalPageName, journey, _)).mkString(System.lineSeparator())
+        overloads.map(unapplyMethod(capitalPageName, journey, _)).mkString(NL)
 
       s"""package ${basePackage / "pages"}
          |

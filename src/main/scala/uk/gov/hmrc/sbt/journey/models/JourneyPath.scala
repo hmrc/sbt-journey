@@ -16,8 +16,6 @@
 
 package uk.gov.hmrc.sbt.journey.models
 
-import scala.annotation.tailrec
-
 /** A representation of the path to an answer in UserAnswers for a given page key.
   */
 sealed trait JourneyPath extends Product with Serializable {
@@ -52,29 +50,15 @@ sealed trait JourneyPath extends Product with Serializable {
   }
 
   /** A path string that represents the [[JourneyPath]] in a jq-like format. */
-  def pathString: String = {
-    @tailrec def go(paths: List[PathAtom], acc: StringBuilder = new StringBuilder): StringBuilder =
-      paths match {
-        case Nil => acc
-        case Root :: tail =>
-          acc.append("$")
-          go(tail, acc)
-        case StringPath(pageKey) :: tail =>
-          if (acc.isEmpty) acc.append(pageKey)
-          else acc.append(s".$pageKey")
-          go(tail, acc)
-        case IndexPath(pageKey) :: tail =>
-          if (acc.isEmpty) acc.append(s"$pageKey[]")
-          else acc.append(s".$pageKey[]")
-          go(tail, acc)
-        case ChoicePath(pageKey, enumCase) :: tail =>
-          if (acc.isEmpty) acc.append(s"$pageKey.$enumCase")
-          else acc.append(s".$pageKey.$enumCase")
-          go(tail, acc)
+  def pathString: String =
+    paths
+      .map {
+        case Root                          => "$"
+        case StringPath(pageKey)           => pageKey
+        case IndexPath(pageKey)            => s"$pageKey[]"
+        case ChoicePath(pageKey, enumCase) => s"$pageKey.$enumCase"
       }
-
-    go(paths).toString
-  }
+      .mkString(".")
 }
 
 /** A compound [[JourneyPath]] composed of multiple [[PathAtom]]s. */

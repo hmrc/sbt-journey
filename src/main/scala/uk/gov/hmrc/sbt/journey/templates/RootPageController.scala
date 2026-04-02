@@ -19,7 +19,7 @@ package uk.gov.hmrc.sbt.journey.templates
 import uk.gov.hmrc.sbt.journey.models.{QualifiedName, RootPage}
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.pascalCase
 
-object RootPageController {
+object RootPageController extends Template {
   def render(
     basePackage: QualifiedName,
     pageName: String,
@@ -31,7 +31,7 @@ object RootPageController {
     val defaultImplName = s"Default${capitalPageName}Controller"
     val implementedBy =
       if (!withDefault) ""
-      else s"@ImplementedBy(classOf[$defaultImplName])${System.lineSeparator()}"
+      else s"@ImplementedBy(classOf[$defaultImplName])$NL"
 
     val defaultImpl =
       if (!withDefault) ""

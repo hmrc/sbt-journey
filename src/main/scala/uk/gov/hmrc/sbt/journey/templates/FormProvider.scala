@@ -22,7 +22,7 @@ import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.pascalCase
 
 import java.time.LocalDate
 
-object FormProvider {
+object FormProvider extends Template {
   private def hasMappingsFor(
     models: Map[String, AnswerModel],
     fieldType: FieldType
@@ -91,7 +91,7 @@ object FormProvider {
           subFieldType
         )}"""
     }
-    .mkString("," + System.lineSeparator())
+    .mkString("," + NL)
 
   private def mappingsFor(
     models: Map[String, AnswerModel],
@@ -258,7 +258,7 @@ object FormProvider {
        |
        |class DefaultFormProvidersModule extends AbstractModule {
        |  override def configure(): Unit = {
-       |${bindings.mkString(System.lineSeparator())}
+       |${bindings.mkString(NL)}
        |  }
        |}
        |""".stripMargin

@@ -21,7 +21,7 @@ import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{kebabCase, pascalCase}
 
-import java.time.{DayOfWeek, LocalDate}
+import java.time.DayOfWeek
 
 class ViewStubSpec extends AnyFlatSpec with Matchers {
 
@@ -183,7 +183,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
   it should "render a form provider for a BigDecimal page" in {
     ViewStub.renderForm(
       Map.empty,
-      journeyPage("whatIsTheValuation", ClassType(classOf[BigDecimal]))
+      journeyPage("whatIsTheValuation", FieldType.BIGDECIMAL)
     ) shouldBe
       """@import viewmodels.InputWidth._
         |
@@ -224,7 +224,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
   it should "render a view stub for a LocalDate page" in {
     ViewStub.renderForm(
       Map.empty,
-      journeyPage("whenDidYouSendSamples", ClassType(classOf[LocalDate]))
+      journeyPage("whenDidYouSendSamples", FieldType.LOCALDATE)
     ) shouldBe
       """@this(
         |    layout: templates.Layout,
@@ -262,7 +262,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
   it should "render a view stub for an optional LocalDate page" in {
     ViewStub.renderForm(
       Map.empty,
-      journeyPage("whenDidYouSendSamples", OptionType(ClassType(classOf[LocalDate])))
+      journeyPage("whenDidYouSendSamples", OptionType(FieldType.LOCALDATE))
     ) shouldBe
       """@this(
         |    layout: templates.Layout,
@@ -385,8 +385,8 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
           List(
             "auditType"                   -> FieldType.STRING,
             "description"                 -> FieldType.STRING,
-            "expectedGoLiveDate"          -> ClassType(classOf[LocalDate]),
-            "expectedDecommissioningDate" -> OptionType(ClassType(classOf[LocalDate]))
+            "expectedGoLiveDate"          -> FieldType.LOCALDATE,
+            "expectedDecommissioningDate" -> OptionType(FieldType.LOCALDATE)
           )
         )
       ),
@@ -413,6 +413,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
         |        }
         |
         |        <h1 class="govuk-heading-xl">@messages("auditEvent.heading")</h1>
+        |
         |        @govukInput(
         |            InputViewModel(
         |                field = form("value.auditType"),
@@ -461,7 +462,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
           List(
             "auditType"               -> FieldType.STRING,
             "description"             -> FieldType.STRING,
-            "expectedGoLiveDate"      -> ClassType(classOf[LocalDate]),
+            "expectedGoLiveDate"      -> FieldType.LOCALDATE,
             "expectedGoLiveDayOfWeek" -> ClassType(classOf[DayOfWeek])
           )
         )
@@ -489,6 +490,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
         |        }
         |
         |        <h1 class="govuk-heading-xl">@messages("auditEvent.heading")</h1>
+        |
         |        @govukInput(
         |            InputViewModel(
         |                field = form("value.auditType"),

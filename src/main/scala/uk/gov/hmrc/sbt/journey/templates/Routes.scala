@@ -19,7 +19,7 @@ package uk.gov.hmrc.sbt.journey.templates
 import uk.gov.hmrc.sbt.journey.models.{Journey, JourneyConfig, JourneyPage, RootPage}
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, kebabCase}
 
-object Routes {
+object Routes extends Template {
   private[templates] def journeyRoutes(journey: Journey, journeyPage: JourneyPage): String = {
     val viewRoute          = journeyPage.viewRoute
     val changeRoute        = journeyPage.changeRoute
@@ -51,7 +51,7 @@ object Routes {
               |POST ${indexRoute}${changeRoute}${changeRoutePadding}${controllerClass}.onSubmit($indexParams, mode: Mode = CheckMode)""".stripMargin
         }
       }
-      .mkString(System.lineSeparator() * 2)
+      .mkString(NL * 2)
   }
 
   def render(journeyConfig: JourneyConfig): String = {
@@ -69,6 +69,6 @@ object Routes {
         .filterNot(_.isEmpty)
     }
 
-    (rootPageRoutes ++ journeyPageRoutes).mkString(System.lineSeparator() * 2)
+    (rootPageRoutes ++ journeyPageRoutes).mkString(NL * 2)
   }
 }

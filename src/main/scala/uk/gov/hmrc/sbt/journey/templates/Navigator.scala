@@ -19,7 +19,7 @@ package uk.gov.hmrc.sbt.journey.templates
 import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.pascalCase
 
-object Navigator {
+object Navigator extends Template {
   private def unapplyParams(pages: Map[String, JourneyPage], journeyPath: JourneyPath): String = {
     val paths = journeyPath.paths
       .map {
@@ -143,7 +143,7 @@ object Navigator {
       }
       val choicePageRoutes =
         s"""|    case ${pascalCase(choicePage)}Page${unapplyParams(pages, journeyPath)} => _ => {
-            |${choiceRoutes.mkString(System.lineSeparator())}
+            |${choiceRoutes.mkString(NL)}
             |    }""".stripMargin
       val subJourneyRoutes = subJourneys.flatMap { case (choice, subJourney) =>
         val choicePath = journeyPath / ChoicePath(as.getOrElse(choicePage), choice)
@@ -185,7 +185,7 @@ object Navigator {
 
   private[templates] def normalRoutesFor(journeyConfig: JourneyConfig): String = {
     val routes = journeyConfig.journeys.values.toList.flatMap(normalRoutesFor)
-    if (routes.isEmpty) "" else routes.mkString(System.lineSeparator())
+    if (routes.isEmpty) "" else routes.mkString(NL)
   }
 
   private def checkRoutesFor(journey: Journey): List[String] = {
@@ -201,7 +201,7 @@ object Navigator {
 
   private[templates] def checkRoutesFor(journeyConfig: JourneyConfig): String = {
     val routes = journeyConfig.journeys.values.toList.flatMap(checkRoutesFor)
-    if (routes.isEmpty) "" else routes.mkString(System.lineSeparator())
+    if (routes.isEmpty) "" else routes.mkString(NL)
   }
 
   def render(config: JourneyConfig): String = {

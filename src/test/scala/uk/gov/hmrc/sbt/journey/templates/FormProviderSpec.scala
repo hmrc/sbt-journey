@@ -21,7 +21,7 @@ import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{kebabCase, pascalCase}
 
-import java.time.{DayOfWeek, LocalDate}
+import java.time.DayOfWeek
 
 class FormProviderSpec extends AnyFlatSpec with Matchers {
 
@@ -164,7 +164,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
     FormProvider.baseProvider(
       basePackage,
       Map.empty,
-      journeyPage("whatIsTheValuation", ClassType(classOf[BigDecimal]))
+      journeyPage("whatIsTheValuation", FieldType.BIGDECIMAL)
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
@@ -196,7 +196,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
     FormProvider.baseProvider(
       basePackage,
       Map.empty,
-      journeyPage("whenDidYouSendSamples", ClassType(classOf[LocalDate]))
+      journeyPage("whenDidYouSendSamples", FieldType.LOCALDATE)
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
@@ -230,7 +230,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
     FormProvider.baseProvider(
       basePackage,
       Map.empty,
-      journeyPage("whenDidYouSendSamples", OptionType(ClassType(classOf[LocalDate])))
+      journeyPage("whenDidYouSendSamples", OptionType(FieldType.LOCALDATE))
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
@@ -319,8 +319,8 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
           List(
             "auditType"                   -> FieldType.STRING,
             "description"                 -> FieldType.STRING,
-            "expectedGoLiveDate"          -> ClassType(classOf[LocalDate]),
-            "expectedDecommissioningDate" -> OptionType(ClassType(classOf[LocalDate]))
+            "expectedGoLiveDate"          -> FieldType.LOCALDATE,
+            "expectedDecommissioningDate" -> OptionType(FieldType.LOCALDATE)
           )
         )
       ),
@@ -447,7 +447,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
     FormProvider.providerStub(
       basePackage,
       Map.empty,
-      journeyPage("whatIsTheValuation", ClassType(classOf[BigDecimal]))
+      journeyPage("whatIsTheValuation", FieldType.BIGDECIMAL)
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
@@ -474,7 +474,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
     FormProvider.providerStub(
       basePackage,
       Map.empty,
-      journeyPage("whenDidYouSendSamples", ClassType(classOf[LocalDate]))
+      journeyPage("whenDidYouSendSamples", FieldType.LOCALDATE)
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
@@ -504,7 +504,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
     FormProvider.providerStub(
       basePackage,
       Map.empty,
-      journeyPage("whenDidYouSendSamples", OptionType(ClassType(classOf[LocalDate])))
+      journeyPage("whenDidYouSendSamples", OptionType(FieldType.LOCALDATE))
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
@@ -590,8 +590,8 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
           List(
             "auditType"                   -> FieldType.STRING,
             "description"                 -> FieldType.STRING,
-            "expectedGoLiveDate"          -> ClassType(classOf[LocalDate]),
-            "expectedDecommissioningDate" -> OptionType(ClassType(classOf[LocalDate]))
+            "expectedGoLiveDate"          -> FieldType.LOCALDATE,
+            "expectedDecommissioningDate" -> OptionType(FieldType.LOCALDATE)
           )
         )
       ),
@@ -640,7 +640,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
           List(
             "auditType"               -> FieldType.STRING,
             "description"             -> FieldType.STRING,
-            "expectedGoLiveDate"      -> ClassType(classOf[LocalDate]),
+            "expectedGoLiveDate"      -> FieldType.LOCALDATE,
             "expectedGoLiveDayOfWeek" -> ClassType(classOf[DayOfWeek])
           )
         )

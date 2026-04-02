@@ -2,6 +2,7 @@ import sbt._
 
 lazy val plugin = Project("sbt-journey", file("."))
   .enablePlugins(SbtPlugin)
+  .settings(CodeCoverageSettings.settings*)
   .settings(
     majorVersion     := 0,
     scalaVersion     := "2.12.20",

@@ -20,7 +20,7 @@ import uk.gov.hmrc.sbt.journey.models.{FieldType, QualifiedName}
 import uk.gov.hmrc.sbt.journey.templates.Imports.PlayJsonPrefix
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.camelCase
 
-object JourneyModel {
+object JourneyModel extends Template {
   private def switchCase(caseName: String, fields: List[(String, FieldType)]) = {
     if (fields.isEmpty)
       s"  case $caseName"
@@ -28,7 +28,7 @@ object JourneyModel {
       s"""|  case $caseName(
           |  ${fields
            .map((ModelFields.field _).tupled)
-           .mkString("," + System.lineSeparator() + (" " * 2))}
+           .mkString("," + NL + (" " * 2))}
           |  )""".stripMargin
   }
 
@@ -102,18 +102,14 @@ object JourneyModel {
     val subtypeReadsWrites =
       if (caseReadsAndWrites.isEmpty) ""
       else
-        caseReadsAndWrites.mkString(
-          System.lineSeparator(),
-          System.lineSeparator(),
-          System.lineSeparator()
-        )
+        caseReadsAndWrites.mkString(NL, NL, NL)
 
     s"""package $modelsPackage
        |
        |$imports
        |
        |enum $modelName {
-       |${modelCases.map((switchCase _).tupled).mkString(System.lineSeparator())}
+       |${modelCases.map((switchCase _).tupled).mkString(NL)}
        |}
        |
        |object $modelName $extendsClause{$subtypeReadsWrites
@@ -122,7 +118,7 @@ object JourneyModel {
        |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
        |${modelCases
         .map((switchCaseRead _).tupled)
-        .mkString(System.lineSeparator())}
+        .mkString(NL)}
        |        case _ =>
        |          JsError("error.invalid")
        |      }
@@ -134,7 +130,7 @@ object JourneyModel {
        |  given writes(using config: JsonConfiguration): Writes[$modelName] = Writes {
        |${modelCases
         .map((switchCaseWrite _).tupled)
-        .mkString(System.lineSeparator())}
+        .mkString(NL)}
        |  }
        |
        |  given Format[$modelName] = Format(reads, writes)
@@ -172,7 +168,7 @@ object JourneyModel {
        |
        |enum $modelName {
        |  case Yes(
-       |  ${fields.map((ModelFields.field _).tupled).mkString("," + System.lineSeparator() + "  ")}
+       |  ${fields.map((ModelFields.field _).tupled).mkString("," + NL + "  ")}
        |  )
        |  case No
        |
@@ -229,7 +225,7 @@ object JourneyModel {
        |$imports
        |
        |case class $modelName(
-       |${fields.map((ModelFields.field _).tupled).mkString("," + System.lineSeparator())}
+       |${fields.map((ModelFields.field _).tupled).mkString("," + NL)}
        |)
        |
        |object $modelName $extendsClause{

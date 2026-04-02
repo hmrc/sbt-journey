@@ -18,7 +18,7 @@ package uk.gov.hmrc.sbt.journey.templates
 
 import uk.gov.hmrc.sbt.journey.models.*
 
-object Imports {
+object Imports extends Template {
   private[templates] val JavaLangPrefix             = List("java", "lang")
   private[templates] val JavaTimePrefix             = List("java", "time")
   private[templates] val PlayI18nPrefix             = List("play", "api", "i18n")
@@ -55,7 +55,7 @@ object Imports {
         List("import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats")
       else List.empty
 
-    (fieldImports ++ instanceImports).mkString(System.lineSeparator())
+    (fieldImports ++ instanceImports).mkString(NL)
   }
 
   def merge(

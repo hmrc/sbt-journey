@@ -35,8 +35,10 @@ sealed trait JourneyPart extends Product with Serializable {
   def startPageIndexes: List[IndexPath] = {
     @tailrec def find(journeyPart: JourneyPart, path: List[IndexPath] = Nil): List[IndexPath] =
       journeyPart match {
-        case DoWhilePart(_, subJourney, as) => find(subJourney.head, IndexPath(as) :: path)
-        case _                              => path.reverse
+        case DoWhilePart(_, subJourney, as) =>
+          find(subJourney.head, IndexPath(as) :: path)
+        case _ =>
+          path.reverse
       }
 
     find(this)

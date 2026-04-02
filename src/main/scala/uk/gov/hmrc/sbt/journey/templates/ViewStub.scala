@@ -21,7 +21,7 @@ import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.packageCase
 
 import java.time.LocalDate
 
-object ViewStub {
+object ViewStub extends Template {
   def renderNoForm(pageName: String): String = {
     s"""@this(
        |    layout: templates.Layout
@@ -142,7 +142,7 @@ object ViewStub {
               |$p        field = form("$parentField$fieldName"),
               |$p        legend = ${legendFor(pageName, fieldName)},
               |$p        items = List(
-              |${items.mkString("," + System.lineSeparator())}
+              |${items.mkString("," + NL)}
               |$p        )
               |$p    )
               |$p)""".stripMargin
@@ -237,7 +237,7 @@ object ViewStub {
   }
 
   def renderForm(models: Map[String, AnswerModel], page: JourneyPage): String = {
-    val pageName = page.pageKey
+    val pageName   = page.pageKey
     val answerType = page.answerType
 
     val imports = {
@@ -245,11 +245,7 @@ object ViewStub {
       if (imports.isEmpty)
         ""
       else
-        imports.distinct.mkString(
-          "",
-          System.lineSeparator(),
-          System.lineSeparator() * 2
-        )
+        imports.distinct.mkString("", NL, NL * 2)
     }
 
     val inputs = {
@@ -257,11 +253,7 @@ object ViewStub {
       if (inputs.isEmpty)
         ""
       else
-        inputs.distinct.mkString(
-          System.lineSeparator(),
-          System.lineSeparator(),
-          ""
-        )
+        inputs.distinct.mkString(NL, NL, "")
     }
 
     val fields = fieldsFor(models, pageName, "", "value", answerType)
@@ -269,7 +261,7 @@ object ViewStub {
     val heading =
       if (fields.length == 1) ""
       else
-        s"""        <h1 class="govuk-heading-xl">@messages("$pageName.heading")</h1>${System.lineSeparator()}"""
+        s"""        <h1 class="govuk-heading-xl">@messages("$pageName.heading")</h1>${NL * 2}"""
 
       s"""$imports@this(
        |    layout: templates.Layout,
@@ -287,7 +279,7 @@ object ViewStub {
        |            @govukErrorSummary(ErrorSummaryViewModel(form))
        |        }
        |
-       |$heading${fields.mkString(System.lineSeparator() * 2)}
+       |$heading${fields.mkString(NL * 2)}
        |
        |        @govukButton(
        |            ButtonViewModel(messages("site.continue"))

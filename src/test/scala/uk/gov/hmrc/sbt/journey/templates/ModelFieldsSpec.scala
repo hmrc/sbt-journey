@@ -21,8 +21,6 @@ import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{kebabCase, pascalCase}
 
-import java.time.LocalDate
-
 class ModelFieldsSpec extends AnyFlatSpec with Matchers {
   val basePackage   = QualifiedName("uk.gov.hmrc.sbtjourneytest")
   val modelsPackage = basePackage / "models"
@@ -72,7 +70,7 @@ class ModelFieldsSpec extends AnyFlatSpec with Matchers {
   it should "return a field declaration for an Option field" in {
     ModelFields.field(
       "expectedDecommissioningDate",
-      OptionType(ClassType(classOf[LocalDate]))
+      OptionType(FieldType.LOCALDATE)
     ) shouldBe s"  expectedDecommissioningDate: Option[LocalDate]"
   }
 
@@ -132,7 +130,7 @@ class ModelFieldsSpec extends AnyFlatSpec with Matchers {
       modelsPackage,
       journey,
       doWhilePart
-    ) shouldBe List("auditEvents" -> ListType(ClassType(classOf[String])))
+    ) shouldBe List("auditEvents" -> ListType(FieldType.STRING))
   }
 
   it should "use a synthetic class answer type for a do-while journey with multiple questions per entry" in {

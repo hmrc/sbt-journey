@@ -18,7 +18,7 @@ package uk.gov.hmrc.sbt.journey.templates
 
 import uk.gov.hmrc.sbt.journey.models.*
 
-object Mermaid {
+object Mermaid extends Template {
   private def forPart(part: JourneyPart, nextPart: JourneyPart): List[String] = {
     val p = " " * 2
     part match {
@@ -64,7 +64,7 @@ object Mermaid {
     }
     s"""|```mermaid
         |flowchart TD
-        |${parts.mkString(System.lineSeparator())}
+        |${parts.mkString(NL)}
         |```""".stripMargin
   }
 

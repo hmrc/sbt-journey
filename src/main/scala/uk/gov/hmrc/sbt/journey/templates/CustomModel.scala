@@ -20,7 +20,7 @@ import uk.gov.hmrc.sbt.journey.models.{AnswerModel, CaseClassModel, EnumModel, Q
 import uk.gov.hmrc.sbt.journey.templates.Imports.PlayJsonPrefix
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.camelCase
 
-object CustomModel {
+object CustomModel extends Template {
   def render(basePackage: QualifiedName, model: AnswerModel): String = model match {
     case model: CaseClassModel => caseClassModel(basePackage, model)
     case model: EnumModel      => enumModel(basePackage, model)
@@ -73,7 +73,7 @@ object CustomModel {
        |  given reads(using config: JsonConfiguration): Reads[$name] = Reads {
        |    case obj: JsObject => obj.value.get(config.discriminator) match {
        |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
-       |${cases.map(enumRead).mkString(System.lineSeparator())}
+       |${cases.map(enumRead).mkString(NL)}
        |        case _ =>
        |          JsError("error.invalid")
        |      }
@@ -83,7 +83,7 @@ object CustomModel {
        |  }
        |
        |  given writes(using config: JsonConfiguration): Writes[$name] = Writes {
-       |${cases.map(enumWrite).mkString(System.lineSeparator())}
+       |${cases.map(enumWrite).mkString(NL)}
        |  }
        |
        |  given Format[$name] = Format(reads, writes)
@@ -114,7 +114,7 @@ object CustomModel {
        |$imports
        |
        |case class $name(
-       |${fields.map((ModelFields.field _).tupled).mkString("," + System.lineSeparator())}
+       |${fields.map((ModelFields.field _).tupled).mkString("," + NL)}
        |)
        |
        |object $name $extendsClause{

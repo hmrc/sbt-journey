@@ -279,7 +279,7 @@ object JourneyPlugin extends AutoPlugin {
       if (config.hasPath("withDefaultFormProvider")) config.getBoolean("withDefaultFormProvider")
       else true
     val answerType =
-      deserialiseAnswerModel(models, modelsPackage, errors, config.getValue("answerType"))
+      deserialiseFieldType(models, modelsPackage, errors, config.getValue("answerType"))
     key -> JourneyPage(
       key,
       titleKey,
@@ -306,7 +306,7 @@ object JourneyPlugin extends AutoPlugin {
     classOf[scala.math.BigDecimal]
   ).map(clazz => clazz.getSimpleName -> ClassType(clazz.getName)).toMap
 
-  private[journey] def deserialiseAnswerModel(
+  private[journey] def deserialiseFieldType(
     models: Map[String, ?],
     modelsPackage: QualifiedName,
     errors: mutable.ListBuffer[JourneyConfigProblem],
@@ -319,7 +319,7 @@ object JourneyPlugin extends AutoPlugin {
         val firstEntry = entries.head
         val modelName  = firstEntry.getKey
         if (modelName == "Option") {
-          OptionType(deserialiseAnswerModel(models, modelsPackage, errors, obj.get(modelName)))
+          OptionType(deserialiseFieldType(models, modelsPackage, errors, obj.get(modelName)))
         } else {
           errors += problem(
             firstEntry.getValue.origin(),
@@ -337,13 +337,13 @@ object JourneyPlugin extends AutoPlugin {
       case _ =>
         errors += problem(
           config.origin(),
-          "Expected either a configuration object describing a custom model or a string describing a known type"
+          "Expected either a configuration object describing a collection type or a string describing a known type"
         )
         null
     }
   }
 
-  private[journey] def deserialiseRootAnswerModel(
+  private[journey] def deserialiseAnswerModel(
     modelsPackage: QualifiedName,
     models: Map[String, ConfigValue],
     errors: mutable.ListBuffer[JourneyConfigProblem],
@@ -372,7 +372,7 @@ object JourneyPlugin extends AutoPlugin {
               val entries    = fieldConfig.entrySet().asScala.toList
               val firstEntry = entries.head
               val fieldName  = firstEntry.getKey
-              fieldName -> deserialiseAnswerModel(
+              fieldName -> deserialiseFieldType(
                 models,
                 modelsPackage,
                 errors,
@@ -649,7 +649,7 @@ object JourneyPlugin extends AutoPlugin {
     // Add a "Choice" model for Yes / No questions
     val choiceModel = EnumModel("Choice", List("Yes", "No"))
     val answerModels =
-      models.map((deserialiseRootAnswerModel(modelsPackage, models, errors, _, _)).tupled)
+      models.map((deserialiseAnswerModel(modelsPackage, models, errors, _, _)).tupled)
 
     val journeyConfig = journeys.map(
       (deserialiseJourney(basePackage, rootPages, answerModels, modelsPackage, errors, _, _)).tupled
@@ -786,9 +786,9 @@ object JourneyPlugin extends AutoPlugin {
           JourneyPageController.render(
             basePackage,
             requiresData = pageName != journey.startPage,
+            journey,
             pageName,
             page,
-            journey
           )
         )
         logger.info(s"Generated journey controller $journeyPageController")
@@ -840,7 +840,7 @@ object JourneyPlugin extends AutoPlugin {
     baseDirectory: FileRef,
     config: JourneyConfig
   ): Seq[File] = {
-    val journeyDiagrams = PlantUml.forConfig(config)
+    val journeyDiagrams    = PlantUml.forConfig(config)
     val journeyMermaidText = Mermaid.forConfig(config)
 
     val journeyTextFiles = journeyDiagrams.map { case (name, diagram) =>

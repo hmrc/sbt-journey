@@ -20,8 +20,6 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.sbt.journey.models.*
 
-import java.time.LocalDate
-
 class CustomModelSpec extends AnyFlatSpec with Matchers {
   "CustomModel.render" should "render an enum model" in {
     val basePackage = QualifiedName("uk.gov.hmrc.sbtjourneytest")
@@ -172,7 +170,7 @@ class CustomModelSpec extends AnyFlatSpec with Matchers {
       "TestCaseClass",
       List(
         "anInt"         -> FieldType.INT,
-        "aDate"         -> ClassType(classOf[LocalDate]),
+        "aDate"         -> FieldType.LOCALDATE,
         "aListOfString" -> ListType(FieldType.STRING)
       )
     )
