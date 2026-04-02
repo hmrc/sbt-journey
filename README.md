@@ -90,9 +90,9 @@ $ sbt compile
 Now add the generated routes file to your `prod.routes` file:
 
 ```diff
-->         /<microservice name>            app.Routes
-+->        /<microservice name>            journey.Routes
-->         /                               health.Routes
+ ->         /<microservice name>            app.Routes
++->         /<microservice name>            journey.Routes
+ ->         /                               health.Routes
 ```
 
 After making changes to the configuration, you can create view templates for any new pages with the `initialiseJourneyViews` task. Existing view template files will not be overwritten.
