@@ -341,7 +341,7 @@ This plugin contributes several sbt tasks once it is enabled:
 * `overwriteJourneyViews <Y/N>` - Identical to the above task except that it overwrites any existing templates for your pages.
 * `initialiseJourneyForms`      - Creates a form provider class for each of the journey `pages` in your application that does not have such a class already.
 * `overwriteJourneyForms <Y/N>` - Identical to the above task except that it overwrites any existing form provider classes for your pages.
-* `generateJourneyDiagrams`     - Generates PlantUML source code describing the structure of each of your `journeys`. If you have configured a PlantUML dependency, it also generates PNG images.
+* `generateJourneyDiagrams`     - Generates PlantUML and Mermaid.js source code describing the structure of each of your `journeys`. If you have configured a PlantUML dependency, it also generates PNG images.
 
 ## How it works
 
@@ -355,6 +355,42 @@ Before your application is built via sbt's `compile` task, **sbt-journey** reads
 * JourneyNavigator - a navigator object which determines the next controller method to `Call` based upon the current journey `Page` and the `UserAnswers`.
 * journey.routes - a Play Framework [routes file](https://www.playframework.com/documentation/3.0.x/ScalaRouting#The-routes-file-syntax) which declares routes for each of the `pages` in all of the `journeys`.
 * Controllers - controllers which render the application's `View`s, validate `Form` submissions, save `UserAnswers` using `Page` objects and then ask the `JourneyNavigator` to redirect the user to the next page.
+
+## Sample diagrams
+
+The Mermaid diagrams look like this:
+
+```mermaid
+flowchart TD
+  cipAssessmentTicket-->cipAssessmentPage
+  cipAssessmentPage-->serviceName
+  serviceName-->serviceDescription
+  serviceDescription-->dataDomain
+  addAnotherDataDomain{{addAnotherDataDomain}}
+  addAnotherDataDomain-- Yes -->dataDomain
+  addAnotherDataDomain-- No -->addATaxRegime
+  dataDomain-->addAnotherDataDomain
+  addATaxRegime{{addATaxRegime}}
+  addATaxRegime-- Yes -->taxRegime
+  addATaxRegime-- No -->auditProvider
+  addAnotherTaxRegime{{addAnotherTaxRegime}}
+  addAnotherTaxRegime-- Yes -->taxRegime
+  addAnotherTaxRegime-- No -->auditProvider
+  taxRegime-->addAnotherTaxRegime
+  auditProvider-->auditSource
+  addAnotherAuditSource{{addAnotherAuditSource}}
+  addAnotherAuditSource-- Yes -->auditSource
+  addAnotherAuditSource-- No -->checkYourAnswers
+  auditSource-->auditEvent
+  addAnotherAuditEvent{{addAnotherAuditEvent}}
+  addAnotherAuditEvent-- Yes -->auditEvent
+  addAnotherAuditEvent-- No -->addAnotherAuditSource
+  auditEvent-->addAnotherAuditEvent
+```
+
+The PlantUML diagrams look like this:
+
+![An example user journey featuring a sequence of individual pages, followed by a series of optional and and looping subjourneys of various kinds](./docs/sample.png)
 
 ## License
 
