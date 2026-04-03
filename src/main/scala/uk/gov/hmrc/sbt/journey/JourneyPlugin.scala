@@ -112,13 +112,13 @@ object JourneyPlugin extends AutoPlugin {
     },
     generateJourney / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
     generateJourney / target := {
-      crossTarget.value / "journey" / Defaults.nameForSrc(configuration.value.name)
+      baseDirectory.value / "generated" / Defaults.nameForSrc(configuration.value.name)
     },
     managedSourceDirectories += (generateJourney / target).value,
     generateJourneyRoutes := {
       val logger            = streams.value.log
       val factory           = streams.value.cacheStoreFactory
-      val baseDir           = resourceManaged.value
+      val baseDir           = baseDirectory.value / "generated" / "conf"
       val journeyConfigFile = (Compile / resourceDirectory).value / "journey.conf"
       val journeyConfig     = journeyConfiguration.value
       whenConfigChanges(factory, journeyConfigFile) { lastFiles =>
@@ -174,7 +174,7 @@ object JourneyPlugin extends AutoPlugin {
     },
     generateJourneyTests / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
     generateJourneyTests / target := {
-      crossTarget.value / "journey" / Defaults.nameForSrc(configuration.value.name)
+      baseDirectory.value / "generated" / Defaults.nameForSrc(configuration.value.name)
     },
     managedSourceDirectories += (generateJourneyTests / target).value
   )
@@ -788,7 +788,7 @@ object JourneyPlugin extends AutoPlugin {
             requiresData = pageName != journey.startPage,
             journey,
             pageName,
-            page,
+            page
           )
         )
         logger.info(s"Generated journey controller $journeyPageController")

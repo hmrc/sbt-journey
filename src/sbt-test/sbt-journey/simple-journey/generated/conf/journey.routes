@@ -1,0 +1,75 @@
+GET  /  uk.gov.hmrc.simplejourney.controllers.IndexBaseController.onPageLoad
+
+GET  /before-you-begin  uk.gov.hmrc.simplejourney.controllers.BeforeYouBeginBaseController.onPageLoad
+
+GET  /check-your-answers  uk.gov.hmrc.simplejourney.controllers.CheckYourAnswersBaseController.onPageLoad
+
+GET  /add-a-tax-regime         uk.gov.hmrc.simplejourney.controllers.AddATaxRegimeBaseController.onPageLoad(mode: Mode = NormalMode)
+POST /add-a-tax-regime         uk.gov.hmrc.simplejourney.controllers.AddATaxRegimeBaseController.onSubmit(mode: Mode = NormalMode)
+GET  /change-add-a-tax-regime  uk.gov.hmrc.simplejourney.controllers.AddATaxRegimeBaseController.onPageLoad(mode: Mode = CheckMode)
+POST /change-add-a-tax-regime  uk.gov.hmrc.simplejourney.controllers.AddATaxRegimeBaseController.onSubmit(mode: Mode = CheckMode)
+
+GET  /audit-sources/:auditSources/audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.simplejourney.controllers.AddAnotherAuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+POST /audit-sources/:auditSources/audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.simplejourney.controllers.AddAnotherAuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+GET  /audit-sources/:auditSources/audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.simplejourney.controllers.AddAnotherAuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+POST /audit-sources/:auditSources/audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.simplejourney.controllers.AddAnotherAuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+
+GET  /audit-sources/:auditSources/add-another-audit-source         uk.gov.hmrc.simplejourney.controllers.AddAnotherAuditSourceBaseController.onPageLoad(auditSources: Int, mode: Mode = NormalMode)
+POST /audit-sources/:auditSources/add-another-audit-source         uk.gov.hmrc.simplejourney.controllers.AddAnotherAuditSourceBaseController.onSubmit(auditSources: Int, mode: Mode = NormalMode)
+GET  /audit-sources/:auditSources/change-add-another-audit-source  uk.gov.hmrc.simplejourney.controllers.AddAnotherAuditSourceBaseController.onPageLoad(auditSources: Int, mode: Mode = CheckMode)
+POST /audit-sources/:auditSources/change-add-another-audit-source  uk.gov.hmrc.simplejourney.controllers.AddAnotherAuditSourceBaseController.onSubmit(auditSources: Int, mode: Mode = CheckMode)
+
+GET  /data-domains/:dataDomains/add-another-data-domain         uk.gov.hmrc.simplejourney.controllers.AddAnotherDataDomainBaseController.onPageLoad(dataDomains: Int, mode: Mode = NormalMode)
+POST /data-domains/:dataDomains/add-another-data-domain         uk.gov.hmrc.simplejourney.controllers.AddAnotherDataDomainBaseController.onSubmit(dataDomains: Int, mode: Mode = NormalMode)
+GET  /data-domains/:dataDomains/change-add-another-data-domain  uk.gov.hmrc.simplejourney.controllers.AddAnotherDataDomainBaseController.onPageLoad(dataDomains: Int, mode: Mode = CheckMode)
+POST /data-domains/:dataDomains/change-add-another-data-domain  uk.gov.hmrc.simplejourney.controllers.AddAnotherDataDomainBaseController.onSubmit(dataDomains: Int, mode: Mode = CheckMode)
+
+GET  /tax-regimes/:taxRegimes/add-another-tax-regime         uk.gov.hmrc.simplejourney.controllers.AddAnotherTaxRegimeBaseController.onPageLoad(taxRegimes: Int, mode: Mode = NormalMode)
+POST /tax-regimes/:taxRegimes/add-another-tax-regime         uk.gov.hmrc.simplejourney.controllers.AddAnotherTaxRegimeBaseController.onSubmit(taxRegimes: Int, mode: Mode = NormalMode)
+GET  /tax-regimes/:taxRegimes/change-add-another-tax-regime  uk.gov.hmrc.simplejourney.controllers.AddAnotherTaxRegimeBaseController.onPageLoad(taxRegimes: Int, mode: Mode = CheckMode)
+POST /tax-regimes/:taxRegimes/change-add-another-tax-regime  uk.gov.hmrc.simplejourney.controllers.AddAnotherTaxRegimeBaseController.onSubmit(taxRegimes: Int, mode: Mode = CheckMode)
+
+GET  /audit-sources/:auditSources/audit-events/:auditEvents/audit-event         uk.gov.hmrc.simplejourney.controllers.AuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+POST /audit-sources/:auditSources/audit-events/:auditEvents/audit-event         uk.gov.hmrc.simplejourney.controllers.AuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+GET  /audit-sources/:auditSources/audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.simplejourney.controllers.AuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+POST /audit-sources/:auditSources/audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.simplejourney.controllers.AuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+
+GET  /audit-provider         uk.gov.hmrc.simplejourney.controllers.AuditProviderBaseController.onPageLoad(mode: Mode = NormalMode)
+POST /audit-provider         uk.gov.hmrc.simplejourney.controllers.AuditProviderBaseController.onSubmit(mode: Mode = NormalMode)
+GET  /change-audit-provider  uk.gov.hmrc.simplejourney.controllers.AuditProviderBaseController.onPageLoad(mode: Mode = CheckMode)
+POST /change-audit-provider  uk.gov.hmrc.simplejourney.controllers.AuditProviderBaseController.onSubmit(mode: Mode = CheckMode)
+
+GET  /audit-sources/:auditSources/audit-source         uk.gov.hmrc.simplejourney.controllers.AuditSourceBaseController.onPageLoad(auditSources: Int, mode: Mode = NormalMode)
+POST /audit-sources/:auditSources/audit-source         uk.gov.hmrc.simplejourney.controllers.AuditSourceBaseController.onSubmit(auditSources: Int, mode: Mode = NormalMode)
+GET  /audit-sources/:auditSources/change-audit-source  uk.gov.hmrc.simplejourney.controllers.AuditSourceBaseController.onPageLoad(auditSources: Int, mode: Mode = CheckMode)
+POST /audit-sources/:auditSources/change-audit-source  uk.gov.hmrc.simplejourney.controllers.AuditSourceBaseController.onSubmit(auditSources: Int, mode: Mode = CheckMode)
+
+GET  /cip-assessment-page         uk.gov.hmrc.simplejourney.controllers.CipAssessmentPageBaseController.onPageLoad(mode: Mode = NormalMode)
+POST /cip-assessment-page         uk.gov.hmrc.simplejourney.controllers.CipAssessmentPageBaseController.onSubmit(mode: Mode = NormalMode)
+GET  /change-cip-assessment-page  uk.gov.hmrc.simplejourney.controllers.CipAssessmentPageBaseController.onPageLoad(mode: Mode = CheckMode)
+POST /change-cip-assessment-page  uk.gov.hmrc.simplejourney.controllers.CipAssessmentPageBaseController.onSubmit(mode: Mode = CheckMode)
+
+GET  /cip-assessment-ticket         uk.gov.hmrc.simplejourney.controllers.CipAssessmentTicketBaseController.onPageLoad(mode: Mode = NormalMode)
+POST /cip-assessment-ticket         uk.gov.hmrc.simplejourney.controllers.CipAssessmentTicketBaseController.onSubmit(mode: Mode = NormalMode)
+GET  /change-cip-assessment-ticket  uk.gov.hmrc.simplejourney.controllers.CipAssessmentTicketBaseController.onPageLoad(mode: Mode = CheckMode)
+POST /change-cip-assessment-ticket  uk.gov.hmrc.simplejourney.controllers.CipAssessmentTicketBaseController.onSubmit(mode: Mode = CheckMode)
+
+GET  /data-domains/:dataDomains/data-domain         uk.gov.hmrc.simplejourney.controllers.DataDomainBaseController.onPageLoad(dataDomains: Int, mode: Mode = NormalMode)
+POST /data-domains/:dataDomains/data-domain         uk.gov.hmrc.simplejourney.controllers.DataDomainBaseController.onSubmit(dataDomains: Int, mode: Mode = NormalMode)
+GET  /data-domains/:dataDomains/change-data-domain  uk.gov.hmrc.simplejourney.controllers.DataDomainBaseController.onPageLoad(dataDomains: Int, mode: Mode = CheckMode)
+POST /data-domains/:dataDomains/change-data-domain  uk.gov.hmrc.simplejourney.controllers.DataDomainBaseController.onSubmit(dataDomains: Int, mode: Mode = CheckMode)
+
+GET  /service-description         uk.gov.hmrc.simplejourney.controllers.ServiceDescriptionBaseController.onPageLoad(mode: Mode = NormalMode)
+POST /service-description         uk.gov.hmrc.simplejourney.controllers.ServiceDescriptionBaseController.onSubmit(mode: Mode = NormalMode)
+GET  /change-service-description  uk.gov.hmrc.simplejourney.controllers.ServiceDescriptionBaseController.onPageLoad(mode: Mode = CheckMode)
+POST /change-service-description  uk.gov.hmrc.simplejourney.controllers.ServiceDescriptionBaseController.onSubmit(mode: Mode = CheckMode)
+
+GET  /service-name         uk.gov.hmrc.simplejourney.controllers.ServiceNameBaseController.onPageLoad(mode: Mode = NormalMode)
+POST /service-name         uk.gov.hmrc.simplejourney.controllers.ServiceNameBaseController.onSubmit(mode: Mode = NormalMode)
+GET  /change-service-name  uk.gov.hmrc.simplejourney.controllers.ServiceNameBaseController.onPageLoad(mode: Mode = CheckMode)
+POST /change-service-name  uk.gov.hmrc.simplejourney.controllers.ServiceNameBaseController.onSubmit(mode: Mode = CheckMode)
+
+GET  /tax-regimes/:taxRegimes/tax-regime         uk.gov.hmrc.simplejourney.controllers.TaxRegimeBaseController.onPageLoad(taxRegimes: Int, mode: Mode = NormalMode)
+POST /tax-regimes/:taxRegimes/tax-regime         uk.gov.hmrc.simplejourney.controllers.TaxRegimeBaseController.onSubmit(taxRegimes: Int, mode: Mode = NormalMode)
+GET  /tax-regimes/:taxRegimes/change-tax-regime  uk.gov.hmrc.simplejourney.controllers.TaxRegimeBaseController.onPageLoad(taxRegimes: Int, mode: Mode = CheckMode)
+POST /tax-regimes/:taxRegimes/change-tax-regime  uk.gov.hmrc.simplejourney.controllers.TaxRegimeBaseController.onSubmit(taxRegimes: Int, mode: Mode = CheckMode)
