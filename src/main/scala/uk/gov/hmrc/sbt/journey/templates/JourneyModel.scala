@@ -16,11 +16,68 @@
 
 package uk.gov.hmrc.sbt.journey.templates
 
-import uk.gov.hmrc.sbt.journey.models.{FieldType, QualifiedName}
+import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.templates.Imports.PlayJsonPrefix
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.camelCase
 
 object JourneyModel extends Template {
+  private def jsPathReads(fieldName: String, fieldType: FieldType): String = {
+    val scalaType = ModelFields.fieldType(fieldType)
+    s"""(JsPath \\ "$fieldName").read[$scalaType]"""
+  }
+
+  private def listReads(
+    journeyPart: JourneyPart,
+    fieldName: String,
+    fieldType: FieldType
+  ): String = {
+    val p = " " * 4
+    fieldType match {
+      case ListType(elementType) =>
+        val scalaType = ModelFields.fieldType(elementType)
+        s"""${p}val $fieldName = Reads.list(Reads.at[$scalaType](JsPath \\ "${journeyPart.startPage}"))$NL""".stripMargin
+      case _ =>
+        ""
+    }
+  }
+
+  private def nestedReads(
+    subJourney: List[JourneyPart],
+    modelName: String,
+    fields: List[(String, FieldType)],
+    modifier: String
+  ): String = {
+    val nm = camelCase(modelName)
+    if (fields.length == 1) {
+      val (fieldName, fieldType) = fields.head
+      val readList               = listReads(subJourney.head, fieldName, fieldType)
+      val usingReads             = if (readList.nonEmpty) s"(using $fieldName)" else ""
+      val pathReads              = jsPathReads(fieldName, fieldType)
+      if (readList.isEmpty)
+        s"""  $modifier ${nm}Reads: Reads[$modelName] =
+           |    $pathReads$usingReads.map($modelName.apply)""".stripMargin
+      else
+        s"""  $modifier ${nm}Reads: Reads[$modelName] = {
+           |$readList    $pathReads$usingReads.map($modelName.apply)
+           |  }""".stripMargin
+    } else {
+      val (readList, readPath) = subJourney
+        .zip(fields)
+        .map { case (journeyPart, (fieldName, fieldType)) =>
+          val readList   = listReads(journeyPart, fieldName, fieldType)
+          val usingReads = if (readList.nonEmpty) s"(using $fieldName)" else ""
+          val readPath   = s"""      ${jsPathReads(fieldName, fieldType)}$usingReads"""
+          (readList, readPath)
+        }
+        .unzip
+      s"""  $modifier ${nm}Reads: Reads[$modelName] = {
+         |${if (readList.isEmpty) "" else readList.distinct.mkString}    (
+         |${readPath.mkString(" and" + NL)}
+         |    )($modelName.apply)
+         |  }""".stripMargin
+    }
+  }
+
   private def switchCase(caseName: String, fields: List[(String, FieldType)]) = {
     if (fields.isEmpty)
       s"  case $caseName"
@@ -32,18 +89,17 @@ object JourneyModel extends Template {
           |  )""".stripMargin
   }
 
-  private def switchCaseReads(caseName: String, fields: List[(String, FieldType)]): String = {
+  private def switchCaseReads(
+    subJourney: List[JourneyPart],
+    caseName: String,
+    fields: List[(String, FieldType)]
+  ): String = {
     val nm = camelCase(caseName)
     if (fields.isEmpty) ""
     else
-      s"""  val ${nm}Reads: Reads[$caseName] = Json.reads[$caseName]
-         |  val nested${caseName}Reads: Reads[$caseName] = Reads.at(JsPath \\ "$caseName")(${nm}Reads)
-         |""".stripMargin
-  }
-
-  private def switchCaseWrites(caseName: String, fields: List[(String, FieldType)]): String = {
-    if (fields.isEmpty) ""
-    else s"  val ${camelCase(caseName)}Writes: Writes[$caseName] = Json.writes[$caseName]"
+      s"""${nestedReads(subJourney, caseName, fields, "private val")}
+         |  private val nested${caseName}Reads: Reads[$caseName] =
+         |    (JsPath \\ "$caseName").reads[$caseName](using ${nm}Reads)""".stripMargin
   }
 
   private def switchCaseRead(
@@ -59,21 +115,9 @@ object JourneyModel extends Template {
           |          nested${caseName}Reads.reads(obj)""".stripMargin
   }
 
-  private def switchCaseWrite(
-    caseName: String,
-    fields: List[(String, FieldType)]
-  ): String = {
-    val nm = camelCase(caseName)
-    if (fields.isEmpty)
-      s"""|    case $nm: $caseName =>
-          |      Json.obj(config.discriminator -> config.typeNaming("$caseName"))""".stripMargin
-    else
-      s"""|    case $nm: $caseName =>
-          |      Json.obj(config.discriminator -> config.typeNaming("$caseName"), "$caseName" -> ${nm}Writes.writes($nm))""".stripMargin
-  }
-
   def forSwitchCase(
     modelsPackage: QualifiedName,
+    switchCasePart: SwitchCasePart,
     modelName: String,
     modelCases: Map[String, List[(String, FieldType)]]
   ): String = {
@@ -85,9 +129,7 @@ object JourneyModel extends Template {
         "JsObject",
         "JsPath",
         "JsValue",
-        "Format",
-        "Reads",
-        "Writes"
+        "Reads"
       )
     )
 
@@ -95,24 +137,28 @@ object JourneyModel extends Template {
     val imports        = Imports.importsFor(modelsPackage, importPrefixes)
     val extendsClause  = FormatTraits.extendsClause(importPrefixes)
 
-    val caseReads          = modelCases.map((switchCaseReads _).tupled)
-    val caseWrites         = modelCases.map((switchCaseWrites _).tupled)
-    val caseReadsAndWrites = (caseReads ++ caseWrites).toList.filterNot(_.isBlank)
+    val caseReads = modelCases
+      .map { case (caseName, fields) =>
+        switchCaseReads(switchCasePart.subJourneys(caseName), caseName, fields)
+      }
+      .toList
+      .filterNot(_.isBlank)
 
-    val subtypeReadsWrites =
-      if (caseReadsAndWrites.isEmpty) ""
+    val subtypeReads =
+      if (caseReads.isEmpty) ""
       else
-        caseReadsAndWrites.mkString(NL, NL, NL)
+        caseReads.mkString(NL, NL, NL)
 
     s"""package $modelsPackage
        |
+       |import play.api.libs.functional.syntax.*
        |$imports
        |
        |enum $modelName {
        |${modelCases.map((switchCase _).tupled).mkString(NL)}
        |}
        |
-       |object $modelName $extendsClause{$subtypeReadsWrites
+       |object $modelName $extendsClause{$subtypeReads
        |  given reads(using config: JsonConfiguration): Reads[$modelName] = Reads {
        |    case obj: JsObject => obj.value.get(config.discriminator) match {
        |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
@@ -126,20 +172,13 @@ object JourneyModel extends Template {
        |    }
        |    case _ => JsError("error.expected.jsobject")
        |  }
-       |
-       |  given writes(using config: JsonConfiguration): Writes[$modelName] = Writes {
-       |${modelCases
-        .map((switchCaseWrite _).tupled)
-        .mkString(NL)}
-       |  }
-       |
-       |  given Format[$modelName] = Format(reads, writes)
        |}
        |""".stripMargin
   }
 
   def forIfThen(
     modelsPackage: QualifiedName,
+    ifThenPart: IfThenPart,
     modelName: String,
     fields: List[(String, FieldType)]
   ): String = {
@@ -152,9 +191,7 @@ object JourneyModel extends Template {
         "JsPath",
         "JsSuccess",
         "JsValue",
-        "Format",
-        "Reads",
-        "Writes"
+        "Reads"
       )
     )
 
@@ -164,6 +201,7 @@ object JourneyModel extends Template {
 
     s"""package $modelsPackage
        |
+       |import play.api.libs.functional.syntax.*
        |$imports
        |
        |enum $modelName {
@@ -179,9 +217,9 @@ object JourneyModel extends Template {
        |}
        |
        |object $modelName $extendsClause{
-       |  val yesReads: Reads[Yes] = Json.reads[Yes]
-       |  val yesWrites: Writes[Yes] = Json.writes[Yes]
-       |  val nestedYesReads: Reads[Yes] = Reads.at(JsPath \\ "Yes")(yesReads)
+       |${nestedReads(ifThenPart.subJourney, "Yes", fields, "private val")}
+       |  private val nestedYesReads: Reads[Yes] =
+       |    (JsPath \\ "Yes").read[Yes](using yesReads)
        |
        |  given reads(using config: JsonConfiguration): Reads[$modelName] = Reads {
        |    case obj: JsObject => obj.value.get(config.discriminator) match {
@@ -197,21 +235,13 @@ object JourneyModel extends Template {
        |    }
        |    case _ => JsError("error.expected.jsobject")
        |  }
-       |
-       |  given writes(using config: JsonConfiguration): Writes[$modelName] = Writes {
-       |    case yes: Yes =>
-       |      Json.obj(config.discriminator -> config.typeNaming("Yes"), "Yes" -> yesWrites.writes(yes))
-       |    case No =>
-       |      Json.obj(config.discriminator -> config.typeNaming("No"))
-       |  }
-       |
-       |  given Format[$modelName] = Format(reads, writes)
        |}
        |""".stripMargin
   }
 
   def forDoWhile(
     modelsPackage: QualifiedName,
+    doWhilePart: DoWhilePart,
     modelName: String,
     fields: List[(String, FieldType)]
   ): String = {
@@ -221,7 +251,8 @@ object JourneyModel extends Template {
 
     s"""package $modelsPackage
        |
-       |import play.api.libs.json.{Json, Reads}
+       |import play.api.libs.json.{Json, JsPath, Reads}
+       |import play.api.libs.functional.syntax.*
        |$imports
        |
        |case class $modelName(
@@ -229,7 +260,7 @@ object JourneyModel extends Template {
        |)
        |
        |object $modelName $extendsClause{
-       |  given Reads[$modelName] = Json.reads[$modelName]
+       |${nestedReads(doWhilePart.subJourney, modelName, fields, "given")}
        |}
        |""".stripMargin
   }

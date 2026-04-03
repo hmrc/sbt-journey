@@ -18,20 +18,27 @@ package uk.gov.hmrc.sbt.journey.templates
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import uk.gov.hmrc.sbt.journey.models.{ClassType, FieldType, ListType, QualifiedName}
+import uk.gov.hmrc.sbt.journey.models.*
 
 class JourneyModelSpec extends AnyFlatSpec with Matchers {
   "JourneyModel.forSwitchCase" should "render an enum model for a switch-case journey part with no subjourneys" in {
     val basePackage   = QualifiedName("uk.gov.hmrc.sbtjourneytest")
     val modelsPackage = basePackage / "models"
+    val switchCasePart = SwitchCasePart(
+      "whichTaxRegime",
+      Map("SA" -> List.empty, "VAT" -> List.empty),
+      None
+    )
     JourneyModel.forSwitchCase(
       modelsPackage,
+      switchCasePart,
       "WhichTaxRegime",
       Map("SA" -> List.empty, "VAT" -> List.empty)
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
-        |import play.api.libs.json.{Format,JsError,JsObject,JsPath,JsValue,Json,JsonConfiguration,Reads,Writes}
+        |import play.api.libs.functional.syntax.*
+        |import play.api.libs.json.{JsError,JsObject,JsPath,JsValue,Json,JsonConfiguration,Reads}
         |
         |enum WhichTaxRegime {
         |  case SA
@@ -53,15 +60,6 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |    }
         |    case _ => JsError("error.expected.jsobject")
         |  }
-        |
-        |  given writes(using config: JsonConfiguration): Writes[WhichTaxRegime] = Writes {
-        |    case sa: SA =>
-        |      Json.obj(config.discriminator -> config.typeNaming("SA"))
-        |    case vat: VAT =>
-        |      Json.obj(config.discriminator -> config.typeNaming("VAT"))
-        |  }
-        |
-        |  given Format[WhichTaxRegime] = Format(reads, writes)
         |}
         |""".stripMargin
   }
@@ -69,8 +67,17 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
   it should "render an enum model for a switch-case journey part with subjourneys" in {
     val basePackage   = QualifiedName("uk.gov.hmrc.sbtjourneytest")
     val modelsPackage = basePackage / "models"
+    val switchCasePart = SwitchCasePart(
+      "whichTaxRegime",
+      Map(
+        "SA"  -> List(SinglePagePart("saInfo", None)),
+        "VAT" -> List(SinglePagePart("vatInfo", None))
+      ),
+      None
+    )
     JourneyModel.forSwitchCase(
       modelsPackage,
+      switchCasePart,
       "WhichTaxRegime",
       Map(
         "SA"  -> List("saInfo" -> FieldType.STRING),
@@ -79,7 +86,8 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
-        |import play.api.libs.json.{Format,JsError,JsObject,JsPath,JsValue,Json,JsonConfiguration,Reads,Writes}
+        |import play.api.libs.functional.syntax.*
+        |import play.api.libs.json.{JsError,JsObject,JsPath,JsValue,Json,JsonConfiguration,Reads}
         |
         |enum WhichTaxRegime {
         |  case SA(
@@ -91,14 +99,14 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |}
         |
         |object WhichTaxRegime {
-        |  val saReads: Reads[SA] = Json.reads[SA]
-        |  val nestedSAReads: Reads[SA] = Reads.at(JsPath \ "SA")(saReads)
-        |
-        |  val vatReads: Reads[VAT] = Json.reads[VAT]
-        |  val nestedVATReads: Reads[VAT] = Reads.at(JsPath \ "VAT")(vatReads)
-        |
-        |  val saWrites: Writes[SA] = Json.writes[SA]
-        |  val vatWrites: Writes[VAT] = Json.writes[VAT]
+        |  private val saReads: Reads[SA] =
+        |    (JsPath \ "saInfo").read[String].map(SA.apply)
+        |  private val nestedSAReads: Reads[SA] =
+        |    (JsPath \ "SA").reads[SA](using saReads)
+        |  private val vatReads: Reads[VAT] =
+        |    (JsPath \ "vatInfo").read[String].map(VAT.apply)
+        |  private val nestedVATReads: Reads[VAT] =
+        |    (JsPath \ "VAT").reads[VAT](using vatReads)
         |
         |  given reads(using config: JsonConfiguration): Reads[WhichTaxRegime] = Reads {
         |    case obj: JsObject => obj.value.get(config.discriminator) match {
@@ -114,15 +122,6 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |    }
         |    case _ => JsError("error.expected.jsobject")
         |  }
-        |
-        |  given writes(using config: JsonConfiguration): Writes[WhichTaxRegime] = Writes {
-        |    case sa: SA =>
-        |      Json.obj(config.discriminator -> config.typeNaming("SA"), "SA" -> saWrites.writes(sa))
-        |    case vat: VAT =>
-        |      Json.obj(config.discriminator -> config.typeNaming("VAT"), "VAT" -> vatWrites.writes(vat))
-        |  }
-        |
-        |  given Format[WhichTaxRegime] = Format(reads, writes)
         |}
         |""".stripMargin
   }
@@ -130,14 +129,27 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
   "JourneyModel.forIfThen" should "render an enum model for an if-then journey part" in {
     val basePackage   = QualifiedName("uk.gov.hmrc.sbtjourneytest")
     val modelsPackage = basePackage / "models"
+    val ifThenPart = IfThenPart(
+      "addATaxRegime",
+      List(
+        DoWhilePart(
+          "addAnotherTaxRegime",
+          List(SinglePagePart("taxRegime", None)),
+          "taxRegimes"
+        )
+      ),
+      None
+    )
     JourneyModel.forIfThen(
       modelsPackage,
+      ifThenPart,
       "AddATaxRegime",
       List("taxRegimes" -> ListType(ClassType(modelsPackage / "TaxRegime")))
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
-        |import play.api.libs.json.{Format,JsError,JsObject,JsPath,JsSuccess,JsValue,Json,JsonConfiguration,Reads,Writes}
+        |import play.api.libs.functional.syntax.*
+        |import play.api.libs.json.{JsError,JsObject,JsPath,JsSuccess,JsValue,Json,JsonConfiguration,Reads}
         |
         |enum AddATaxRegime {
         |  case Yes(
@@ -152,9 +164,12 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |}
         |
         |object AddATaxRegime {
-        |  val yesReads: Reads[Yes] = Json.reads[Yes]
-        |  val yesWrites: Writes[Yes] = Json.writes[Yes]
-        |  val nestedYesReads: Reads[Yes] = Reads.at(JsPath \ "Yes")(yesReads)
+        |  private val yesReads: Reads[Yes] = {
+        |    val taxRegimes = Reads.list(Reads.at[TaxRegime](JsPath \ "taxRegime"))
+        |    (JsPath \ "taxRegimes").read[List[TaxRegime]](using taxRegimes).map(Yes.apply)
+        |  }
+        |  private val nestedYesReads: Reads[Yes] =
+        |    (JsPath \ "Yes").read[Yes](using yesReads)
         |
         |  given reads(using config: JsonConfiguration): Reads[AddATaxRegime] = Reads {
         |    case obj: JsObject => obj.value.get(config.discriminator) match {
@@ -170,15 +185,6 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |    }
         |    case _ => JsError("error.expected.jsobject")
         |  }
-        |
-        |  given writes(using config: JsonConfiguration): Writes[AddATaxRegime] = Writes {
-        |    case yes: Yes =>
-        |      Json.obj(config.discriminator -> config.typeNaming("Yes"), "Yes" -> yesWrites.writes(yes))
-        |    case No =>
-        |      Json.obj(config.discriminator -> config.typeNaming("No"))
-        |  }
-        |
-        |  given Format[AddATaxRegime] = Format(reads, writes)
         |}
         |""".stripMargin
   }
@@ -186,9 +192,22 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
   "JourneyModel.forDoWhile" should "render a case class model for a do-while journey part" in {
     val basePackage   = QualifiedName("uk.gov.hmrc.sbtjourneytest")
     val modelsPackage = basePackage / "models"
+    val doWhilePart = DoWhilePart(
+      "addAnotherAuditSource",
+      List(
+        SinglePagePart("auditSource", None),
+        DoWhilePart(
+          "addAnotherAuditEvent",
+          List(SinglePagePart("auditEvent", None)),
+          "auditEvents"
+        )
+      ),
+      "auditSources"
+    )
     JourneyModel
       .forDoWhile(
         modelsPackage,
+        doWhilePart,
         "AuditSources",
         List(
           "auditSource" -> FieldType.STRING,
@@ -197,7 +216,8 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
       ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
-        |import play.api.libs.json.{Json, Reads}
+        |import play.api.libs.json.{Json, JsPath, Reads}
+        |import play.api.libs.functional.syntax.*
         |
         |
         |case class AuditSources(
@@ -206,7 +226,13 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |)
         |
         |object AuditSources {
-        |  given Reads[AuditSources] = Json.reads[AuditSources]
+        |  given auditSourcesReads: Reads[AuditSources] = {
+        |    val auditEvents = Reads.list(Reads.at[AuditEvent](JsPath \ "auditEvent"))
+        |    (
+        |      (JsPath \ "auditSource").read[String] and
+        |      (JsPath \ "auditEvents").read[List[AuditEvent]](using auditEvents)
+        |    )(AuditSources.apply)
+        |  }
         |}
         |""".stripMargin
   }

@@ -1,6 +1,7 @@
 package uk.gov.hmrc.simplejourney.models
 
-import play.api.libs.json.{Format,JsError,JsObject,JsPath,JsSuccess,JsValue,Json,JsonConfiguration,Reads,Writes}
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.{JsError,JsObject,JsPath,JsSuccess,JsValue,Json,JsonConfiguration,Reads}
 
 enum AddATaxRegime {
   case Yes(
@@ -15,9 +16,12 @@ enum AddATaxRegime {
 }
 
 object AddATaxRegime {
-  val yesReads: Reads[Yes] = Json.reads[Yes]
-  val yesWrites: Writes[Yes] = Json.writes[Yes]
-  val nestedYesReads: Reads[Yes] = Reads.at(JsPath \ "Yes")(yesReads)
+  private val yesReads: Reads[Yes] = {
+    val taxRegimes = Reads.list(Reads.at[TaxRegime](JsPath \ "taxRegime"))
+    (JsPath \ "taxRegimes").read[List[TaxRegime]](using taxRegimes).map(Yes.apply)
+  }
+  private val nestedYesReads: Reads[Yes] =
+    (JsPath \ "Yes").read[Yes](using yesReads)
 
   given reads(using config: JsonConfiguration): Reads[AddATaxRegime] = Reads {
     case obj: JsObject => obj.value.get(config.discriminator) match {
@@ -33,13 +37,4 @@ object AddATaxRegime {
     }
     case _ => JsError("error.expected.jsobject")
   }
-
-  given writes(using config: JsonConfiguration): Writes[AddATaxRegime] = Writes {
-    case yes: Yes =>
-      Json.obj(config.discriminator -> config.typeNaming("Yes"), "Yes" -> yesWrites.writes(yes))
-    case No =>
-      Json.obj(config.discriminator -> config.typeNaming("No"))
-  }
-
-  given Format[AddATaxRegime] = Format(reads, writes)
 }

@@ -167,10 +167,15 @@ object JourneyPlugin extends AutoPlugin {
   def journeyTestSettings: Seq[Setting[?]] = Def.settings(
     sourceGenerators += generateJourneyTests.taskValue,
     generateJourneyTests := {
-      val logger        = streams.value.log
-      val baseDir       = (generateJourneyTests / target).value
-      val journeyConfig = journeyConfiguration.value
-      generateJourneyTestFiles(logger, baseDir, journeyConfig)
+      val logger            = streams.value.log
+      val factory           = streams.value.cacheStoreFactory
+      val baseDir           = (generateJourneyTests / target).value
+      val journeyConfigFile = (Compile / resourceDirectory).value / "journey.conf"
+      val journeyConfig     = journeyConfiguration.value
+      whenConfigChanges(factory, journeyConfigFile) { lastFiles =>
+        cleanJourneyFiles(lastFiles)
+        generateJourneyTestFiles(logger, baseDir, journeyConfig)
+      }
     },
     generateJourneyTests / fileInputs += ((Compile / resourceDirectory).value / "journey.conf").toGlob,
     generateJourneyTests / target := {
@@ -723,35 +728,30 @@ object JourneyPlugin extends AutoPlugin {
 
     val journeyFiles = config.journeys.flatMap { case (_, journey) =>
       def syntheticJourneyModels(journeyPart: JourneyPart): Seq[File] = journeyPart match {
-        case SwitchCasePart(choicePage, subJourney, as) =>
+        case part @ SwitchCasePart(choicePage, subJourney, as) =>
           val subJourneyModels = subJourney.values.toList.flatMap(_.flatMap(syntheticJourneyModels))
           val modelName        = pascalCase(as.getOrElse(choicePage))
           val modelFile        = packageFolder / "models" / s"$modelName.scala"
           val cases = subJourney.mapValues(ModelFields.forParts(modelsPackage, journey, _))
-          IO.write(modelFile, JourneyModel.forSwitchCase(modelsPackage, modelName, cases))
+          IO.write(modelFile, JourneyModel.forSwitchCase(modelsPackage, part, modelName, cases))
           logger.info(s"Generated journey model $modelFile")
           modelFile +: subJourneyModels
-        case IfThenPart(choicePage, subJourney, as) =>
+        case part @ IfThenPart(choicePage, subJourney, as) =>
           val subJourneyModels = subJourney.flatMap(syntheticJourneyModels)
           val modelFields      = ModelFields.forParts(modelsPackage, journey, subJourney)
           val modelName        = pascalCase(as.getOrElse(choicePage))
           val modelFile        = packageFolder / "models" / s"$modelName.scala"
-          IO.write(modelFile, JourneyModel.forIfThen(modelsPackage, modelName, modelFields))
+          IO.write(modelFile, JourneyModel.forIfThen(modelsPackage, part, modelName, modelFields))
           logger.info(s"Generated journey model $modelFile")
           modelFile +: subJourneyModels
-        case DoWhilePart(_, subJourney, as) =>
+        case part @ DoWhilePart(_, subJourney, as) =>
           val subJourneyModels = subJourney.flatMap(syntheticJourneyModels)
-          val modelFields      = ModelFields.forParts(modelsPackage, journey, subJourney)
-          if (modelFields.length == 1) {
-            // We don't need to generate a model for this subjourney because it doesn't have multiple answers
-            subJourneyModels
-          } else {
-            val modelName = pascalCase(as)
-            val modelFile = packageFolder / "models" / s"$modelName.scala"
-            IO.write(modelFile, JourneyModel.forDoWhile(modelsPackage, modelName, modelFields))
-            logger.info(s"Generated journey model $modelFile")
-            modelFile +: subJourneyModels
-          }
+          val fields           = ModelFields.forParts(modelsPackage, journey, subJourney)
+          val modelName        = pascalCase(as)
+          val modelFile        = packageFolder / "models" / s"$modelName.scala"
+          IO.write(modelFile, JourneyModel.forDoWhile(modelsPackage, part, modelName, fields))
+          logger.info(s"Generated journey model $modelFile")
+          modelFile +: subJourneyModels
         case SinglePagePart(_, _) =>
           Seq.empty
       }
