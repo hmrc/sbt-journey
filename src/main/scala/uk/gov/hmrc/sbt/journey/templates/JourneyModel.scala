@@ -44,10 +44,11 @@ object JourneyModel extends Template {
   private def nestedReads(
     subJourney: List[JourneyPart],
     modelName: String,
+    caseName: String,
     fields: List[(String, FieldType)],
     modifier: String
   ): String = {
-    val nm = camelCase(modelName)
+    val nm = camelCase(caseName)
     if (fields.length == 1) {
       val (fieldName, fieldType) = fields.head
       val readList               = listReads(subJourney.head, fieldName, fieldType)
@@ -55,10 +56,10 @@ object JourneyModel extends Template {
       val pathReads              = jsPathReads(fieldName, fieldType)
       if (readList.isEmpty)
         s"""  $modifier ${nm}Reads: Reads[$modelName] =
-           |    $pathReads$usingReads.map($modelName.apply)""".stripMargin
+           |    $pathReads$usingReads.map($caseName.apply)""".stripMargin
       else
         s"""  $modifier ${nm}Reads: Reads[$modelName] = {
-           |$readList    $pathReads$usingReads.map($modelName.apply)
+           |$readList    $pathReads$usingReads.map($caseName.apply)
            |  }""".stripMargin
     } else {
       val (readList, readPath) = subJourney
@@ -73,7 +74,7 @@ object JourneyModel extends Template {
       s"""  $modifier ${nm}Reads: Reads[$modelName] = {
          |${if (readList.isEmpty) "" else readList.distinct.mkString}    (
          |${readPath.mkString(" and" + NL)}
-         |    )($modelName.apply)
+         |    )($caseName.apply)
          |  }""".stripMargin
     }
   }
@@ -91,15 +92,16 @@ object JourneyModel extends Template {
 
   private def switchCaseReads(
     subJourney: List[JourneyPart],
+    modelName: String,
     caseName: String,
     fields: List[(String, FieldType)]
   ): String = {
     val nm = camelCase(caseName)
     if (fields.isEmpty) ""
     else
-      s"""${nestedReads(subJourney, caseName, fields, "private val")}
-         |  private val nested${caseName}Reads: Reads[$caseName] =
-         |    (JsPath \\ "$caseName").reads[$caseName](using ${nm}Reads)""".stripMargin
+      s"""${nestedReads(subJourney, modelName, caseName, fields, "private val")}
+         |  private val nested${caseName}Reads: Reads[$modelName] =
+         |    (JsPath \\ "$caseName").read[$caseName](using ${nm}Reads)""".stripMargin
   }
 
   private def switchCaseRead(
@@ -139,7 +141,7 @@ object JourneyModel extends Template {
 
     val caseReads = modelCases
       .map { case (caseName, fields) =>
-        switchCaseReads(switchCasePart.subJourneys(caseName), caseName, fields)
+        switchCaseReads(switchCasePart.subJourneys(caseName), modelName, caseName, fields)
       }
       .toList
       .filterNot(_.isBlank)
@@ -211,14 +213,14 @@ object JourneyModel extends Template {
        |  case No
        |
        |  def choice: Choice = this match {
-       |    case Yes(_) => Choice.Yes
-       |    case No     => Choice.No
+       |    case Yes${fields.map(_ => "_").mkString("(", ", ", ")")} => Choice.Yes
+       |    case No => Choice.No
        |  }
        |}
        |
        |object $modelName $extendsClause{
-       |${nestedReads(ifThenPart.subJourney, "Yes", fields, "private val")}
-       |  private val nestedYesReads: Reads[Yes] =
+       |${nestedReads(ifThenPart.subJourney, modelName, "Yes", fields, "private val")}
+       |  private val nestedYesReads: Reads[$modelName] =
        |    (JsPath \\ "Yes").read[Yes](using yesReads)
        |
        |  given reads(using config: JsonConfiguration): Reads[$modelName] = Reads {
@@ -260,7 +262,7 @@ object JourneyModel extends Template {
        |)
        |
        |object $modelName $extendsClause{
-       |${nestedReads(doWhilePart.subJourney, modelName, fields, "given")}
+       |${nestedReads(doWhilePart.subJourney, modelName, modelName, fields, "given")}
        |}
        |""".stripMargin
   }
