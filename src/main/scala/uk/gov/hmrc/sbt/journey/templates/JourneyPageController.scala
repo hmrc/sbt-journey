@@ -70,7 +70,7 @@ object JourneyPageController extends Template {
       case _ :: tail =>
         go(tail, acc)
       case Nil =>
-        acc.reverse
+        acc
     }
 
     // Process the path in reverse so that we can see the prefix of each path as "tail"
