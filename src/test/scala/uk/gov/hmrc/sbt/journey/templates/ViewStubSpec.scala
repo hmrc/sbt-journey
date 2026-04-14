@@ -377,6 +377,81 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
         |""".stripMargin
   }
 
+  it should "render a view stub for a set of enum model" in {
+    ViewStub.renderForm(
+      Map(
+        "SurvivedBy" -> EnumModel(
+          "SurvivedBy",
+          List("SPOUSE", "SIBLING", "PARENT", "CHILDREN", "GRANDCHILDREN")
+        )
+      ),
+      journeyPage("whoSurvivesDeceased", SetType(ClassType(basePackage / "models" / "SurvivedBy")))
+    ) shouldBe
+      """@this(
+        |    layout: templates.Layout,
+        |    formHelper: FormWithCSRF,
+        |    govukErrorSummary: GovukErrorSummary,
+        |    govukCheckboxes: GovukCheckboxes,
+        |    govukButton: GovukButton
+        |)
+        |
+        |@(form: Form[_], action: Call, mode: Mode)(implicit request: Request[_], messages: Messages)
+        |
+        |@layout(pageTitle = title(form, messages("whoSurvivesDeceased.title"))) {
+        |
+        |    @formHelper(action = action, Symbol("autoComplete") -> "off") {
+        |        @if(form.errors.nonEmpty) {
+        |            @govukErrorSummary(ErrorSummaryViewModel(form))
+        |        }
+        |
+        |        @govukCheckboxes(
+        |            CheckboxesViewModel(
+        |                form = form,
+        |                name = "value",
+        |                legend = LegendViewModel(messages("whoSurvivesDeceased.heading")).asPageHeading(),
+        |                items = List(
+        |                    CheckboxItemViewModel(
+        |                        content = Text(messages("whoSurvivesDeceased.value.spouse")),
+        |                        fieldId = "value",
+        |                        index = 0,
+        |                        value = "SPOUSE"
+        |                    ),
+        |                    CheckboxItemViewModel(
+        |                        content = Text(messages("whoSurvivesDeceased.value.sibling")),
+        |                        fieldId = "value",
+        |                        index = 1,
+        |                        value = "SIBLING"
+        |                    ),
+        |                    CheckboxItemViewModel(
+        |                        content = Text(messages("whoSurvivesDeceased.value.parent")),
+        |                        fieldId = "value",
+        |                        index = 2,
+        |                        value = "PARENT"
+        |                    ),
+        |                    CheckboxItemViewModel(
+        |                        content = Text(messages("whoSurvivesDeceased.value.children")),
+        |                        fieldId = "value",
+        |                        index = 3,
+        |                        value = "CHILDREN"
+        |                    ),
+        |                    CheckboxItemViewModel(
+        |                        content = Text(messages("whoSurvivesDeceased.value.grandchildren")),
+        |                        fieldId = "value",
+        |                        index = 4,
+        |                        value = "GRANDCHILDREN"
+        |                    )
+        |                )
+        |            )
+        |        )
+        |
+        |        @govukButton(
+        |            ButtonViewModel(messages("site.continue"))
+        |        )
+        |    }
+        |}
+        |""".stripMargin
+  }
+
   it should "render a view stub for a case class model" in {
     ViewStub.renderForm(
       Map(

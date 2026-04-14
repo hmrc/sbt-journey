@@ -41,6 +41,12 @@ object FieldType {
   */
 case class ListType(elements: FieldType) extends FieldType
 
+/** A set answer.
+ * @param elements
+ *   the element type of the set.
+ */
+case class SetType(elements: FieldType) extends FieldType
+
 /** An optional answer.
   * @param elements
   *   the element type of the option.

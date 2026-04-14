@@ -104,6 +104,8 @@ object ViewStub extends Template {
             List(s"${p}govukInput: GovukInput,")
           case ClassType(clazz) if clazz == classOf[String].getName =>
             List(s"${p}govukInput: GovukInput,")
+          case SetType(_) =>
+            List(s"${p}govukCheckboxes: GovukCheckboxes,")
           case OptionType(fieldType) =>
             inputsFor(models, fieldType)
           case _ =>
@@ -160,6 +162,37 @@ object ViewStub extends Template {
         fieldType match {
           case OptionType(fieldType) =>
             fieldsFor(models, pageName, enclosing, fieldName, fieldType)
+
+          case SetType(fieldType) =>
+            val Some(EnumModel(enumName, choices)) = fieldType.typeName.flatMap(models.get)
+
+            val messagePrefix =
+              if (enumName == "Choice") "site"
+              else s"$pageName.$fieldName"
+
+            val items = choices.zipWithIndex.map { case (choice, index) =>
+              val p = " " * 20
+              s"""|${p}CheckboxItemViewModel(
+                  |${p}    content = Text(messages("$messagePrefix.${packageCase(choice)}")),
+                  |${p}    fieldId = "$parentField$fieldName",
+                  |${p}    index = $index,
+                  |${p}    value = "$choice"
+                  |${p})""".stripMargin
+            }
+
+            val checkboxes =
+              s"""|$p@govukCheckboxes(
+                  |$p    CheckboxesViewModel(
+                  |$p        form = form,
+                  |$p        name = "$parentField$fieldName",
+                  |$p        legend = ${legendFor(pageName, fieldName)},
+                  |$p        items = List(
+                  |${items.mkString("," + NL)}
+                  |$p        )
+                  |$p    )
+                  |$p)""".stripMargin
+
+            List(checkboxes)
 
           case PrimitiveType(clazz) if clazz == classOf[Boolean] =>
             val radios =

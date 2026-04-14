@@ -50,6 +50,7 @@ object ModelFields {
 
   def fieldType(typ: FieldType): String = typ match {
     case ListType(elements)          => s"List[${fieldType(elements)}]"
+    case SetType(elements)           => s"Set[${fieldType(elements)}]"
     case OptionType(elements)        => s"Option[${fieldType(elements)}]"
     case PrimitiveType(clazz)        => capitalise(clazz.getSimpleName)
     case ClassType(clazz)            => clazz.split("\\.").last

@@ -25,9 +25,10 @@ object Mermaid extends Template {
       case SinglePagePart(pageKey, _) =>
         List(s"$p$pageKey-->${nextPart.startPage}")
       case SwitchCasePart(choicePage, subJourneys, _) =>
-        s"$choicePage{{$choicePage}}" :: subJourneys.toList.map { case (name, parts) =>
-          s"""|$p$choicePage-- $name -->${parts.head.startPage}
-              |${forParts(parts, nextPart)}""".stripMargin
+        s"$choicePage{{$choicePage}}" :: subJourneys.toList.flatMap { case (name, parts) =>
+          val choicePagePart  = s"""$p$choicePage-- $name -->${parts.head.startPage}"""
+          val subJourneyParts = forParts(parts, nextPart)
+          choicePagePart :: subJourneyParts
         }
       case IfThenPart(choicePage, subJourney, _) =>
         val subJourneyParts = forParts(subJourney, nextPart)

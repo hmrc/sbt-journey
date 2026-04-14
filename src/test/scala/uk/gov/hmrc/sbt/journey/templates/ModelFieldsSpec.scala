@@ -67,6 +67,13 @@ class ModelFieldsSpec extends AnyFlatSpec with Matchers {
     ) shouldBe s"  cipAssessmentTickets: List[String]"
   }
 
+  it should "return a field declaration for a Set field" in {
+    ModelFields.field(
+      "cipAssessmentTickets",
+      SetType(FieldType.STRING)
+    ) shouldBe s"  cipAssessmentTickets: Set[String]"
+  }
+
   it should "return a field declaration for an Option field" in {
     ModelFields.field(
       "expectedDecommissioningDate",

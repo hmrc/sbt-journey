@@ -59,7 +59,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |
         |
@@ -87,7 +87,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |
         |
@@ -106,7 +106,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |
         |
@@ -137,7 +137,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |
         |
@@ -169,7 +169,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import scala.math.BigDecimal
         |
@@ -201,7 +201,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import java.time.LocalDate
         |import play.api.i18n.Messages
@@ -235,7 +235,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import java.time.LocalDate
         |import play.api.i18n.Messages
@@ -269,7 +269,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import java.time.DayOfWeek
         |
@@ -288,7 +288,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import uk.gov.hmrc.sbtjourneytest.Choice
         |
@@ -305,6 +305,42 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
         |      requiredKey = "areYouSendingSamples.error.required",
         |      invalidKey = "areYouSendingSamples.error.invalid",
         |    )
+        |  )
+        |}
+        |""".stripMargin
+  }
+
+  it should "render a form provider for a set of enum model" in {
+    FormProvider.baseProvider(
+      basePackage,
+      Map(
+        "SurvivedBy" -> EnumModel(
+          "SurvivedBy",
+          List("SPOUSE", "SIBLING", "PARENT", "CHILDREN", "GRANDCHILDREN")
+        )
+      ),
+      journeyPage("whoSurvivesDeceased", SetType(ClassType(basePackage / "models" / "SurvivedBy")))
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional,set}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |import uk.gov.hmrc.sbtjourneytest.models.SurvivedBy
+        |
+        |trait WhoSurvivesDeceasedBaseFormProvider {
+        |  def apply(): Form[Set[SurvivedBy]]
+        |}
+        |
+        |class DefaultWhoSurvivesDeceasedFormProvider
+        |  extends WhoSurvivesDeceasedBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply(): Form[Set[SurvivedBy]] = Form(
+        |    "value" -> set(enumerable[SurvivedBy](
+        |      requiredKey = "whoSurvivesDeceased.error.required",
+        |      invalidKey = "whoSurvivesDeceased.error.invalid",
+        |    ))
         |  )
         |}
         |""".stripMargin
@@ -329,7 +365,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import uk.gov.hmrc.sbtjourneytest.AuditEvent
         |import play.api.i18n.Messages
@@ -373,7 +409,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |
         |
@@ -397,7 +433,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |
         |
@@ -424,7 +460,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |
         |
@@ -452,7 +488,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import scala.math.BigDecimal
         |
@@ -479,7 +515,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import java.time.LocalDate
         |import play.api.i18n.Messages
@@ -509,7 +545,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import java.time.LocalDate
         |import play.api.i18n.Messages
@@ -539,7 +575,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import java.time.DayOfWeek
         |
@@ -563,7 +599,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import uk.gov.hmrc.sbtjourneytest.Choice
         |
@@ -576,6 +612,38 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
         |      requiredKey = "areYouSendingSamples.error.required",
         |      invalidKey = "areYouSendingSamples.error.invalid",
         |    )
+        |  )
+        |}
+        |""".stripMargin
+  }
+
+  it should "render a form provider for a set of enum model" in {
+    FormProvider.providerStub(
+      basePackage,
+      Map(
+        "SurvivedBy" -> EnumModel(
+          "SurvivedBy",
+          List("SPOUSE", "SIBLING", "PARENT", "CHILDREN", "GRANDCHILDREN")
+        )
+      ),
+      journeyPage("whoSurvivesDeceased", SetType(ClassType(basePackage / "models" / "SurvivedBy")))
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.forms
+        |
+        |import play.api.data.Form
+        |import play.api.data.Forms.{mapping,optional,set}
+        |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
+        |import uk.gov.hmrc.sbtjourneytest.models.SurvivedBy
+        |
+        |class WhoSurvivesDeceasedFormProvider
+        |  extends WhoSurvivesDeceasedBaseFormProvider
+        |  with Mappings {
+        |
+        |  def apply(): Form[Set[SurvivedBy]] = Form(
+        |    "value" -> set(enumerable[SurvivedBy](
+        |      requiredKey = "whoSurvivesDeceased.error.required",
+        |      invalidKey = "whoSurvivesDeceased.error.invalid",
+        |    ))
         |  )
         |}
         |""".stripMargin
@@ -600,7 +668,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import uk.gov.hmrc.sbtjourneytest.AuditEvent
         |import play.api.i18n.Messages
@@ -650,7 +718,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.forms
         |
         |import play.api.data.Form
-        |import play.api.data.Forms.{mapping,optional}
+        |import play.api.data.Forms.{mapping,optional,set}
         |import _root_.forms.mappings.Mappings // uk.gov.hmrc.sbtjourneytest.forms.mappings.Mappings
         |import uk.gov.hmrc.sbtjourneytest.AuditEvent
         |import play.api.i18n.Messages

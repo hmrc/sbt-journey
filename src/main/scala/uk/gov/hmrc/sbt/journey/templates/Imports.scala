@@ -90,6 +90,7 @@ object Imports extends Template {
   private def collectClassTypes(fieldType: FieldType): Set[ClassType] = {
     def find(typ: FieldType): Set[ClassType] = typ match {
       case ListType(elements)       => find(elements)
+      case SetType(elements)        => find(elements)
       case OptionType(elements)     => find(elements)
       case classType @ ClassType(_) => Set(classType)
       case SyntheticClassType(_, _) => Set.empty

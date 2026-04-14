@@ -35,6 +35,8 @@ object FormProvider extends Template {
         fieldType match {
           case OptionType(fieldType) =>
             hasMappingsFor(models, fieldType)
+          case SetType(fieldType) =>
+            hasMappingsFor(models, fieldType)
           case PrimitiveType(clazz) =>
             Set[Class[? <: AnyVal]](classOf[Int], classOf[Boolean]).contains(clazz)
           case ClassType(clazz) =>
@@ -142,6 +144,8 @@ object FormProvider extends Template {
                 |$p)""".stripMargin
           case ClassType(clazz) if clazz == classOf[String].getName =>
             s"""text("$pageName.error.${parentField}${subField}required")""".stripMargin
+          case SetType(fieldType) =>
+            s"set(${mappingsFor(models, pageName, indent, enclosing, fieldName, fieldType)})"
           case OptionType(fieldType) =>
             s"optional(${mappingsFor(models, pageName, indent, enclosing, fieldName, fieldType)})"
           case _ =>
@@ -187,7 +191,7 @@ object FormProvider extends Template {
     s"""package $formsPackage
        |
        |import play.api.data.Form
-       |import play.api.data.Forms.{mapping,optional}
+       |import play.api.data.Forms.{mapping,optional,set}
        |import _root_.forms.mappings.Mappings // ${basePackage / "forms.mappings.Mappings"}
        |$imports
        |
@@ -219,7 +223,7 @@ object FormProvider extends Template {
     s"""package $formsPackage
        |
        |import play.api.data.Form
-       |import play.api.data.Forms.{mapping,optional}
+       |import play.api.data.Forms.{mapping,optional,set}
        |import _root_.forms.mappings.Mappings // ${basePackage / "forms.mappings.Mappings"}
        |$imports
        |
