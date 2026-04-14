@@ -102,11 +102,11 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |  private val saReads: Reads[WhichTaxRegime] =
         |    (JsPath \ "saInfo").read[String].map(SA.apply)
         |  private val nestedSAReads: Reads[WhichTaxRegime] =
-        |    (JsPath \ "SA").read[SA](using saReads)
+        |    (JsPath \ "SA").read[WhichTaxRegime](using saReads)
         |  private val vatReads: Reads[WhichTaxRegime] =
         |    (JsPath \ "vatInfo").read[String].map(VAT.apply)
         |  private val nestedVATReads: Reads[WhichTaxRegime] =
-        |    (JsPath \ "VAT").read[VAT](using vatReads)
+        |    (JsPath \ "VAT").read[WhichTaxRegime](using vatReads)
         |
         |  given reads(using config: JsonConfiguration): Reads[WhichTaxRegime] = Reads {
         |    case obj: JsObject => obj.value.get(config.discriminator) match {
@@ -169,7 +169,7 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |    (JsPath \ "taxRegimes").read[List[TaxRegime]](using taxRegimes).map(Yes.apply)
         |  }
         |  private val nestedYesReads: Reads[AddATaxRegime] =
-        |    (JsPath \ "Yes").read[Yes](using yesReads)
+        |    (JsPath \ "Yes").read[AddATaxRegime](using yesReads)
         |
         |  given reads(using config: JsonConfiguration): Reads[AddATaxRegime] = Reads {
         |    case obj: JsObject => obj.value.get(config.discriminator) match {

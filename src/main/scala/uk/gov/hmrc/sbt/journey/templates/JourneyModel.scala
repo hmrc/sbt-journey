@@ -101,7 +101,7 @@ object JourneyModel extends Template {
     else
       s"""${nestedReads(subJourney, modelName, caseName, fields, "private val")}
          |  private val nested${caseName}Reads: Reads[$modelName] =
-         |    (JsPath \\ "$caseName").read[$caseName](using ${nm}Reads)""".stripMargin
+         |    (JsPath \\ "$caseName").read[$modelName](using ${nm}Reads)""".stripMargin
   }
 
   private def switchCaseRead(
@@ -221,7 +221,7 @@ object JourneyModel extends Template {
        |object $modelName $extendsClause{
        |${nestedReads(ifThenPart.subJourney, modelName, "Yes", fields, "private val")}
        |  private val nestedYesReads: Reads[$modelName] =
-       |    (JsPath \\ "Yes").read[Yes](using yesReads)
+       |    (JsPath \\ "Yes").read[$modelName](using yesReads)
        |
        |  given reads(using config: JsonConfiguration): Reads[$modelName] = Reads {
        |    case obj: JsObject => obj.value.get(config.discriminator) match {
