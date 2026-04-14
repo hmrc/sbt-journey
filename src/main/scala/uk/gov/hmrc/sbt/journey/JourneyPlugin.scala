@@ -501,7 +501,7 @@ object JourneyPlugin extends AutoPlugin {
             val caseObject = config.getObject("case")
 
             val subJourneys = caseObject.asScala.toMap.map { case (enumValue, journey) =>
-              if (!cases.contains(enumValue)) {
+              if (!cases.contains(enumValue) && enumValue != "default") {
                 errors += problem(
                   caseObject.origin(),
                   s"The value $enumValue is not one of the cases of enum $enumName"
@@ -814,7 +814,7 @@ object JourneyPlugin extends AutoPlugin {
     }.toList
 
     val navigatorFile = packageFolder / "navigation" / s"JourneyNavigator.scala"
-    IO.write(navigatorFile, Navigator.render(config))
+    IO.write(navigatorFile, new Navigator(config.models).render(config))
     logger.info(s"Generated navigator $navigatorFile")
 
     rootPageFiles ++ modelFiles ++ journeyFiles :+ navigatorFile

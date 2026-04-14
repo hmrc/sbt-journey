@@ -24,6 +24,13 @@ import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{kebabCase, pascalCase}
 class NavigatorSpec extends AnyFlatSpec with Matchers {
   val basePackage = QualifiedName("uk.gov.hmrc.sbtjourneytest")
 
+  val navigator = new Navigator(
+    Map(
+      "Choice"    -> EnumModel("Choice", List("Yes", "No")),
+      "TaxRegime" -> EnumModel("TaxRegime", List("SA", "VAT"))
+    )
+  )
+
   def rootPage(pageKey: String, viewRoute: String = "") = RootPage(
     s"$pageKey.title",
     s"$pageKey.heading",
@@ -76,7 +83,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.normalRoutesFor(config) shouldBe
+    navigator.normalRoutesFor(config) shouldBe
       """    case CipAssessmentTicketPage => _ => _ =>
         |      routes.CipAssessmentPageBaseController.onPageLoad(NormalMode)
         |    case CipAssessmentPagePage => _ => _ =>
@@ -109,7 +116,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.normalRoutesFor(config) shouldBe
+    navigator.normalRoutesFor(config) shouldBe
       """    case AddAnotherAuditEventPage(auditEventsIndex) => _ => {
         |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, NormalMode)
         |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
@@ -149,7 +156,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.normalRoutesFor(config) shouldBe
+    navigator.normalRoutesFor(config) shouldBe
       """    case CipAssessmentPagePage => _ => _ =>
         |      routes.AuditEventBaseController.onPageLoad(0, NormalMode)
         |    case AddAnotherAuditEventPage(auditEventsIndex) => _ => {
@@ -191,7 +198,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.normalRoutesFor(config) shouldBe
+    navigator.normalRoutesFor(config) shouldBe
       """    case AddAnotherAuditEventPage(auditEventsIndex) => _ => {
         |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, NormalMode)
         |      case Choice.No  => routes.CipAssessmentPageBaseController.onPageLoad(NormalMode)
@@ -238,7 +245,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.normalRoutesFor(config) shouldBe
+    navigator.normalRoutesFor(config) shouldBe
       """    case CipAssessmentPagePage => _ => _ =>
         |      routes.AuditEventBaseController.onPageLoad(0, 0, NormalMode)
         |    case AddAnotherAuditSourcePage(auditSourcesIndex) => _ => {
@@ -283,7 +290,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.normalRoutesFor(config) shouldBe
+    navigator.normalRoutesFor(config) shouldBe
       """    case WhichTaxRegimePage => _ => {
         |      case TaxRegime.SA => routes.SaInfoBaseController.onPageLoad(NormalMode)
         |      case TaxRegime.VAT => routes.VatInfoBaseController.onPageLoad(NormalMode)
@@ -291,6 +298,80 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
         |    case SaInfoPage(TaxRegime.SA) => _ => _ =>
         |      routes.CheckYourAnswersBaseController.onPageLoad
         |    case VatInfoPage(TaxRegime.VAT) => _ => _ =>
+        |      routes.CheckYourAnswersBaseController.onPageLoad""".stripMargin
+  }
+
+  it should "render navigations between the pages of a switch-case journey with a default case" in {
+    val whichTaxRegime =
+      journeyPage("whichTaxRegime", ClassType(basePackage / "models" / "TaxRegime"))
+    val vatInfo =
+      journeyPage("vatInfo", FieldType.STRING)
+    val saInfo =
+      journeyPage("saInfo", FieldType.STRING)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whichTaxRegime" -> Journey(
+        pages = Map(
+          "whichTaxRegime" -> whichTaxRegime,
+          "saInfo"         -> saInfo,
+          "vatInfo"        -> vatInfo
+        ),
+        journey = List(
+          SwitchCasePart(
+            "whichTaxRegime",
+            Map(
+              "SA"  -> List(SinglePagePart("saInfo", None)),
+              "default" -> List(SinglePagePart("vatInfo", None))
+            ),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    navigator.normalRoutesFor(config) shouldBe
+      """    case WhichTaxRegimePage => _ => {
+        |      case TaxRegime.SA => routes.SaInfoBaseController.onPageLoad(NormalMode)
+        |      case _ => routes.VatInfoBaseController.onPageLoad(NormalMode)
+        |    }
+        |    case SaInfoPage(TaxRegime.SA) => _ => _ =>
+        |      routes.CheckYourAnswersBaseController.onPageLoad
+        |    case VatInfoPage(_) => _ => _ =>
+        |      routes.CheckYourAnswersBaseController.onPageLoad""".stripMargin
+  }
+
+  it should "render navigations between the pages of a switch-case journey that doesn't cover all cases" in {
+    val whichTaxRegime =
+      journeyPage("whichTaxRegime", ClassType(basePackage / "models" / "TaxRegime"))
+    val saInfo =
+      journeyPage("saInfo", FieldType.STRING)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whichTaxRegime" -> Journey(
+        pages = Map(
+          "whichTaxRegime" -> whichTaxRegime,
+          "saInfo"         -> saInfo
+        ),
+        journey = List(
+          SwitchCasePart(
+            "whichTaxRegime",
+            Map("SA"  -> List(SinglePagePart("saInfo", None))),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    navigator.normalRoutesFor(config) shouldBe
+      """    case WhichTaxRegimePage => _ => {
+        |      case TaxRegime.SA => routes.SaInfoBaseController.onPageLoad(NormalMode)
+        |      case _ => routes.CheckYourAnswersBaseController.onPageLoad
+        |    }
+        |    case SaInfoPage(TaxRegime.SA) => _ => _ =>
         |      routes.CheckYourAnswersBaseController.onPageLoad""".stripMargin
   }
 
@@ -327,7 +408,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.normalRoutesFor(config) shouldBe
+    navigator.normalRoutesFor(config) shouldBe
       """    case AddATaxRegimePage => _ => {
         |      case Choice.Yes => routes.TaxRegimeBaseController.onPageLoad(0, NormalMode)
         |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
@@ -352,10 +433,10 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
       journey = "auditSources" -> Journey(
         pages = Map(
-          "auditEvent"           -> auditEvent,
-          "auditSource"          -> auditSource,
+          "auditEvent"            -> auditEvent,
+          "auditSource"           -> auditSource,
           "addAnotherAuditSource" -> addAnotherAuditSource,
-          "addAnotherAuditEvent" -> addAnotherAuditEvent
+          "addAnotherAuditEvent"  -> addAnotherAuditEvent
         ),
         journey = List(
           DoWhilePart(
@@ -375,7 +456,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.normalRoutesFor(config) shouldBe
+    navigator.normalRoutesFor(config) shouldBe
       """    case AddAnotherAuditSourcePage(auditSourcesIndex) => _ => {
         |      case Choice.Yes => routes.AuditSourceBaseController.onPageLoad(auditSourcesIndex + 1, NormalMode)
         |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
@@ -411,7 +492,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.checkRoutesFor(config) shouldBe
+    navigator.checkRoutesFor(config) shouldBe
       """    case CipAssessmentTicketPage => _ => _ =>
         |      routes.CheckYourAnswersBaseController.onPageLoad
         |    case CipAssessmentPagePage => _ => _ =>
@@ -444,7 +525,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.checkRoutesFor(config) shouldBe
+    navigator.checkRoutesFor(config) shouldBe
       """    case AddAnotherAuditEventPage(auditEventsIndex) => _ => {
         |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, CheckMode)
         |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
@@ -484,7 +565,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.checkRoutesFor(config) shouldBe
+    navigator.checkRoutesFor(config) shouldBe
       """    case CipAssessmentPagePage => _ => _ =>
         |      routes.CheckYourAnswersBaseController.onPageLoad
         |    case AddAnotherAuditEventPage(auditEventsIndex) => _ => {
@@ -526,7 +607,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.checkRoutesFor(config) shouldBe
+    navigator.checkRoutesFor(config) shouldBe
       """    case AddAnotherAuditEventPage(auditEventsIndex) => _ => {
         |      case Choice.Yes => routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, CheckMode)
         |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
@@ -573,7 +654,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.checkRoutesFor(config) shouldBe
+    navigator.checkRoutesFor(config) shouldBe
       """    case CipAssessmentPagePage => _ => _ =>
         |      routes.CheckYourAnswersBaseController.onPageLoad
         |    case AddAnotherAuditSourcePage(auditSourcesIndex) => _ => {
@@ -618,7 +699,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.checkRoutesFor(config) shouldBe
+    navigator.checkRoutesFor(config) shouldBe
       """    case WhichTaxRegimePage => _ => {
         |      case TaxRegime.SA => routes.SaInfoBaseController.onPageLoad(CheckMode)
         |      case TaxRegime.VAT => routes.VatInfoBaseController.onPageLoad(CheckMode)
@@ -662,7 +743,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.checkRoutesFor(config) shouldBe
+    navigator.checkRoutesFor(config) shouldBe
       """    case AddATaxRegimePage => _ => {
         |      case Choice.Yes => routes.TaxRegimeBaseController.onPageLoad(0, CheckMode)
         |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
@@ -687,10 +768,10 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
       journey = "auditSources" -> Journey(
         pages = Map(
-          "auditEvent"           -> auditEvent,
-          "auditSource"          -> auditSource,
+          "auditEvent"            -> auditEvent,
+          "auditSource"           -> auditSource,
           "addAnotherAuditSource" -> addAnotherAuditSource,
-          "addAnotherAuditEvent" -> addAnotherAuditEvent
+          "addAnotherAuditEvent"  -> addAnotherAuditEvent
         ),
         journey = List(
           DoWhilePart(
@@ -710,7 +791,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Navigator.checkRoutesFor(config) shouldBe
+    navigator.checkRoutesFor(config) shouldBe
       """    case AddAnotherAuditSourcePage(auditSourcesIndex) => _ => {
         |      case Choice.Yes => routes.AuditSourceBaseController.onPageLoad(auditSourcesIndex + 1, CheckMode)
         |      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
@@ -728,7 +809,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
   "Navigator.render" should "render a Navigator interface and default implementation" in {
     val config = JourneyConfig(basePackage.toString, Map.empty, Map.empty, Map.empty)
 
-    Navigator.render(config) shouldBe
+    navigator.render(config) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.navigation
         |
         |import uk.gov.hmrc.sbtjourneytest.controllers.routes

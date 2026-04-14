@@ -19,12 +19,12 @@ package uk.gov.hmrc.sbt.journey.templates
 import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.pascalCase
 
-object Navigator extends Template {
+class Navigator(models: Map[String, AnswerModel]) extends Template {
   private def unapplyParams(pages: Map[String, JourneyPage], journeyPath: JourneyPath): String = {
     val paths = journeyPath.paths
       .map {
-        case IndexPath(pageKey) =>
-          s"${pageKey}Index"
+        case IndexPath(pageKey)       => s"${pageKey}Index"
+        case ChoicePath(_, "default") => "_"
         case ChoicePath(pageKey, choice) =>
           val choiceType = ModelFields.fieldType(pages(pageKey).answerType)
           s"$choiceType.$choice"
@@ -134,16 +134,27 @@ object Navigator extends Template {
         routesFor(mode, pages, subJourney, indexPath, choicePagePart, indexPath)
       choicePageRoutes :: subJourneyRoutes
     case SwitchCasePart(choicePage, subJourneys, as) =>
-      val choiceType = ModelFields.fieldType(pages(choicePage).answerType)
+      val answerType                = pages(choicePage).answerType
+      val choiceType                = ModelFields.fieldType(pages(choicePage).answerType)
+      val Some(EnumModel(_, cases)) = answerType.typeName.flatMap(models.get)
+      val uncoveredCases            = cases.toSet.diff(subJourneys.keySet)
+      val hasDefault                = subJourneys.contains("default")
+      val isExhaustive              = uncoveredCases.isEmpty || hasDefault
+      val nextPartPage              = pascalCase(nextPart.startPage)
+      val nextParams                = nextRouteParams(mode, pages, journeyPath, nextPart, nextPath)
+      val wildcardRoute =
+        if (isExhaustive) ""
+        else s"""$NL      case _ => routes.${nextPartPage}BaseController.onPageLoad$nextParams"""
       val choiceRoutes = subJourneys.map { case (choice, subJourney) =>
         val firstPage      = pascalCase(subJourney.head.startPage)
         val firstPartPaths = journeyPath.indexPaths ++ subJourney.head.startPageIndexes
         val firstParams    = routeParams(mode, journeyPath.indexPaths, firstPartPaths)
-        s"""      case $choiceType.$choice => routes.${firstPage}BaseController.onPageLoad$firstParams""".stripMargin
-      }
+        val choiceCase     = if (choice == "default") "_" else s"$choiceType.$choice"
+        s"""      case $choiceCase => routes.${firstPage}BaseController.onPageLoad$firstParams"""
+      }.toList.sorted
       val choicePageRoutes =
         s"""|    case ${pascalCase(choicePage)}Page${unapplyParams(pages, journeyPath)} => _ => {
-            |${choiceRoutes.mkString(NL)}
+            |${choiceRoutes.mkString(NL)}$wildcardRoute
             |    }""".stripMargin
       val subJourneyRoutes = subJourneys.flatMap { case (choice, subJourney) =>
         val choicePath = journeyPath / ChoicePath(as.getOrElse(choicePage), choice)
