@@ -438,8 +438,8 @@ object JourneyPlugin extends AutoPlugin {
 
         val answerType = Option(pages(choicePage).answerType)
 
-        if (!answerType.contains(FieldType.BOOLEAN)) {
-          errors += problem(obj.origin(), "Expected a choice page with a Boolean answerType")
+        if (!answerType.contains(FieldType.BOOLEAN) && !answerType.exists(_.typeName.contains("Choice"))) {
+          errors += problem(obj.origin(), "Expected a choice page with a Boolean or Choice answerType")
         }
 
         choicePages += choicePage
@@ -467,8 +467,8 @@ object JourneyPlugin extends AutoPlugin {
 
         val answerType = Option(pages(choicePage).answerType)
 
-        if (!answerType.contains(FieldType.BOOLEAN)) {
-          errors += problem(obj.origin(), "Expected a choice page with a Boolean answerType")
+        if (!answerType.contains(FieldType.BOOLEAN) && !answerType.exists(_.typeName.contains("Choice"))) {
+          errors += problem(obj.origin(), "Expected a choice page with a Boolean or Choice answerType")
         }
 
         choicePages += choicePage
@@ -653,8 +653,9 @@ object JourneyPlugin extends AutoPlugin {
 
     // Add a "Choice" model for Yes / No questions
     val choiceModel = EnumModel("Choice", List("Yes", "No"))
+
     val answerModels =
-      models.map((deserialiseAnswerModel(modelsPackage, models, errors, _, _)).tupled)
+      models.map((deserialiseAnswerModel(modelsPackage, models, errors, _, _)).tupled) + ("Choice" -> choiceModel)
 
     val journeyConfig = journeys.map(
       (deserialiseJourney(basePackage, rootPages, answerModels, modelsPackage, errors, _, _)).tupled
@@ -670,7 +671,7 @@ object JourneyPlugin extends AutoPlugin {
     JourneyConfig(
       basePackage,
       rootPages,
-      answerModels + ("Choice" -> choiceModel),
+      answerModels,
       journeyConfig
     )
   }
