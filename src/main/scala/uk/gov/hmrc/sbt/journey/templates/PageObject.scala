@@ -158,9 +158,9 @@ object PageObject extends Template {
          |""".stripMargin
     } else {
       val applyMethods =
-        overloads.map(applyMethod(capitalPageName, journey, _)).mkString(NL)
+        overloads.map(applyMethod(capitalPageName, journey, _)).distinct.mkString(NL)
       val unapplyMethods =
-        overloads.map(unapplyMethod(capitalPageName, journey, _)).mkString(NL)
+        overloads.map(unapplyMethod(capitalPageName, journey, _)).distinct.mkString(NL)
 
       s"""package ${basePackage / "pages"}
          |

@@ -263,9 +263,9 @@ object JourneyPageController extends Template {
            |  override val controllerComponents: MessagesControllerComponents
            |)(implicit ec: ExecutionContext) extends $interfaceName {
            |
-           |${onPageLoadImpls.mkString(NL * 2)}
+           |${onPageLoadImpls.distinct.mkString(NL * 2)}
            |
-           |${onSubmitImpls.mkString(NL * 2)}
+           |${onSubmitImpls.distinct.mkString(NL * 2)}
            |}
            |""".stripMargin
 
@@ -290,8 +290,8 @@ object JourneyPageController extends Template {
        |import scala.concurrent.{ExecutionContext, Future}
        |
        |${implementedBy}trait $interfaceName extends FrontendBaseController with I18nSupport {
-       |${onPageLoadDecls.mkString(NL)}
-       |${onSubmitDecls.mkString(NL)}
+       |${onPageLoadDecls.distinct.mkString(NL)}
+       |${onSubmitDecls.distinct.mkString(NL)}
        |}
        |$defaultImpl""".stripMargin
   }
