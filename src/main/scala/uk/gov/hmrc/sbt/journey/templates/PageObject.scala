@@ -84,7 +84,8 @@ object PageObject extends Template {
     else paths.mkString("(", ", ", ")")
   }
 
-  private def jsPathNodesFor(path: JourneyPath): String =
+  private def jsPathNodesFor(path: JourneyPath): String = {
+    val p = " " * 8
     path.paths
       .flatMap {
         case IndexPath(pageKey) =>
@@ -96,7 +97,8 @@ object PageObject extends Template {
         case _ =>
           List.empty
       }
-      .mkString("", " :: ", " :: Nil")
+      .mkString("", s"$NL$p:: ", s"$NL$p:: Nil")
+  }
 
   def applyMethod(pageName: String, journey: Journey, path: JourneyPath): String = {
     val params       = applyParams(journey, path)

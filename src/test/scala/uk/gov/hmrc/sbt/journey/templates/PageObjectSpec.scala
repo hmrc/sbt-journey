@@ -115,7 +115,10 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
         |
         |  def unapply(page: AuditEventPage): Option[Int] =
         |    page.path.path match {
-        |      case KeyPathNode("auditEvents") :: IdxPathNode(auditEventsIndex) :: KeyPathNode("auditEvent") :: Nil => Some(auditEventsIndex)
+        |      case KeyPathNode("auditEvents")
+        |        :: IdxPathNode(auditEventsIndex)
+        |        :: KeyPathNode("auditEvent")
+        |        :: Nil => Some(auditEventsIndex)
         |      case _ => None
         |    }
         |}
@@ -173,7 +176,10 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
         |
         |  def unapply(page: SaInfoPage): Option[TaxRegime] =
         |    page.path.path match {
-        |      case KeyPathNode("whichTaxRegime") :: KeyPathNode(whichTaxRegime) :: KeyPathNode("saInfo") :: Nil => Some(TaxRegime.valueOf(whichTaxRegime))
+        |      case KeyPathNode("whichTaxRegime")
+        |        :: KeyPathNode(whichTaxRegime)
+        |        :: KeyPathNode("saInfo")
+        |        :: Nil => Some(TaxRegime.valueOf(whichTaxRegime))
         |      case _ => None
         |    }
         |}
@@ -232,7 +238,12 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
         |
         |  def unapply(page: AuditEventPage): Option[(Int, Int)] =
         |    page.path.path match {
-        |      case KeyPathNode("auditSources") :: IdxPathNode(auditSourcesIndex) :: KeyPathNode("auditEvents") :: IdxPathNode(auditEventsIndex) :: KeyPathNode("auditEvent") :: Nil => Some((auditSourcesIndex, auditEventsIndex))
+        |      case KeyPathNode("auditSources")
+        |        :: IdxPathNode(auditSourcesIndex)
+        |        :: KeyPathNode("auditEvents")
+        |        :: IdxPathNode(auditEventsIndex)
+        |        :: KeyPathNode("auditEvent")
+        |        :: Nil => Some((auditSourcesIndex, auditEventsIndex))
         |      case _ => None
         |    }
         |}
