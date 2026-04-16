@@ -18,7 +18,7 @@ package uk.gov.hmrc.sbt.journey.templates
 
 import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.templates.Imports.PlayJsonPrefix
-import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.camelCase
+import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, pascalCase}
 
 object JourneyModel extends Template {
   private def jsPathReads(fieldName: String, fieldType: FieldType): String = {
@@ -96,11 +96,12 @@ object JourneyModel extends Template {
     caseName: String,
     fields: List[(String, FieldType)]
   ): String = {
-    val nm = camelCase(caseName)
+    val nm        = camelCase(caseName)
+    val capitalNm = pascalCase(caseName)
     if (fields.isEmpty) ""
     else
       s"""${nestedReads(subJourney, modelName, caseName, fields, "private val")}
-         |  private val nested${caseName}Reads: Reads[$modelName] =
+         |  private val nested${capitalNm}Reads: Reads[$modelName] =
          |    (JsPath \\ "$caseName").read[$modelName](using ${nm}Reads)""".stripMargin
   }
 
@@ -108,13 +109,14 @@ object JourneyModel extends Template {
     caseName: String,
     fields: List[(String, FieldType)]
   ): String = {
-    val nm = camelCase(caseName)
+    val nm        = camelCase(caseName)
+    val capitalNm = pascalCase(caseName)
     if (fields.isEmpty)
       s"""|        case $nm if $nm == config.typeNaming("$caseName") =>
           |          JsSuccess($caseName)""".stripMargin
     else
       s"""|        case $nm if $nm == config.typeNaming("$caseName") =>
-          |          nested${caseName}Reads.reads(obj)""".stripMargin
+          |          nested${capitalNm}Reads.reads(obj)""".stripMargin
   }
 
   def forSwitchCase(
