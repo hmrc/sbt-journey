@@ -21,7 +21,12 @@ object AuditEventPage {
 
   def unapply(page: AuditEventPage): Option[(Int, Int)] =
     page.path.path match {
-      case KeyPathNode("auditSources") :: IdxPathNode(auditSourcesIndex) :: KeyPathNode("auditEvents") :: IdxPathNode(auditEventsIndex) :: KeyPathNode("auditEvent") :: Nil => Some((auditSourcesIndex, auditEventsIndex))
+      case KeyPathNode("auditSources")
+        :: IdxPathNode(auditSourcesIndex)
+        :: KeyPathNode("auditEvents")
+        :: IdxPathNode(auditEventsIndex)
+        :: KeyPathNode("auditEvent")
+        :: Nil => Some((auditSourcesIndex, auditEventsIndex))
       case _ => None
     }
 }

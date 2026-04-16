@@ -21,7 +21,9 @@ object AddAnotherAuditSourcePage {
 
   def unapply(page: AddAnotherAuditSourcePage): Option[Int] =
     page.path.path match {
-      case KeyPathNode("auditSources") :: IdxPathNode(auditSourcesIndex) :: Nil => Some(auditSourcesIndex)
+      case KeyPathNode("auditSources")
+        :: IdxPathNode(auditSourcesIndex)
+        :: Nil => Some(auditSourcesIndex)
       case _ => None
     }
 }

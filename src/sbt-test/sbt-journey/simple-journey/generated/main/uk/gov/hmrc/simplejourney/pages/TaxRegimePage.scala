@@ -21,7 +21,12 @@ object TaxRegimePage {
 
   def unapply(page: TaxRegimePage): Option[(Choice, Int)] =
     page.path.path match {
-      case KeyPathNode("addATaxRegime") :: KeyPathNode(addATaxRegime) :: KeyPathNode("taxRegimes") :: IdxPathNode(taxRegimesIndex) :: KeyPathNode("taxRegime") :: Nil => Some((Choice.valueOf(addATaxRegime), taxRegimesIndex))
+      case KeyPathNode("addATaxRegime")
+        :: KeyPathNode(addATaxRegime)
+        :: KeyPathNode("taxRegimes")
+        :: IdxPathNode(taxRegimesIndex)
+        :: KeyPathNode("taxRegime")
+        :: Nil => Some((Choice.valueOf(addATaxRegime), taxRegimesIndex))
       case _ => None
     }
 }

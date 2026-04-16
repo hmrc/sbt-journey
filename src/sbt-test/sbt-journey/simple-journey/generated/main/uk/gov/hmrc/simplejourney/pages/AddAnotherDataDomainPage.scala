@@ -21,7 +21,9 @@ object AddAnotherDataDomainPage {
 
   def unapply(page: AddAnotherDataDomainPage): Option[Int] =
     page.path.path match {
-      case KeyPathNode("dataDomains") :: IdxPathNode(dataDomainsIndex) :: Nil => Some(dataDomainsIndex)
+      case KeyPathNode("dataDomains")
+        :: IdxPathNode(dataDomainsIndex)
+        :: Nil => Some(dataDomainsIndex)
       case _ => None
     }
 }

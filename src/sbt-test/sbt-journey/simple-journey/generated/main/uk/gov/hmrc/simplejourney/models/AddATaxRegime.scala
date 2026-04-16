@@ -11,17 +11,17 @@ enum AddATaxRegime {
 
   def choice: Choice = this match {
     case Yes(_) => Choice.Yes
-    case No     => Choice.No
+    case No => Choice.No
   }
 }
 
 object AddATaxRegime {
-  private val yesReads: Reads[Yes] = {
+  private val yesReads: Reads[AddATaxRegime] = {
     val taxRegimes = Reads.list(Reads.at[TaxRegime](JsPath \ "taxRegime"))
     (JsPath \ "taxRegimes").read[List[TaxRegime]](using taxRegimes).map(Yes.apply)
   }
-  private val nestedYesReads: Reads[Yes] =
-    (JsPath \ "Yes").read[Yes](using yesReads)
+  private val nestedYesReads: Reads[AddATaxRegime] =
+    (JsPath \ "Yes").read[AddATaxRegime](using yesReads)
 
   given reads(using config: JsonConfiguration): Reads[AddATaxRegime] = Reads {
     case obj: JsObject => obj.value.get(config.discriminator) match {

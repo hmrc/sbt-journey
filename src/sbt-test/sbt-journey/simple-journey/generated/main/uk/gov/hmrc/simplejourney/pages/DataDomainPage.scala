@@ -21,7 +21,10 @@ object DataDomainPage {
 
   def unapply(page: DataDomainPage): Option[Int] =
     page.path.path match {
-      case KeyPathNode("dataDomains") :: IdxPathNode(dataDomainsIndex) :: KeyPathNode("dataDomain") :: Nil => Some(dataDomainsIndex)
+      case KeyPathNode("dataDomains")
+        :: IdxPathNode(dataDomainsIndex)
+        :: KeyPathNode("dataDomain")
+        :: Nil => Some(dataDomainsIndex)
       case _ => None
     }
 }
