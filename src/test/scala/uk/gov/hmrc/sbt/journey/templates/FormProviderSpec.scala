@@ -184,7 +184,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
         |  def apply(): Form[BigDecimal] = Form(
         |    "value" -> currency(
         |      requiredKey = "whatIsTheValuation.error.required",
-        |      invalidNumericKey = "whatIsTheValuation.error.invalidNumeric",
+        |      invalidNumeric = "whatIsTheValuation.error.invalidNumeric",
         |      nonNumericKey = "whatIsTheValuation.error.nonNumeric",
         |    )
         |  )
@@ -499,7 +499,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
         |  def apply(): Form[BigDecimal] = Form(
         |    "value" -> currency(
         |      requiredKey = "whatIsTheValuation.error.required",
-        |      invalidNumericKey = "whatIsTheValuation.error.invalidNumeric",
+        |      invalidNumeric = "whatIsTheValuation.error.invalidNumeric",
         |      nonNumericKey = "whatIsTheValuation.error.nonNumeric",
         |    )
         |  )

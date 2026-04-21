@@ -139,7 +139,7 @@ object FormProvider extends Template {
           case ClassType(clazz) if clazz == classOf[BigDecimal].getName =>
             s"""|currency(
                 |$p  requiredKey = "$pageName.error.required",
-                |$p  invalidNumericKey = "$pageName.error.${parentField}${subField}invalidNumeric",
+                |$p  invalidNumeric = "$pageName.error.${parentField}${subField}invalidNumeric",
                 |$p  nonNumericKey = "$pageName.error.${parentField}${subField}nonNumeric",
                 |$p)""".stripMargin
           case ClassType(clazz) if clazz == classOf[String].getName =>
