@@ -36,12 +36,14 @@ object StringCaseUtils {
 
   def pascalCase(str: String): String =
     camelComponents(str) match {
-      case Array(first, rest*) => capitalise(first) + rest.map(capitalise).mkString
+      case Array(first, rest*) =>
+        capitalise(first.toLowerCase) + rest.map(s => capitalise(s.toLowerCase)).mkString
     }
 
   def camelCase(str: String): String =
     camelComponents(str) match {
-      case Array(first, rest*) => first.toLowerCase + rest.map(capitalise).mkString
+      case Array(first, rest*) =>
+        first.toLowerCase + rest.map(s => capitalise(s.toLowerCase)).mkString
     }
 
   def kebabCase(str: String): String =

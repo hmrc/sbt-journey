@@ -93,16 +93,16 @@ class StringCaseUtilsSpec extends AnyFlatSpec with Matchers with ScalaCheckPrope
     pascalCase("vatInfo") shouldBe "VatInfo"
   }
 
-  it should "convert priceIncludingVAT to PriceIncludingVAT" in {
-    pascalCase("priceIncludingVAT") shouldBe "PriceIncludingVAT"
+  it should "convert priceIncludingVAT to PriceIncludingVat" in {
+    pascalCase("priceIncludingVAT") shouldBe "PriceIncludingVat"
   }
 
   it should "convert price-including-vat to PriceIncludingVat" in {
     pascalCase("price-including-vat") shouldBe "PriceIncludingVat"
   }
 
-  it should "leave PriceIncludingVAT unchanged" in {
-    pascalCase("PriceIncludingVAT") shouldBe "PriceIncludingVAT"
+  it should "leave PriceIncludingVat unchanged" in {
+    pascalCase("PriceIncludingVat") shouldBe "PriceIncludingVat"
   }
 
   "StringCaseUtils.camelCase" should "convert StringCaseUtils to stringCaseUtils" in {
@@ -121,8 +121,8 @@ class StringCaseUtilsSpec extends AnyFlatSpec with Matchers with ScalaCheckPrope
     camelCase("price-including-vat") shouldBe "priceIncludingVat"
   }
 
-  it should "leave priceIncludingVAT unchanged" in {
-    camelCase("priceIncludingVAT") shouldBe "priceIncludingVAT"
+  it should "leave priceIncludingVat unchanged" in {
+    camelCase("priceIncludingVat") shouldBe "priceIncludingVat"
   }
 
   "StringCaseUtils.kebabCase" should "convert StringCaseUtils to string-case-utils" in {

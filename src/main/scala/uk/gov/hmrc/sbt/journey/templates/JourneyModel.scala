@@ -20,7 +20,8 @@ import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.templates.Imports.PlayJsonPrefix
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, pascalCase}
 
-object JourneyModel extends Template {
+class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerModel])
+  extends Template {
   private def jsPathReads(fieldName: String, fieldType: FieldType): String = {
     val scalaType = ModelFields.fieldType(fieldType)
     s"""(JsPath \\ "$fieldName").read[$scalaType]"""
@@ -105,7 +106,7 @@ object JourneyModel extends Template {
          |    (JsPath \\ "$caseName").read[$modelName](using ${nm}Reads)""".stripMargin
   }
 
-  private def switchCaseRead(
+  private def readNamedCase(
     caseName: String,
     fields: List[(String, FieldType)]
   ): String = {
@@ -119,9 +120,23 @@ object JourneyModel extends Template {
           |          nested${capitalNm}Reads.reads(obj)""".stripMargin
   }
 
+  private def readDefaultCase(fields: List[(String, FieldType)]): String = {
+    if (fields.isEmpty)
+      s"""|        case _ =>
+          |          JsSuccess(default)""".stripMargin
+    else
+      s"""|        case _ =>
+          |          nestedDefaultReads.reads(obj)""".stripMargin
+  }
+
+  private val readInvalidCase: String =
+    s"""|        case _ =>
+        |          JsError("error.invalid")""".stripMargin
+
   def forSwitchCase(
     modelsPackage: QualifiedName,
     switchCasePart: SwitchCasePart,
+    choicePage: String,
     modelName: String,
     modelCases: Map[String, List[(String, FieldType)]]
   ): String = {
@@ -129,6 +144,7 @@ object JourneyModel extends Template {
       PlayJsonPrefix -> Set(
         "Json",
         "JsonConfiguration",
+        "JsSuccess",
         "JsError",
         "JsObject",
         "JsPath",
@@ -141,17 +157,49 @@ object JourneyModel extends Template {
     val imports        = Imports.importsFor(modelsPackage, importPrefixes)
     val extendsClause  = FormatTraits.extendsClause(importPrefixes)
 
-    val caseReads = modelCases
+    val answerType = pages(choicePage).answerType
+
+    val Some(model @ EnumModel(_, _)) = answerType.typeName.flatMap(models.get)
+
+    val nonDefault = modelCases.filterKeys(_ != "default")
+    val uncovered  = model.uncoveredCases(modelCases.keySet)
+    val default    = modelCases.get("default")
+
+    val normalCases    = nonDefault.map((switchCase _).tupled).toList
+    val uncoveredCases = uncovered.map(switchCase(_, List.empty)).toList
+    val defaultCase = default
+      .map(fields => List(switchCase("default", fields)))
+      .getOrElse(uncoveredCases)
+
+    val normalCaseReads = nonDefault
+      .filter { case (_, fields) => fields.nonEmpty }
       .map { case (caseName, fields) =>
         switchCaseReads(switchCasePart.subJourneys(caseName), modelName, caseName, fields)
       }
       .toList
-      .filterNot(_.isBlank)
+
+    val defaultCaseReads = default
+      .filterNot(_.isEmpty)
+      .map { fields =>
+        switchCaseReads(switchCasePart.subJourneys("default"), modelName, "default", fields)
+      }
+      .toList
+
+    val allCaseReads = normalCaseReads ++ defaultCaseReads
 
     val subtypeReads =
-      if (caseReads.isEmpty) ""
+      if (allCaseReads.isEmpty) ""
       else
-        caseReads.mkString(NL, NL, NL)
+        allCaseReads.mkString(NL, NL, NL)
+
+    val readNamedCases =
+      nonDefault.map((readNamedCase _).tupled).toList
+    val readUncoveredCases =
+      uncovered.map(readNamedCase(_, List.empty)).toList ++ List(readInvalidCase)
+
+    val readDefault = default
+      .map(fields => List(readDefaultCase(fields)))
+      .getOrElse(readUncoveredCases)
 
     s"""package $modelsPackage
        |
@@ -159,18 +207,14 @@ object JourneyModel extends Template {
        |$imports
        |
        |enum $modelName {
-       |${modelCases.map((switchCase _).tupled).mkString(NL)}
+       |${(normalCases ++ defaultCase).mkString(NL)}
        |}
        |
        |object $modelName $extendsClause{$subtypeReads
        |  given reads(using config: JsonConfiguration): Reads[$modelName] = Reads {
        |    case obj: JsObject => obj.value.get(config.discriminator) match {
        |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
-       |${modelCases
-        .map((switchCaseRead _).tupled)
-        .mkString(NL)}
-       |        case _ =>
-       |          JsError("error.invalid")
+       |${(readNamedCases ++ readDefault).mkString(NL)}
        |      }
        |      case _ => JsError(JsPath \\ config.discriminator, "error.missing.path")
        |    }

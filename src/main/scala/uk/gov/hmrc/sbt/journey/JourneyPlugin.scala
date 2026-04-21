@@ -754,13 +754,17 @@ object JourneyPlugin extends AutoPlugin {
     }.toList
 
     val journeyFiles = config.journeys.flatMap { case (_, journey) =>
+      val journeyModel = new JourneyModel(journey.pages, config.models)
       def syntheticJourneyModels(journeyPart: JourneyPart): Seq[File] = journeyPart match {
         case part @ SwitchCasePart(choicePage, subJourney, as) =>
           val subJourneyModels = subJourney.values.toList.flatMap(_.flatMap(syntheticJourneyModels))
           val modelName        = pascalCase(as.getOrElse(choicePage))
           val modelFile        = packageFolder / "models" / s"$modelName.scala"
           val cases = subJourney.mapValues(ModelFields.forParts(modelsPackage, journey, _))
-          IO.write(modelFile, JourneyModel.forSwitchCase(modelsPackage, part, modelName, cases))
+          IO.write(
+            modelFile,
+            journeyModel.forSwitchCase(modelsPackage, part, choicePage, modelName, cases)
+          )
           logger.info(s"Generated journey model $modelFile")
           modelFile +: subJourneyModels
         case part @ IfThenPart(choicePage, subJourney, as) =>
@@ -768,7 +772,7 @@ object JourneyPlugin extends AutoPlugin {
           val modelFields      = ModelFields.forParts(modelsPackage, journey, subJourney)
           val modelName        = pascalCase(as.getOrElse(choicePage))
           val modelFile        = packageFolder / "models" / s"$modelName.scala"
-          IO.write(modelFile, JourneyModel.forIfThen(modelsPackage, part, modelName, modelFields))
+          IO.write(modelFile, journeyModel.forIfThen(modelsPackage, part, modelName, modelFields))
           logger.info(s"Generated journey model $modelFile")
           modelFile +: subJourneyModels
         case part @ DoWhilePart(_, subJourney, as) =>
@@ -776,7 +780,7 @@ object JourneyPlugin extends AutoPlugin {
           val fields           = ModelFields.forParts(modelsPackage, journey, subJourney)
           val modelName        = pascalCase(as)
           val modelFile        = packageFolder / "models" / s"$modelName.scala"
-          IO.write(modelFile, JourneyModel.forDoWhile(modelsPackage, part, modelName, fields))
+          IO.write(modelFile, journeyModel.forDoWhile(modelsPackage, part, modelName, fields))
           logger.info(s"Generated journey model $modelFile")
           modelFile +: subJourneyModels
         case SinglePagePart(_, _) =>

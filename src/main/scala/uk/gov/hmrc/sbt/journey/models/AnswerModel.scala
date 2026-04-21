@@ -38,4 +38,9 @@ case class CaseClassModel(
 case class EnumModel(
   name: String,
   cases: List[String]
-) extends AnswerModel
+) extends AnswerModel {
+  def uncoveredCases(keys: Set[String]): Set[String] =
+    cases.toSet.diff(keys)
+  def isCoveredBy(keys: Set[String]): Boolean =
+    keys.contains("default") || uncoveredCases(keys).isEmpty
+}

@@ -154,16 +154,13 @@ class Navigator(models: Map[String, AnswerModel]) extends Template {
     case SwitchCasePart(choicePage, subJourneys, as) =>
       val answerType = pages(choicePage).answerType
 
-      val Some(EnumModel(_, cases)) = answerType.typeName.flatMap(models.get)
-      val uncoveredCases            = cases.toSet.diff(subJourneys.keySet)
-      val hasDefault                = subJourneys.contains("default")
-      val isExhaustive              = uncoveredCases.isEmpty || hasDefault
+      val Some(model @ EnumModel(_, _)) = answerType.typeName.flatMap(models.get)
 
       val nextPartPage = pascalCase(nextPart.startPage)
       val nextParams   = nextRouteParams(mode, pages, journeyPath, nextPart, nextPath)
 
       val wildcardRoute =
-        if (isExhaustive) ""
+        if (model.isCoveredBy(subJourneys.keySet)) ""
         else s"""$NL      case _ => routes.${nextPartPage}BaseController.onPageLoad$nextParams"""
 
       val choiceRoutes = subJourneys
