@@ -489,65 +489,56 @@ object JourneyPlugin extends AutoPlugin {
 
         modelType match {
           case Some(model @ EnumModel(name, cases)) =>
-            val trueValue =
+            val thenValue =
               if (config.hasPath("is"))
                 config.getString("is")
-              else if (config.hasPath("not"))
-                config.getString("not")
               else if (name == "Choice")
                 "Yes" // Assume Yes for Choice if no predicate is given
               else {
                 errors += problem(
                   obj.origin(),
-                  s"Expected a comparison 'is' or 'not' value for an if subjourney with an enum answerType"
+                  s"Expected a comparison 'is' value for an if subjourney with an enum answerType"
                 )
                 null
               }
 
-            if (!cases.contains(trueValue)) {
+            if (!cases.contains(thenValue)) {
               errors += problem(
                 obj.origin(),
-                s"The value $trueValue is not one of the cases of enum $name"
+                s"The value $thenValue is not one of the cases of enum $name"
               )
             }
 
-            val trueField  = if (config.hasPath("not")) "else" else "then"
-            val falseField = if (config.hasPath("not")) "then" else "else"
+            val thenPart = List(
+              thenValue -> deserialiseJourneyParts(
+                rootPages,
+                models,
+                pages,
+                errors,
+                choicePages,
+                config.getValue("then")
+              )
+            )
 
-            val truePart =
-              if (config.hasPath(trueField))
+            val uncoveredCases = model.uncoveredCases(Set(thenValue))
+            val elseValue      = if (uncoveredCases.size == 1) uncoveredCases.head else "default"
+
+            val elsePart =
+              if (config.hasPath("else"))
                 List(
-                  trueValue -> deserialiseJourneyParts(
+                  elseValue -> deserialiseJourneyParts(
                     rootPages,
                     models,
                     pages,
                     errors,
                     choicePages,
-                    config.getValue(trueField)
+                    config.getValue("else")
                   )
                 )
               else
                 List.empty
 
-            val uncoveredCases = model.uncoveredCases(Set(trueValue))
-            val falseValue     = if (uncoveredCases.size == 1) uncoveredCases.head else "default"
-
-            val falsePart =
-              if (config.hasPath(falseField))
-                List(
-                  falseValue -> deserialiseJourneyParts(
-                    rootPages,
-                    models,
-                    pages,
-                    errors,
-                    choicePages,
-                    config.getValue(falseField)
-                  )
-                )
-              else
-                List.empty
-
-            val journeyParts = truePart ++ falsePart
+            val journeyParts = thenPart ++ elsePart
 
             SwitchCasePart(
               choicePage,
@@ -568,51 +559,40 @@ object JourneyPlugin extends AutoPlugin {
 
             choicePages += choicePage
 
-            if (config.hasPath("is") || config.hasPath("not") || config.hasPath("else")) {
+            if (config.hasPath("is") || config.hasPath("else")) {
               val trueValue =
                 if (config.hasPath("is"))
                   config.getString("is")
-                else if (config.hasPath("not"))
-                  config.getString("not")
                 else
                   "Yes" // Assume Yes for Choice if no predicate is given
 
-              val trueField  = if (config.hasPath("not")) "else" else "then"
-              val falseField = if (config.hasPath("not")) "then" else "else"
-
-              val truePart =
-                if (config.hasPath(trueField))
-                  List(
-                    trueValue -> deserialiseJourneyParts(
-                      rootPages,
-                      models,
-                      pages,
-                      errors,
-                      choicePages,
-                      config.getValue(trueField)
-                    )
-                  )
-                else
-                  List.empty
-
-              val falseValue = if (trueValue == "Yes") "No" else "Yes"
+              val thenPart = List(
+                trueValue -> deserialiseJourneyParts(
+                  rootPages,
+                  models,
+                  pages,
+                  errors,
+                  choicePages,
+                  config.getValue("then")
+                )
+              )
 
               val falsePart =
-                if (config.hasPath(falseField))
+                if (config.hasPath("else"))
                   List(
-                    falseValue -> deserialiseJourneyParts(
+                    "No" -> deserialiseJourneyParts(
                       rootPages,
                       models,
                       pages,
                       errors,
                       choicePages,
-                      config.getValue(falseField)
+                      config.getValue("else")
                     )
                   )
                 else
                   List.empty
 
-              val journeyParts = truePart ++ falsePart
+              val journeyParts = thenPart ++ falsePart
 
               SwitchCasePart(
                 choicePage,
