@@ -21,9 +21,6 @@ import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.templates.Imports.{JavaLangPrefix, JavaTimePrefix}
 
-import java.time.Instant
-import java.time.format.DateTimeFormatter
-
 class ImportsSpec extends AnyFlatSpec with Matchers {
   "Imports.usesHmrcMongoJavaTime" should "detect usage of supported hmrc-mongo Java time types" in {
     Imports.usesHmrcMongoJavaTime(Map(JavaTimePrefix -> Set("LocalDate"))) shouldBe true
@@ -94,24 +91,4 @@ class ImportsSpec extends AnyFlatSpec with Matchers {
     ) shouldBe "import java.time.{Instant,LocalDate}"
   }
 
-  "Imports.importedSymbols" should "collect imported symbols from field types" in {
-    Imports.importedSymbols(
-      ListType(ClassType(classOf[DateTimeFormatter]))
-    ) shouldBe Map(
-      List("java", "time", "format") -> Set("DateTimeFormatter")
-    )
-  }
-
-  "Imports.importedSymbols" should "collect imported symbols from lists of field declarations" in {
-    Imports.importedSymbols(
-      List(
-        "startDateTime" -> OptionType(ClassType(classOf[Instant])),
-        "endDate"       -> OptionType(FieldType.LOCALDATE),
-        "formatters" -> ListType(ClassType(classOf[DateTimeFormatter]))
-      )
-    ) shouldBe Map(
-      JavaTimePrefix                 -> Set("LocalDate", "Instant"),
-      List("java", "time", "format") -> Set("DateTimeFormatter")
-    )
-  }
 }

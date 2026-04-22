@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.sbt.journey.templates
 
-import uk.gov.hmrc.sbt.journey.models.{AnswerModel, CaseClassModel, EnumModel, QualifiedName}
+import uk.gov.hmrc.sbt.journey.models.{AnswerModel, CaseClassModel, EnumModel, ImportCollector, QualifiedName}
 import uk.gov.hmrc.sbt.journey.templates.Imports.PlayJsonPrefix
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.camelCase
 
-object CustomModel extends Template {
+class CustomModel(collector: ImportCollector) extends Template {
   def render(basePackage: QualifiedName, model: AnswerModel): String = model match {
     case model: CaseClassModel => caseClassModel(basePackage, model)
     case model: EnumModel      => enumModel(basePackage, model)
@@ -104,7 +104,7 @@ object CustomModel extends Template {
     val name          = caseClassModel.name
     val fields        = caseClassModel.fields
 
-    val importPrefixes = Imports.importedSymbols(fields)
+    val importPrefixes = collector.importedSymbols(fields, recursive = false)
     val imports        = Imports.importsFor(modelsPackage, importPrefixes)
     val extendsClause  = FormatTraits.extendsClause(importPrefixes)
 

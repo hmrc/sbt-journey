@@ -22,7 +22,7 @@ import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.pascalCase
 
 import java.time.LocalDate
 
-object FormProvider extends Template {
+class FormProvider(collector: ImportCollector) extends Template {
   private def hasMappingsFor(
     models: Map[String, AnswerModel],
     fieldType: FieldType
@@ -165,11 +165,26 @@ object FormProvider extends Template {
     val withDefault  = journeyPage.withDefaultFormProvider
     val fieldType    = ModelFields.fieldType(answerType)
 
-    val answerImports   = Imports.importedSymbols(answerType)
+    val answerImports = collector.importedSymbols(answerType, recursive = false)
+
+    val fieldImports =
+      if (!withDefault) Map.empty
+      else // We only need to import field types if we're generating a default impl
+        collector
+          .importedSymbols(answerType, recursive = true)
+          .filterKeys(
+            // We only need to import types that can appear in type parameters (enumerable)
+            _.startsWith(basePackage.parts)
+          )
+
     val usesLocalDate   = hasLocalDateField(models, answerType)
     val messagesImports = if (usesLocalDate) Map(PlayI18nPrefix -> Set("Messages")) else Map.empty
     val imports =
-      Imports.importsFor(formsPackage, answerImports ++ messagesImports, addFormatImports = false)
+      Imports.importsFor(
+        formsPackage,
+        answerImports ++ fieldImports ++ messagesImports,
+        addFormatImports = false
+      )
 
     // The localDate form Mapping requires Messages
     val applyParams = if (usesLocalDate) "(using messages: Messages)" else ""
@@ -211,11 +226,23 @@ object FormProvider extends Template {
     val answerType   = journeyPage.answerType
     val fieldType    = ModelFields.fieldType(answerType)
 
-    val answerImports   = Imports.importedSymbols(answerType)
+    val answerImports = collector
+      .importedSymbols(answerType, recursive = true)
+    val fieldImports = collector
+      .importedSymbols(answerType, recursive = true)
+      .filterKeys(
+        // We only need to import types that can appear in type parameters (enumerable)
+        _.startsWith(basePackage.parts)
+      )
+
     val usesLocalDate   = hasLocalDateField(models, answerType)
     val messagesImports = if (usesLocalDate) Map(PlayI18nPrefix -> Set("Messages")) else Map.empty
     val imports =
-      Imports.importsFor(formsPackage, answerImports ++ messagesImports, addFormatImports = false)
+      Imports.importsFor(
+        formsPackage,
+        answerImports ++ fieldImports ++ messagesImports,
+        addFormatImports = false
+      )
 
     // The localDate form Mapping requires Messages
     val applyParams = if (usesLocalDate) "(using messages: Messages)" else ""
@@ -247,7 +274,7 @@ object FormProvider extends Template {
       journey.pages.flatMap { case (pageName, page) =>
         val baseProvider    = s"${pascalCase(pageName)}BaseFormProvider"
         val defaultProvider = s"Default${pascalCase(pageName)}FormProvider"
-        val hasMappings     = FormProvider.hasMappingsFor(config.models, page.answerType)
+        val hasMappings     = hasMappingsFor(config.models, page.answerType)
         if (page.withDefaultFormProvider && hasMappings)
           List(s"${indent}bind(classOf[$baseProvider]).to(classOf[$defaultProvider])")
         else

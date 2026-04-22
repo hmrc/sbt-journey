@@ -26,6 +26,7 @@ import java.time.DayOfWeek
 class FormProviderSpec extends AnyFlatSpec with Matchers {
 
   val basePackage = QualifiedName("uk.gov.hmrc.sbtjourneytest")
+  val formProvider = new FormProvider(new ImportCollector(Map.empty))
 
   def journeyConfig(journey: (String, Journey)) =
     JourneyConfig(
@@ -51,7 +52,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
     )
 
   "FormProvider.baseProvider" should "render a form provider for a String page" in {
-    FormProvider.baseProvider(
+    formProvider.baseProvider(
       basePackage,
       Map.empty,
       journeyPage("serviceUrl", FieldType.STRING)
@@ -79,7 +80,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider without a default implementation if requested" in {
-    FormProvider.baseProvider(
+    formProvider.baseProvider(
       basePackage,
       Map.empty,
       journeyPage("areYouSendingSamples", FieldType.BOOLEAN, withDefaultFormProvider = false)
@@ -98,7 +99,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for a Boolean page" in {
-    FormProvider.baseProvider(
+    formProvider.baseProvider(
       basePackage,
       Map.empty,
       journeyPage("areYouSendingSamples", FieldType.BOOLEAN)
@@ -129,7 +130,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for an Int page" in {
-    FormProvider.baseProvider(
+    formProvider.baseProvider(
       basePackage,
       Map.empty,
       journeyPage("howManySamples", FieldType.INT)
@@ -161,7 +162,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for a BigDecimal page" in {
-    FormProvider.baseProvider(
+    formProvider.baseProvider(
       basePackage,
       Map.empty,
       journeyPage("whatIsTheValuation", FieldType.BIGDECIMAL)
@@ -193,7 +194,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for a LocalDate page" in {
-    FormProvider.baseProvider(
+    formProvider.baseProvider(
       basePackage,
       Map.empty,
       journeyPage("whenDidYouSendSamples", FieldType.LOCALDATE)
@@ -227,7 +228,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for an optional LocalDate page" in {
-    FormProvider.baseProvider(
+    formProvider.baseProvider(
       basePackage,
       Map.empty,
       journeyPage("whenDidYouSendSamples", OptionType(FieldType.LOCALDATE))
@@ -261,7 +262,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for an unsupported type but provide no default implementation" in {
-    FormProvider.baseProvider(
+    formProvider.baseProvider(
       basePackage,
       Map.empty,
       journeyPage("whichDayOfWeek", ClassType(classOf[DayOfWeek]))
@@ -280,7 +281,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for an enum model" in {
-    FormProvider.baseProvider(
+    formProvider.baseProvider(
       basePackage,
       Map("Choice" -> EnumModel("Choice", List("Yes", "No"))),
       journeyPage("areYouSendingSamples", ClassType(basePackage / "Choice"))
@@ -311,7 +312,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for a set of enum model" in {
-    FormProvider.baseProvider(
+    formProvider.baseProvider(
       basePackage,
       Map(
         "SurvivedBy" -> EnumModel(
@@ -347,7 +348,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for a case class model" in {
-    FormProvider.baseProvider(
+    formProvider.baseProvider(
       basePackage,
       Map(
         "AuditEvent" -> CaseClassModel(
@@ -401,7 +402,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   "FormProvider.providerStub" should "render a form provider for a String page" in {
-    FormProvider.providerStub(
+    formProvider.providerStub(
       basePackage,
       Map.empty,
       journeyPage("serviceUrl", FieldType.STRING)
@@ -425,7 +426,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for a Boolean page" in {
-    FormProvider.providerStub(
+    formProvider.providerStub(
       basePackage,
       Map.empty,
       journeyPage("areYouSendingSamples", FieldType.BOOLEAN)
@@ -452,7 +453,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for an Int page" in {
-    FormProvider.providerStub(
+    formProvider.providerStub(
       basePackage,
       Map.empty,
       journeyPage("howManySamples", FieldType.INT)
@@ -480,7 +481,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for a BigDecimal page" in {
-    FormProvider.providerStub(
+    formProvider.providerStub(
       basePackage,
       Map.empty,
       journeyPage("whatIsTheValuation", FieldType.BIGDECIMAL)
@@ -507,7 +508,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
         |""".stripMargin
   }
   it should "render a form provider for a LocalDate page" in {
-    FormProvider.providerStub(
+    formProvider.providerStub(
       basePackage,
       Map.empty,
       journeyPage("whenDidYouSendSamples", FieldType.LOCALDATE)
@@ -537,7 +538,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for an optional LocalDate page" in {
-    FormProvider.providerStub(
+    formProvider.providerStub(
       basePackage,
       Map.empty,
       journeyPage("whenDidYouSendSamples", OptionType(FieldType.LOCALDATE))
@@ -567,7 +568,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for an unsupported type but provide no default mappings" in {
-    FormProvider.providerStub(
+    formProvider.providerStub(
       basePackage,
       Map.empty,
       journeyPage("whichDayOfWeek", ClassType(classOf[DayOfWeek]))
@@ -591,7 +592,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for an enum model" in {
-    FormProvider.providerStub(
+    formProvider.providerStub(
       basePackage,
       Map("Choice" -> EnumModel("Choice", List("Yes", "No"))),
       journeyPage("areYouSendingSamples", ClassType(basePackage / "Choice"))
@@ -618,7 +619,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for a set of enum model" in {
-    FormProvider.providerStub(
+    formProvider.providerStub(
       basePackage,
       Map(
         "SurvivedBy" -> EnumModel(
@@ -650,7 +651,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for a case class model" in {
-    FormProvider.providerStub(
+    formProvider.providerStub(
       basePackage,
       Map(
         "AuditEvent" -> CaseClassModel(
@@ -700,7 +701,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "render a form provider for a case class model with an unsupported field type" in {
-    FormProvider.providerStub(
+    formProvider.providerStub(
       basePackage,
       Map(
         "AuditEvent" -> CaseClassModel(
@@ -758,7 +759,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
     val whichDayOfWeek =
       journeyPage("whichDayOfWeek", ClassType(classOf[DayOfWeek]))
 
-    FormProvider.module(
+    formProvider.module(
       journeyConfig(
         "submission" -> Journey(
           pages = Map(

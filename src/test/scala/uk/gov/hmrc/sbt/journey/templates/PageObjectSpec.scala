@@ -24,6 +24,8 @@ import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{kebabCase, pascalCase}
 class PageObjectSpec extends AnyFlatSpec with Matchers {
   val basePackage = QualifiedName("uk.gov.hmrc.sbtjourneytest")
 
+  val pageObject = new PageObject(new ImportCollector(Map.empty))
+
   def journeyPage(pageKey: String, answerType: FieldType) = JourneyPage(
     pageKey,
     s"$pageKey.title",
@@ -50,7 +52,7 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
         journey = List(SinglePagePart(pageKey, None))
       )
 
-    PageObject.render(basePackage, journey, contactDetailsPage) shouldBe
+    pageObject.render(basePackage, journey, contactDetailsPage) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.pages
         |
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
@@ -91,7 +93,7 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
         )
       )
 
-    PageObject.render(basePackage, journey, auditEvent) shouldBe
+    pageObject.render(basePackage, journey, auditEvent) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.pages
         |
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
@@ -152,7 +154,7 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
         )
       )
 
-    PageObject.render(basePackage, journey, saInfo) shouldBe
+    pageObject.render(basePackage, journey, saInfo) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.pages
         |
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
@@ -214,7 +216,7 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
         )
       )
 
-    PageObject.render(basePackage, journey, auditEvent) shouldBe
+    pageObject.render(basePackage, journey, auditEvent) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.pages
         |
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode

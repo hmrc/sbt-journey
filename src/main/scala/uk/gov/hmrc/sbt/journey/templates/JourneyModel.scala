@@ -22,6 +22,8 @@ import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, pascalCase}
 
 class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerModel])
   extends Template {
+  val collector = new ImportCollector(models)
+
   private def jsPathReads(fieldName: String, fieldType: FieldType): String = {
     val scalaType = ModelFields.fieldType(fieldType)
     s"""(JsPath \\ "$fieldName").read[$scalaType]"""
@@ -153,9 +155,10 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
       )
     )
 
-    val importPrefixes = playImports ++ Imports.importedSymbols(modelCases.values.toList.flatten)
-    val imports        = Imports.importsFor(modelsPackage, importPrefixes)
-    val extendsClause  = FormatTraits.extendsClause(importPrefixes)
+    val importPrefixes =
+      playImports ++ collector.importedSymbols(modelCases.values.toList.flatten, recursive = false)
+    val imports       = Imports.importsFor(modelsPackage, importPrefixes)
+    val extendsClause = FormatTraits.extendsClause(importPrefixes)
 
     val answerType = pages(choicePage).answerType
 
@@ -243,7 +246,7 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
       )
     )
 
-    val importPrefixes = playImports ++ Imports.importedSymbols(fields)
+    val importPrefixes = playImports ++ collector.importedSymbols(fields, recursive = false)
     val imports        = Imports.importsFor(modelsPackage, importPrefixes)
     val extendsClause  = FormatTraits.extendsClause(importPrefixes)
 
@@ -293,7 +296,7 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
     modelName: String,
     fields: List[(String, FieldType)]
   ): String = {
-    val importPrefixes = Imports.importedSymbols(fields)
+    val importPrefixes = collector.importedSymbols(fields, recursive = false)
     val imports        = Imports.importsFor(modelsPackage, importPrefixes)
     val extendsClause  = FormatTraits.extendsClause(importPrefixes)
 

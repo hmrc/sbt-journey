@@ -745,6 +745,8 @@ object JourneyPlugin extends AutoPlugin {
     val basePackage   = QualifiedName(config.basePackage)
     val modelsPackage = basePackage / "models"
 
+    val collector = new ImportCollector(config.models)
+
     val rootPageFiles = config.rootPages.map { case (pageName, page) =>
       val rootPageController =
         packageFolder / "controllers" / s"${pascalCase(pageName)}Controller.scala"
@@ -790,20 +792,22 @@ object JourneyPlugin extends AutoPlugin {
       def journeyModelFiles(journeyParts: List[JourneyPart]): Seq[File] =
         journeyParts.flatMap(syntheticJourneyModels)
 
+      val pageObject = new PageObject(collector)
       val journeyPageObjectFiles = journey.pages.map { case (pageName, page) =>
         val journeyPageObjectFile =
           packageFolder / "pages" / s"${pascalCase(pageName)}Page.scala"
-        IO.write(journeyPageObjectFile, PageObject.render(basePackage, journey, page))
+        IO.write(journeyPageObjectFile, pageObject.render(basePackage, journey, page))
         logger.info(s"Generated page object $journeyPageObjectFile")
         journeyPageObjectFile
       }
 
+      val formProvider = new FormProvider(collector)
       val journeyFormProviderFiles = journey.pages.map { case (pageName, page) =>
         val journeyFormProviderFile =
           packageFolder / "forms" / s"${pascalCase(pageName)}FormProvider.scala"
         IO.write(
           journeyFormProviderFile,
-          FormProvider.baseProvider(basePackage, config.models, page)
+          formProvider.baseProvider(basePackage, config.models, page)
         )
         logger.info(s"Generated form provider $journeyFormProviderFile")
         journeyFormProviderFile
@@ -827,7 +831,7 @@ object JourneyPlugin extends AutoPlugin {
       }
 
       val defaultProvidersModuleFile = packageFolder / "config" / "DefaultFormProvidersModule.scala"
-      IO.write(defaultProvidersModuleFile, FormProvider.module(config))
+      IO.write(defaultProvidersModuleFile, formProvider.module(config))
       logger.info(s"Generated form providers module $defaultProvidersModuleFile")
 
       journeyControllerFiles ++
@@ -837,9 +841,10 @@ object JourneyPlugin extends AutoPlugin {
         Seq(defaultProvidersModuleFile)
     }.toList
 
+    val customModel = new CustomModel(collector)
     val modelFiles = config.models.map { case (modelName, model) =>
       val modelFile = packageFolder / "models" / s"$modelName.scala"
-      IO.write(modelFile, CustomModel.render(basePackage, model))
+      IO.write(modelFile, customModel.render(basePackage, model))
       logger.info(s"Generated model file $modelFile")
       modelFile
     }.toList
@@ -973,11 +978,13 @@ object JourneyPlugin extends AutoPlugin {
     val formsFolder = packageFolder / "forms"
     val basePackage = QualifiedName(config.basePackage)
 
+    val collector    = new ImportCollector(config.models)
+    val formProvider = new FormProvider(collector)
     config.journeys.foreach { case (_, journey) =>
       journey.pages.foreach { case (pageName, page) =>
         val formFile = formsFolder / s"${pascalCase(pageName)}FormProvider.scala"
         if (overwrite || !formFile.exists()) {
-          IO.write(formFile, FormProvider.providerStub(basePackage, config.models, page))
+          IO.write(formFile, formProvider.providerStub(basePackage, config.models, page))
           logger.info(s"Generated form provider $formFile for page $pageName")
         } else {
           logger.warn(s"Skipping form provider $formFile because it already exists")

@@ -16,14 +16,14 @@
 
 package uk.gov.hmrc.sbt.journey.templates
 
-import uk.gov.hmrc.sbt.journey.models.*
+import uk.gov.hmrc.sbt.journey.models.QualifiedName
 
 object Imports extends Template {
-  private[templates] val JavaLangPrefix             = List("java", "lang")
-  private[templates] val JavaTimePrefix             = List("java", "time")
-  private[templates] val PlayI18nPrefix             = List("play", "api", "i18n")
-  private[templates] val PlayJsonPrefix             = List("play", "api", "libs", "json")
-  private[templates] val HmrcMongoJavaTimeInstances = Set("LocalDate", "Instant")
+  val JavaLangPrefix: List[String]       = List("java", "lang")
+  val JavaTimePrefix: List[String]       = List("java", "time")
+  val PlayI18nPrefix: List[String]       = List("play", "api", "i18n")
+  val PlayJsonPrefix: List[String]       = List("play", "api", "libs", "json")
+  private val HmrcMongoJavaTimeInstances = Set("LocalDate", "Instant")
 
   private def needsImport(filePackage: QualifiedName, prefix: List[String]): Boolean =
     prefix != JavaLangPrefix && prefix != filePackage.parts
@@ -63,40 +63,4 @@ object Imports extends Template {
     right: Map[List[String], Set[String]]
   ): Map[List[String], Set[String]] =
     left ++ right.map { case (k, v) => k -> (v ++ left.getOrElse(k, Set.empty)) }
-
-  def importedSymbols(fieldType: FieldType): Map[List[String], Set[String]] =
-    importedSymbols(collectClassTypes(fieldType))
-
-  def importedSymbols(fields: List[(String, FieldType)]): Map[List[String], Set[String]] =
-    importedSymbols(collectClassTypes(fields))
-
-  private def importedSymbols(classTypes: Set[ClassType]): Map[List[String], Set[String]] = {
-    classTypes
-      .map(_.clazz.split("\\.").toList)
-      .groupBy(_.dropRight(1))
-      .view
-      .map { case (prefix, types) => prefix -> types.map(_.last) }
-      .toMap
-  }
-
-  private def collectClassTypes(fields: List[(String, FieldType)]): Set[ClassType] = {
-    fields
-      .map { case (_, fieldType) =>
-        collectClassTypes(fieldType)
-      }
-      .foldLeft(Set.empty[ClassType])(_ ++ _)
-  }
-
-  private def collectClassTypes(fieldType: FieldType): Set[ClassType] = {
-    def find(typ: FieldType): Set[ClassType] = typ match {
-      case ListType(elements)       => find(elements)
-      case SetType(elements)        => find(elements)
-      case OptionType(elements)     => find(elements)
-      case classType @ ClassType(_) => Set(classType)
-      case SyntheticClassType(_, _) => Set.empty
-      case PrimitiveType(_)         => Set.empty
-    }
-
-    find(fieldType)
-  }
 }

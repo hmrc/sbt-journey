@@ -19,7 +19,7 @@ package uk.gov.hmrc.sbt.journey.templates
 import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, pascalCase}
 
-object PageObject extends Template {
+class PageObject(collector: ImportCollector) extends Template {
   private def applyParams(journey: Journey, path: JourneyPath): List[String] =
     path.paths.collect {
       case IndexPath(pageKey) =>
@@ -131,12 +131,12 @@ object PageObject extends Template {
 
     val pageType = ModelFields.fieldType(answerType)
 
-    val answerTypeImports = Imports.importedSymbols(answerType)
+    val answerTypeImports = collector.importedSymbols(answerType, recursive = false)
 
     val choiceModelImports = overloads
       .flatMap(_.choicePaths)
       .map { case ChoicePath(pageKey, _) =>
-        Imports.importedSymbols(journey.pages(pageKey).answerType)
+        collector.importedSymbols(journey.pages(pageKey).answerType, recursive = false)
       }
 
     val importedPrefixes = choiceModelImports.foldLeft(answerTypeImports)(Imports.merge)

@@ -21,12 +21,14 @@ import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.sbt.journey.models.*
 
 class CustomModelSpec extends AnyFlatSpec with Matchers {
+  val customModel = new CustomModel(new ImportCollector(Map.empty))
+
   "CustomModel.render" should "render an enum model" in {
     val basePackage = QualifiedName("uk.gov.hmrc.sbtjourneytest")
 
     val enumModel = EnumModel("TestEnum", List("A", "B", "C"))
 
-    CustomModel.render(basePackage, enumModel) shouldBe
+    customModel.render(basePackage, enumModel) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
         |import models.Enumerable // import uk.gov.hmrc.sbtjourneytest.models.Enumerable
@@ -85,7 +87,7 @@ class CustomModelSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    CustomModel.render(basePackage, caseClassModel) shouldBe
+    customModel.render(basePackage, caseClassModel) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
         |import play.api.libs.json.{Json, Format}
@@ -115,7 +117,7 @@ class CustomModelSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    CustomModel.render(basePackage, caseClassModel) shouldBe
+    customModel.render(basePackage, caseClassModel) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
         |import play.api.libs.json.{Json, Format}
@@ -145,7 +147,7 @@ class CustomModelSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    CustomModel.render(basePackage, caseClassModel) shouldBe
+    customModel.render(basePackage, caseClassModel) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
         |import play.api.libs.json.{Json, Format}
@@ -175,7 +177,7 @@ class CustomModelSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    CustomModel.render(basePackage, caseClassModel) shouldBe
+    customModel.render(basePackage, caseClassModel) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
         |import play.api.libs.json.{Json, Format}
