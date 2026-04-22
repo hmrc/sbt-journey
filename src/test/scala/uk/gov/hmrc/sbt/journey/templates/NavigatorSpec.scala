@@ -27,7 +27,11 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
   val navigator = new Navigator(
     Map(
       "Choice"    -> EnumModel("Choice", List("Yes", "No")),
-      "TaxRegime" -> EnumModel("TaxRegime", List("SA", "VAT"))
+      "TaxRegime" -> EnumModel("TaxRegime", List("SA", "VAT")),
+      "Domicile" -> EnumModel(
+        "Domicile",
+        List("ENGLAND_WALES", "SCOTLAND", "NORTHERN_IRELAND", "OTHER")
+      )
     )
   )
 
@@ -321,7 +325,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
           SwitchCasePart(
             "whichTaxRegime",
             Map(
-              "SA"  -> List(SinglePagePart("saInfo", None)),
+              "SA"      -> List(SinglePagePart("saInfo", None)),
               "default" -> List(SinglePagePart("vatInfo", None))
             ),
             None
@@ -342,7 +346,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
         |      routes.CheckYourAnswersBaseController.onPageLoad""".stripMargin
   }
 
-  it should "render navigations between the pages of a switch-case journey that doesn't cover all cases" in {
+  it should "render navigations between the pages of a switch-case journey when there is one uncovered case" in {
     val whichTaxRegime =
       journeyPage("whichTaxRegime", ClassType(basePackage / "models" / "TaxRegime"))
     val saInfo =
@@ -358,7 +362,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
         journey = List(
           SwitchCasePart(
             "whichTaxRegime",
-            Map("SA"  -> List(SinglePagePart("saInfo", None))),
+            Map("SA" -> List(SinglePagePart("saInfo", None))),
             None
           ),
           SinglePagePart("checkYourAnswers", None)
@@ -369,9 +373,42 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
     navigator.normalRoutesFor(config) shouldBe
       """    case WhichTaxRegimePage => _ => {
         |      case TaxRegime.SA => routes.SaInfoBaseController.onPageLoad(NormalMode)
-        |      case _ => routes.CheckYourAnswersBaseController.onPageLoad
+        |      case TaxRegime.VAT => routes.CheckYourAnswersBaseController.onPageLoad
         |    }
         |    case SaInfoPage(TaxRegime.SA) => _ => _ =>
+        |      routes.CheckYourAnswersBaseController.onPageLoad""".stripMargin
+  }
+
+  it should "render navigations between the pages of a switch-case journey when there are multiple uncovered cases" in {
+    val whereDomiciled =
+      journeyPage("whereDomiciled", ClassType(basePackage / "models" / "Domicile"))
+    val longTermResident =
+      journeyPage("longTermResident", FieldType.BOOLEAN)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whereDomiciled" -> Journey(
+        pages = Map(
+          "whereDomiciled"   -> whereDomiciled,
+          "longTermResident" -> longTermResident
+        ),
+        journey = List(
+          SwitchCasePart(
+            "whereDomiciled",
+            Map("OTHER" -> List(SinglePagePart("longTermResident", None))),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    navigator.normalRoutesFor(config) shouldBe
+      """    case WhereDomiciledPage => _ => {
+        |      case Domicile.OTHER => routes.LongTermResidentBaseController.onPageLoad(NormalMode)
+        |      case _ => routes.CheckYourAnswersBaseController.onPageLoad
+        |    }
+        |    case LongTermResidentPage(Domicile.OTHER) => _ => _ =>
         |      routes.CheckYourAnswersBaseController.onPageLoad""".stripMargin
   }
 

@@ -159,9 +159,17 @@ class Navigator(models: Map[String, AnswerModel]) extends Template {
       val nextPartPage = pascalCase(nextPart.startPage)
       val nextParams   = nextRouteParams(mode, pages, journeyPath, nextPart, nextPath)
 
+      val uncoveredCases = model.uncoveredCases(subJourneys.keySet)
+
       val wildcardRoute =
         if (model.isCoveredBy(subJourneys.keySet)) ""
-        else s"""$NL      case _ => routes.${nextPartPage}BaseController.onPageLoad$nextParams"""
+        else if (uncoveredCases.size == 1) {
+          val choiceCase = uncoveredCases.head
+          val choiceType = ModelFields.fieldType(answerType)
+          s"""$NL      case $choiceType.$choiceCase => routes.${nextPartPage}BaseController.onPageLoad$nextParams"""
+        } else {
+          s"""$NL      case _ => routes.${nextPartPage}BaseController.onPageLoad$nextParams"""
+        }
 
       val choiceRoutes = subJourneys
         .filterKeys(_ != "default")
