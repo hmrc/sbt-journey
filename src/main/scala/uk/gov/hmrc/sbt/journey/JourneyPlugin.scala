@@ -526,6 +526,8 @@ object JourneyPlugin extends AutoPlugin {
                     config.getValue(trueField)
                   )
                 )
+              else if (config.hasPath("not"))
+                List(trueValue -> List.empty)
               else
                 List.empty
 
@@ -592,6 +594,8 @@ object JourneyPlugin extends AutoPlugin {
                       config.getValue(trueField)
                     )
                   )
+                else if (config.hasPath("not"))
+                  List(trueValue -> List.empty)
                 else
                   List.empty
 
