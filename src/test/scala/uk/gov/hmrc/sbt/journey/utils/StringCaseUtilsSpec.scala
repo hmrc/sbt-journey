@@ -25,41 +25,40 @@ import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, camelComponents
 
 class StringCaseUtilsSpec extends AnyFlatSpec with Matchers with ScalaCheckPropertyChecks {
   "StringCaseUtils.capitalise" should "make the first character of its input uppercase" in forAll(
-    Gen.nonEmptyStringOf(Gen.asciiPrintableChar)
+    Gen.stringOf(Gen.asciiPrintableChar)
   ) {
     input: String =>
-      whenever(input.nonEmpty && input(0).isLetter) {
+      whenever(input.take(1).forall(_.isLetter)) {
         val output = capitalise(input)
-        output(0) should be(upperCase)
-        output.drop(1) shouldBe input.drop(1)
+        all (output.take(1)) should be(upperCase)
       }
   }
 
   it should "leave the rest of the input unchanged" in forAll(
-    Gen.nonEmptyStringOf(Gen.asciiPrintableChar)
+    Gen.stringOf(Gen.asciiPrintableChar)
   ) {
     input: String =>
-      whenever(input.nonEmpty && input(0).isLetter) {
+      whenever(input.take(1).forall(_.isLetter)) {
         val output = capitalise(input)
         output.drop(1) shouldBe input.drop(1)
       }
   }
 
   "StringCaseUtils.decapitalise" should "make the first character of its input lowercase" in forAll(
-    Gen.nonEmptyStringOf(Gen.asciiPrintableChar)
+    Gen.stringOf(Gen.asciiPrintableChar)
   ) {
     input: String =>
-      whenever(input.nonEmpty && input(0).isLetter) {
+      whenever(input.take(1).forall(_.isLetter)) {
         val output = decapitalise(input)
-        output(0) should be(lowerCase)
+        all (output.take(1)) should be(lowerCase)
       }
   }
 
   it should "leave the rest of the input unchanged" in forAll(
-    Gen.nonEmptyStringOf(Gen.asciiPrintableChar)
+    Gen.stringOf(Gen.asciiPrintableChar)
   ) {
     input: String =>
-      whenever(input.nonEmpty && input(0).isLetter) {
+      whenever(input.take(1).forall(_.isLetter)) {
         val output = decapitalise(input)
         output.drop(1) shouldBe input.drop(1)
       }

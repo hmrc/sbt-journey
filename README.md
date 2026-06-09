@@ -295,11 +295,19 @@ There are five different kinds of journey part. In all the following examples, t
 
 * `{if: <choicePage>, then: ...}`:
 
-  This kind of journey part declares an optional subjourney. The choice page must have `answerType = Boolean`.
+  This kind of journey part declares an optional subjourney. The choice page must have `answerType = Boolean` or an `answerType` referencing an `enum` model from the `models`.
 
   The user visits the choice page `if` first.
 
   If they answer the choice page affirmatively then they will progress to the subjourney parts in `then`, otherwise they will progress to the next part in the outer journey.
+
+  It's possible to use `enum` model values with `if` by providing either an `is` or `not` predicate, for example:
+
+  `{if: <choicePage>, is: No, then: ...}`
+
+  `if` journeys can optionally include an `else` subjourney which the user will proceed to if they answer the choice page negatively:
+
+  `{if: <choicePage>, then: ..., else: ...}`
 
 * `{do: ..., while: <choicePage>, as: <storageKey>}`:
 
