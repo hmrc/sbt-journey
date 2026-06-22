@@ -300,16 +300,23 @@ object JourneyPlugin extends AutoPlugin {
     )
   }
 
-  private val primitives = Set[Class[? <: AnyVal]](
-    classOf[Int],
-    classOf[Boolean]
-  ).map(clazz => clazz.getSimpleName -> PrimitiveType(clazz)).toMap
+  private val primitives: Map[String, PrimitiveType] =
+    Set[Class[? <: AnyVal]](
+      classOf[Int],
+      classOf[Boolean]
+    ).map(clazz => clazz.getSimpleName -> PrimitiveType(clazz)).toMap
 
-  private val builtIns = Set[Class[? <: AnyRef]](
-    classOf[String],
-    classOf[java.time.LocalDate],
-    classOf[scala.math.BigDecimal]
-  ).map(clazz => clazz.getSimpleName -> ClassType(clazz.getName)).toMap
+  private[journey] def makeBuiltIns(modelsPackage: QualifiedName): Map[String, ClassType] = {
+    val javaBuiltIns = Set[Class[? <: AnyRef]](
+      classOf[String],
+      classOf[java.time.LocalDate],
+      classOf[scala.math.BigDecimal]
+    ).map(clazz => clazz.getSimpleName -> ClassType(clazz.getName)).toMap
+
+    val journeyBuiltIns = Map("FileUpload" -> ClassType(modelsPackage / "FileUpload"))
+
+    javaBuiltIns ++ journeyBuiltIns
+  }
 
   private[journey] def deserialiseFieldType(
     models: Map[String, ?],
@@ -317,6 +324,8 @@ object JourneyPlugin extends AutoPlugin {
     errors: mutable.ListBuffer[JourneyConfigProblem],
     config: ConfigValue
   ): FieldType = {
+    val builtIns = makeBuiltIns(modelsPackage)
+
     config.valueType() match {
       case ConfigValueType.OBJECT =>
         val obj        = config.asInstanceOf[ConfigObject]
@@ -975,11 +984,15 @@ object JourneyPlugin extends AutoPlugin {
       modelFile
     }.toList
 
+    val enumFormatsFile = packageFolder / "models" / "EnumFormats.scala"
+    IO.write(enumFormatsFile, FormatTraits.enumFormats(basePackage))
+    logger.info(s"Generated format traits file $enumFormatsFile")
+
     val navigatorFile = packageFolder / "navigation" / s"JourneyNavigator.scala"
     IO.write(navigatorFile, new Navigator(config.models).render(config))
     logger.info(s"Generated navigator $navigatorFile")
 
-    rootPageFiles ++ modelFiles ++ journeyFiles :+ navigatorFile
+    rootPageFiles ++ modelFiles ++ journeyFiles :+ enumFormatsFile :+ navigatorFile
   }
 
   private[journey] def cleanJourneyRouteFiles(lastFiles: Option[Seq[File]]): Unit = {

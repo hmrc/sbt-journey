@@ -112,28 +112,19 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
     caseName: String,
     fields: List[(String, FieldType)]
   ): String = {
-    val nm        = camelCase(caseName)
     val capitalNm = pascalCase(caseName)
     if (fields.isEmpty)
-      s"""|        case $nm if $nm == config.typeNaming("$caseName") =>
-          |          JsSuccess($caseName)""".stripMargin
+      s"""|    "$caseName" -> Reads.pure($caseName)""".stripMargin
     else
-      s"""|        case $nm if $nm == config.typeNaming("$caseName") =>
-          |          nested${capitalNm}Reads.reads(obj)""".stripMargin
+      s"""|    "$caseName" -> nested${capitalNm}Reads""".stripMargin
   }
 
   private def readDefaultCase(fields: List[(String, FieldType)]): String = {
     if (fields.isEmpty)
-      s"""|        case _ =>
-          |          JsSuccess(default)""".stripMargin
+      "    default = JsSuccess(default)"
     else
-      s"""|        case _ =>
-          |          nestedDefaultReads.reads(obj)""".stripMargin
+      "    default = nestedDefaultReads"
   }
-
-  private val readInvalidCase: String =
-    s"""|        case _ =>
-        |          JsError("error.invalid")""".stripMargin
 
   def forSwitchCase(
     modelsPackage: QualifiedName,
@@ -158,7 +149,7 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
     val importPrefixes =
       playImports ++ collector.importedSymbols(modelCases.values.toList.flatten, recursive = false)
     val imports       = Imports.importsFor(modelsPackage, importPrefixes)
-    val extendsClause = FormatTraits.extendsClause(importPrefixes)
+    val extendsClause = FormatTraits.extendsClause(importPrefixes, modelsPackage / "EnumFormats")
 
     val answerType = pages(choicePage).answerType
 
@@ -198,7 +189,7 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
     val readNamedCases =
       nonDefault.map((readNamedCase _).tupled).toList
     val readUncoveredCases =
-      uncovered.map(readNamedCase(_, List.empty)).toList ++ List(readInvalidCase)
+      uncovered.map(readNamedCase(_, List.empty)).toList
 
     val readDefault = default
       .map(fields => List(readDefaultCase(fields)))
@@ -214,15 +205,9 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
        |}
        |
        |object $modelName $extendsClause{$subtypeReads
-       |  given reads(using config: JsonConfiguration): Reads[$modelName] = Reads {
-       |    case obj: JsObject => obj.value.get(config.discriminator) match {
-       |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
-       |${(readNamedCases ++ readDefault).mkString(NL)}
-       |      }
-       |      case _ => JsError(JsPath \\ config.discriminator, "error.missing.path")
-       |    }
-       |    case _ => JsError("error.expected.jsobject")
-       |  }
+       |  given reads: Reads[$modelName] = enumReads(
+       |${(readDefault ++ readNamedCases).mkString("," + NL)}
+       |  )
        |}
        |""".stripMargin
   }
@@ -248,7 +233,7 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
 
     val importPrefixes = playImports ++ collector.importedSymbols(fields, recursive = false)
     val imports        = Imports.importsFor(modelsPackage, importPrefixes)
-    val extendsClause  = FormatTraits.extendsClause(importPrefixes)
+    val extendsClause  = FormatTraits.extendsClause(importPrefixes, modelsPackage / "EnumFormats")
 
     s"""package $modelsPackage
        |
@@ -272,20 +257,10 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
        |  private val nestedYesReads: Reads[$modelName] =
        |    (JsPath \\ "Yes").read[$modelName](using yesReads)
        |
-       |  given reads(using config: JsonConfiguration): Reads[$modelName] = Reads {
-       |    case obj: JsObject => obj.value.get(config.discriminator) match {
-       |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
-       |        case yes if yes == config.typeNaming("Yes") =>
-       |          nestedYesReads.reads(obj)
-       |        case no  if no  == config.typeNaming("No")  =>
-       |          JsSuccess(No)
-       |        case _ =>
-       |          JsError("error.invalid")
-       |      }
-       |      case _ => JsError(JsPath \\ config.discriminator, "error.missing.path")
-       |    }
-       |    case _ => JsError("error.expected.jsobject")
-       |  }
+       |  given reads: Reads[$modelName] = enumReads(
+       |    "Yes" -> nestedYesReads,
+       |    "No" -> Reads.pure(No)
+       |  )
        |}
        |""".stripMargin
   }

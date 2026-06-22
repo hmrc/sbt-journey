@@ -4,6 +4,7 @@
 * Add queries for reading the journey models
 * Integrate with sbt-header for copyright header generation
 * Rework the hmrc-frontend-scaffold.g8 template to use init_service package structure or create a new template
+* Add `loadRoute` to Page objects to make navigator code easier?
 * Special care needs to be taken to preserve the changes to the frontend-scaffold:
   * Changed `RichJsObject` to use `deepMerge`, preserving nested answers
   * Changed `Page` to have `AnswerType`
@@ -12,7 +13,7 @@
     * May wish to add `loadRoute` too for convenience?
   * Added passthrough to `journey.Routes` in `prod.routes`
 * Rework the generated code to make use of the package structure
-* Implement switch-case else / default functionality?
+* ~~Implement switch-case else / default functionality?~~
 * Consider whether to use the `journeys.<journey name>` to build a sub-package structure
   * e.g. uk.gov.hmrc.<service>.{controllers,forms,pages}.<journey>
   * Could even consider using a fractal application structure (e.g. uk.gov.hmrc.<service>.<journey>.{controllers,forms,pages})

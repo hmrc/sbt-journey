@@ -74,21 +74,11 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |  case VAT
         |}
         |
-        |object WhichTaxRegime {
-        |  given reads(using config: JsonConfiguration): Reads[WhichTaxRegime] = Reads {
-        |    case obj: JsObject => obj.value.get(config.discriminator) match {
-        |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
-        |        case sa if sa == config.typeNaming("SA") =>
-        |          JsSuccess(SA)
-        |        case vat if vat == config.typeNaming("VAT") =>
-        |          JsSuccess(VAT)
-        |        case _ =>
-        |          JsError("error.invalid")
-        |      }
-        |      case _ => JsError(JsPath \ config.discriminator, "error.missing.path")
-        |    }
-        |    case _ => JsError("error.expected.jsobject")
-        |  }
+        |object WhichTaxRegime extends EnumFormats {
+        |  given reads: Reads[WhichTaxRegime] = enumReads(
+        |    "SA" -> Reads.pure(SA),
+        |    "VAT" -> Reads.pure(VAT)
+        |  )
         |}
         |""".stripMargin
   }
@@ -126,7 +116,7 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |  )
         |}
         |
-        |object WhichTaxRegime {
+        |object WhichTaxRegime extends EnumFormats {
         |  private val saReads: Reads[WhichTaxRegime] =
         |    (JsPath \ "saInfo").read[String].map(SA.apply)
         |  private val nestedSaReads: Reads[WhichTaxRegime] =
@@ -136,25 +126,15 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |  private val nestedVatReads: Reads[WhichTaxRegime] =
         |    (JsPath \ "VAT").read[WhichTaxRegime](using vatReads)
         |
-        |  given reads(using config: JsonConfiguration): Reads[WhichTaxRegime] = Reads {
-        |    case obj: JsObject => obj.value.get(config.discriminator) match {
-        |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
-        |        case sa if sa == config.typeNaming("SA") =>
-        |          nestedSaReads.reads(obj)
-        |        case vat if vat == config.typeNaming("VAT") =>
-        |          nestedVatReads.reads(obj)
-        |        case _ =>
-        |          JsError("error.invalid")
-        |      }
-        |      case _ => JsError(JsPath \ config.discriminator, "error.missing.path")
-        |    }
-        |    case _ => JsError("error.expected.jsobject")
-        |  }
+        |  given reads: Reads[WhichTaxRegime] = enumReads(
+        |    "SA" -> nestedSaReads,
+        |    "VAT" -> nestedVatReads
+        |  )
         |}
         |""".stripMargin
   }
 
-  it should "render an enum model for a switch-case journey part with subjourneys that doesn't cover every case" in {
+  it should "render an enum model for a switch-case journey part with subjourneys that don't cover every case" in {
     val switchCasePart = SwitchCasePart(
       "whereDomiciled",
       Map(
@@ -189,7 +169,7 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |  case NORTHERN_IRELAND
         |}
         |
-        |object WhereDomiciled {
+        |object WhereDomiciled extends EnumFormats {
         |  private val otherReads: Reads[WhereDomiciled] =
         |    (JsPath \ "iht401").read[String].map(OTHER.apply)
         |  private val nestedOtherReads: Reads[WhereDomiciled] =
@@ -199,24 +179,12 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |  private val nestedScotlandReads: Reads[WhereDomiciled] =
         |    (JsPath \ "SCOTLAND").read[WhereDomiciled](using scotlandReads)
         |
-        |  given reads(using config: JsonConfiguration): Reads[WhereDomiciled] = Reads {
-        |    case obj: JsObject => obj.value.get(config.discriminator) match {
-        |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
-        |        case other if other == config.typeNaming("OTHER") =>
-        |          nestedOtherReads.reads(obj)
-        |        case scotland if scotland == config.typeNaming("SCOTLAND") =>
-        |          nestedScotlandReads.reads(obj)
-        |        case englandWales if englandWales == config.typeNaming("ENGLAND_WALES") =>
-        |          JsSuccess(ENGLAND_WALES)
-        |        case northernIreland if northernIreland == config.typeNaming("NORTHERN_IRELAND") =>
-        |          JsSuccess(NORTHERN_IRELAND)
-        |        case _ =>
-        |          JsError("error.invalid")
-        |      }
-        |      case _ => JsError(JsPath \ config.discriminator, "error.missing.path")
-        |    }
-        |    case _ => JsError("error.expected.jsobject")
-        |  }
+        |  given reads: Reads[WhereDomiciled] = enumReads(
+        |    "ENGLAND_WALES" -> Reads.pure(ENGLAND_WALES),
+        |    "NORTHERN_IRELAND" -> Reads.pure(NORTHERN_IRELAND),
+        |    "OTHER" -> nestedOtherReads,
+        |    "SCOTLAND" -> nestedScotlandReads
+        |  )
         |}
         |""".stripMargin
   }
@@ -259,7 +227,7 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |  )
         |}
         |
-        |object WhereDomiciled {
+        |object WhereDomiciled extends EnumFormats {
         |  private val otherReads: Reads[WhereDomiciled] =
         |    (JsPath \ "iht401").read[String].map(OTHER.apply)
         |  private val nestedOtherReads: Reads[WhereDomiciled] =
@@ -273,20 +241,11 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |  private val nestedDefaultReads: Reads[WhereDomiciled] =
         |    (JsPath \ "default").read[WhereDomiciled](using defaultReads)
         |
-        |  given reads(using config: JsonConfiguration): Reads[WhereDomiciled] = Reads {
-        |    case obj: JsObject => obj.value.get(config.discriminator) match {
-        |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
-        |        case other if other == config.typeNaming("OTHER") =>
-        |          nestedOtherReads.reads(obj)
-        |        case scotland if scotland == config.typeNaming("SCOTLAND") =>
-        |          nestedScotlandReads.reads(obj)
-        |        case _ =>
-        |          nestedDefaultReads.reads(obj)
-        |      }
-        |      case _ => JsError(JsPath \ config.discriminator, "error.missing.path")
-        |    }
-        |    case _ => JsError("error.expected.jsobject")
-        |  }
+        |  given reads: Reads[WhereDomiciled] = enumReads(
+        |    default = nestedDefaultReads,
+        |    "OTHER" -> nestedOtherReads,
+        |    "SCOTLAND" -> nestedScotlandReads
+        |  )
         |}
         |""".stripMargin
   }
@@ -326,7 +285,7 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |  }
         |}
         |
-        |object AddATaxRegime {
+        |object AddATaxRegime extends EnumFormats {
         |  private val yesReads: Reads[AddATaxRegime] = {
         |    val taxRegimes = Reads.list(Reads.at[TaxRegime](JsPath \ "taxRegime"))
         |    (JsPath \ "taxRegimes").read[List[TaxRegime]](using taxRegimes).map(Yes.apply)
@@ -334,20 +293,10 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
         |  private val nestedYesReads: Reads[AddATaxRegime] =
         |    (JsPath \ "Yes").read[AddATaxRegime](using yesReads)
         |
-        |  given reads(using config: JsonConfiguration): Reads[AddATaxRegime] = Reads {
-        |    case obj: JsObject => obj.value.get(config.discriminator) match {
-        |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
-        |        case yes if yes == config.typeNaming("Yes") =>
-        |          nestedYesReads.reads(obj)
-        |        case no  if no  == config.typeNaming("No")  =>
-        |          JsSuccess(No)
-        |        case _ =>
-        |          JsError("error.invalid")
-        |      }
-        |      case _ => JsError(JsPath \ config.discriminator, "error.missing.path")
-        |    }
-        |    case _ => JsError("error.expected.jsobject")
-        |  }
+        |  given reads: Reads[AddATaxRegime] = enumReads(
+        |    "Yes" -> nestedYesReads,
+        |    "No" -> Reads.pure(No)
+        |  )
         |}
         |""".stripMargin
   }

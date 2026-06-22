@@ -38,23 +38,12 @@ class CustomModelSpec extends AnyFlatSpec with Matchers {
         |  case A, B, C
         |}
         |
-        |object TestEnum {
-        |  given reads(using config: JsonConfiguration): Reads[TestEnum] = Reads {
-        |    case obj: JsObject => obj.value.get(config.discriminator) match {
-        |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
-        |        case a if a == config.typeNaming("A") =>
-        |          JsSuccess(A)
-        |        case b if b == config.typeNaming("B") =>
-        |          JsSuccess(B)
-        |        case c if c == config.typeNaming("C") =>
-        |          JsSuccess(C)
-        |        case _ =>
-        |          JsError("error.invalid")
-        |      }
-        |      case _ => JsError(JsPath \ config.discriminator, "error.missing.path")
-        |    }
-        |    case _ => JsError("error.expected.jsobject")
-        |  }
+        |object TestEnum extends EnumFormats {
+        |  given reads: Reads[TestEnum] = enumReads(
+        |    "A" -> Reads.pure(A),
+        |    "B" -> Reads.pure(B),
+        |    "C" -> Reads.pure(C)
+        |  )
         |
         |  given writes(using config: JsonConfiguration): Writes[TestEnum] = Writes {
         |    case A =>

@@ -7,21 +7,11 @@ enum TaxRegime {
   case SA, VAT
 }
 
-object TaxRegime {
-  given reads(using config: JsonConfiguration): Reads[TaxRegime] = Reads {
-    case obj: JsObject => obj.value.get(config.discriminator) match {
-      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
-        case sa if sa == config.typeNaming("SA") =>
-          JsSuccess(SA)
-        case vat if vat == config.typeNaming("VAT") =>
-          JsSuccess(VAT)
-        case _ =>
-          JsError("error.invalid")
-      }
-      case _ => JsError(JsPath \ config.discriminator, "error.missing.path")
-    }
-    case _ => JsError("error.expected.jsobject")
-  }
+object TaxRegime extends EnumFormats {
+  given reads: Reads[TaxRegime] = enumReads(
+    "SA" -> Reads.pure(SA),
+    "VAT" -> Reads.pure(VAT)
+  )
 
   given writes(using config: JsonConfiguration): Writes[TaxRegime] = Writes {
     case SA =>

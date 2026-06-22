@@ -7,21 +7,11 @@ enum Choice {
   case Yes, No
 }
 
-object Choice {
-  given reads(using config: JsonConfiguration): Reads[Choice] = Reads {
-    case obj: JsObject => obj.value.get(config.discriminator) match {
-      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
-        case yes if yes == config.typeNaming("Yes") =>
-          JsSuccess(Yes)
-        case no if no == config.typeNaming("No") =>
-          JsSuccess(No)
-        case _ =>
-          JsError("error.invalid")
-      }
-      case _ => JsError(JsPath \ config.discriminator, "error.missing.path")
-    }
-    case _ => JsError("error.expected.jsobject")
-  }
+object Choice extends EnumFormats {
+  given reads: Reads[Choice] = enumReads(
+    "Yes" -> Reads.pure(Yes),
+    "No" -> Reads.pure(No)
+  )
 
   given writes(using config: JsonConfiguration): Writes[Choice] = Writes {
     case Yes =>

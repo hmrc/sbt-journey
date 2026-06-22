@@ -16,9 +16,8 @@
 
 package uk.gov.hmrc.sbt.journey.templates
 
-import uk.gov.hmrc.sbt.journey.models.{AnswerModel, CaseClassModel, EnumModel, ImportCollector, QualifiedName}
+import uk.gov.hmrc.sbt.journey.models.*
 import uk.gov.hmrc.sbt.journey.templates.Imports.PlayJsonPrefix
-import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.camelCase
 
 class CustomModel(collector: ImportCollector) extends Template {
   def render(basePackage: QualifiedName, model: AnswerModel): String = model match {
@@ -27,9 +26,7 @@ class CustomModel(collector: ImportCollector) extends Template {
   }
 
   private def enumRead(caseName: String): String = {
-    val nm = camelCase(caseName)
-    s"""|        case $nm if $nm == config.typeNaming("$caseName") =>
-        |          JsSuccess($caseName)""".stripMargin
+    s"""|    "$caseName" -> Reads.pure($caseName)""".stripMargin
   }
 
   private def enumWrite(caseName: String): String = {
@@ -69,18 +66,10 @@ class CustomModel(collector: ImportCollector) extends Template {
        |  case ${cases.mkString(", ")}
        |}
        |
-       |object $name {
-       |  given reads(using config: JsonConfiguration): Reads[$name] = Reads {
-       |    case obj: JsObject => obj.value.get(config.discriminator) match {
-       |      case Some(jsDiscriminator) => jsDiscriminator.validate[String].flatMap {
-       |${cases.map(enumRead).mkString(NL)}
-       |        case _ =>
-       |          JsError("error.invalid")
-       |      }
-       |      case _ => JsError(JsPath \\ config.discriminator, "error.missing.path")
-       |    }
-       |    case _ => JsError("error.expected.jsobject")
-       |  }
+       |object $name extends EnumFormats {
+       |  given reads: Reads[$name] = enumReads(
+       |${cases.map(enumRead).mkString("", "," + NL, "")}
+       |  )
        |
        |  given writes(using config: JsonConfiguration): Writes[$name] = Writes {
        |${cases.map(enumWrite).mkString(NL)}
