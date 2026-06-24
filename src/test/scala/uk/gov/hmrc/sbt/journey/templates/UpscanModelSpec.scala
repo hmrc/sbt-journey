@@ -141,7 +141,7 @@ class UpscanModelSpec extends AnyFlatSpec with Matchers {
         |)
         |
         |object UploadDetails {
-        |  given OFormat[UploadDetails] = Json.format[UploadDetails]
+        |  given format: OFormat[UploadDetails] = Json.format[UploadDetails]
         |}
         |""".stripMargin
   }
@@ -158,7 +158,7 @@ class UpscanModelSpec extends AnyFlatSpec with Matchers {
         |)
         |
         |object FailureDetails {
-        |  given OFormat[FailureDetails] = Json.format[FailureDetails]
+        |  given format: OFormat[FailureDetails] = Json.format[FailureDetails]
         |}
         |""".stripMargin
   }
@@ -255,11 +255,12 @@ class UpscanModelSpec extends AnyFlatSpec with Matchers {
         |
         |enum FileUpload {
         |  def id: UploadId
+        |  def userId: String
         |  def reference: UpscanReference
-        |  case Initiated(id: UploadId, reference: UpscanReference, initiatedAt: Instant)
-        |  case Processing(id: UploadId, reference: UpscanReference, updatedAt: Instant)
-        |  case Failed(id: UploadId, reference: UpscanReference, failureDetails: FailureDetails, updatedAt: Instant)
-        |  case Ready(id: UploadId, reference: UpscanReference, downloadUrl: URI, uploadDetails: UploadDetails, updatedAt: Instant)
+        |  case Initiated(id: UploadId, userId: String, reference: UpscanReference, initiatedAt: Instant)
+        |  case Processing(id: UploadId, userId: String, reference: UpscanReference, updatedAt: Instant)
+        |  case Failed(id: UploadId, userId: String, reference: UpscanReference, failureDetails: FailureDetails, updatedAt: Instant)
+        |  case Ready(id: UploadId, userId: String, reference: UpscanReference, downloadUrl: URI, uploadDetails: UploadDetails, updatedAt: Instant)
         |}
         |
         |object FileUpload extends EnumFormats, UploadId.MongoFormat, MongoJavatimeFormats.Implicits {

@@ -1315,14 +1315,16 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |        successRedirect = journeyRoutes.UploadWillDocumentBaseController.onUploadSuccess(uploadId.id, mode),
         |        errorRedirect = journeyRoutes.UploadWillDocumentBaseController.onUploadFailure(uploadId.id, mode)
         |      )
-        |      uploadId <- fileUploadRepository.initiate(uploadId, initiateResponse.reference)
+        |      uploadId <- fileUploadRepository.initiate(uploadId, request.userId, initiateResponse.reference)
         |      formTemplate = initiateResponse.uploadRequest
-        |      preparedForm = request.getQueryString("errorCode").fold(form()) { errorCode =>
-        |        val reference = request.getQueryString("key").orNull
-        |        val errorMessage = request.getQueryString("errorMessage").orNull
-        |        logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
-        |        val uploadError = UploadError.fromErrorCode(errorCode)
-        |        form().withError("file", uploadError.messageKey)
+        |      preparedForm <- request.getQueryString("errorCode").fold(Future.successful(form())) { errorCode =>
+        |        val reference = UpscanReference(request.getQueryString("key").orNull)
+        |        fileUploadRepository.setRejected(request.userId, reference).map { _ =>
+        |          val errorMessage = request.getQueryString("errorMessage").orNull
+        |          logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
+        |          val uploadError = UploadError.fromErrorCode(errorCode)
+        |          form().withError("file", uploadError.messageKey)
+        |        }
         |      }
         |    } yield Ok(view(preparedForm, formTemplate, mode))
         |  }
@@ -1334,7 +1336,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |      .getOrElse(UserAnswers(request.userId))
         |    for {
         |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
-        |      _ <- fileUploadRepository.setProcessing(uploadId)
+        |      _ <- fileUploadRepository.setProcessing(uploadId, request.userId)
         |      _ <- sessionRepository.set(updatedAnswers)
         |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
         |  }
@@ -1418,14 +1420,16 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |        successRedirect = journeyRoutes.UploadWillDocumentBaseController.onUploadSuccess(uploadId.id, mode),
         |        errorRedirect = journeyRoutes.UploadWillDocumentBaseController.onUploadFailure(uploadId.id, mode)
         |      )
-        |      uploadId <- fileUploadRepository.initiate(uploadId, initiateResponse.reference)
+        |      uploadId <- fileUploadRepository.initiate(uploadId, request.userId, initiateResponse.reference)
         |      formTemplate = initiateResponse.uploadRequest
-        |      preparedForm = request.getQueryString("errorCode").fold(form()) { errorCode =>
-        |        val reference = request.getQueryString("key").orNull
-        |        val errorMessage = request.getQueryString("errorMessage").orNull
-        |        logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
-        |        val uploadError = UploadError.fromErrorCode(errorCode)
-        |        form().withError("file", uploadError.messageKey)
+        |      preparedForm <- request.getQueryString("errorCode").fold(Future.successful(form())) { errorCode =>
+        |        val reference = UpscanReference(request.getQueryString("key").orNull)
+        |        fileUploadRepository.setRejected(request.userId, reference).map { _ =>
+        |          val errorMessage = request.getQueryString("errorMessage").orNull
+        |          logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
+        |          val uploadError = UploadError.fromErrorCode(errorCode)
+        |          form().withError("file", uploadError.messageKey)
+        |        }
         |      }
         |    } yield Ok(view(preparedForm, formTemplate, mode))
         |  }
@@ -1436,7 +1440,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |    val userAnswers = request.userAnswers
         |    for {
         |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
-        |      _ <- fileUploadRepository.setProcessing(uploadId)
+        |      _ <- fileUploadRepository.setProcessing(uploadId, request.userId)
         |      _ <- sessionRepository.set(updatedAnswers)
         |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
         |  }
@@ -1534,14 +1538,16 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |        successRedirect = journeyRoutes.UploadWillDocumentBaseController.onUploadSuccess(willDocumentsIndex: Int, uploadId.id, mode),
         |        errorRedirect = journeyRoutes.UploadWillDocumentBaseController.onUploadFailure(willDocumentsIndex: Int, uploadId.id, mode)
         |      )
-        |      uploadId <- fileUploadRepository.initiate(uploadId, initiateResponse.reference)
+        |      uploadId <- fileUploadRepository.initiate(uploadId, request.userId, initiateResponse.reference)
         |      formTemplate = initiateResponse.uploadRequest
-        |      preparedForm = request.getQueryString("errorCode").fold(form()) { errorCode =>
-        |        val reference = request.getQueryString("key").orNull
-        |        val errorMessage = request.getQueryString("errorMessage").orNull
-        |        logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
-        |        val uploadError = UploadError.fromErrorCode(errorCode)
-        |        form().withError("file", uploadError.messageKey)
+        |      preparedForm <- request.getQueryString("errorCode").fold(Future.successful(form())) { errorCode =>
+        |        val reference = UpscanReference(request.getQueryString("key").orNull)
+        |        fileUploadRepository.setRejected(request.userId, reference).map { _ =>
+        |          val errorMessage = request.getQueryString("errorMessage").orNull
+        |          logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
+        |          val uploadError = UploadError.fromErrorCode(errorCode)
+        |          form().withError("file", uploadError.messageKey)
+        |        }
         |      }
         |    } yield Ok(view(preparedForm, formTemplate, mode))
         |  }
@@ -1552,7 +1558,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |    val userAnswers = request.userAnswers
         |    for {
         |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
-        |      _ <- fileUploadRepository.setProcessing(uploadId)
+        |      _ <- fileUploadRepository.setProcessing(uploadId, request.userId)
         |      _ <- sessionRepository.set(updatedAnswers)
         |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
         |  }
@@ -1657,14 +1663,16 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |        successRedirect = journeyRoutes.EvidenceFromQaBaseController.onUploadSuccess(auditSourcesIndex: Int, auditEventsIndex: Int, uploadId.id, mode),
         |        errorRedirect = journeyRoutes.EvidenceFromQaBaseController.onUploadFailure(auditSourcesIndex: Int, auditEventsIndex: Int, uploadId.id, mode)
         |      )
-        |      uploadId <- fileUploadRepository.initiate(uploadId, initiateResponse.reference)
+        |      uploadId <- fileUploadRepository.initiate(uploadId, request.userId, initiateResponse.reference)
         |      formTemplate = initiateResponse.uploadRequest
-        |      preparedForm = request.getQueryString("errorCode").fold(form()) { errorCode =>
-        |        val reference = request.getQueryString("key").orNull
-        |        val errorMessage = request.getQueryString("errorMessage").orNull
-        |        logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
-        |        val uploadError = UploadError.fromErrorCode(errorCode)
-        |        form().withError("file", uploadError.messageKey)
+        |      preparedForm <- request.getQueryString("errorCode").fold(Future.successful(form())) { errorCode =>
+        |        val reference = UpscanReference(request.getQueryString("key").orNull)
+        |        fileUploadRepository.setRejected(request.userId, reference).map { _ =>
+        |          val errorMessage = request.getQueryString("errorMessage").orNull
+        |          logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
+        |          val uploadError = UploadError.fromErrorCode(errorCode)
+        |          form().withError("file", uploadError.messageKey)
+        |        }
         |      }
         |    } yield Ok(view(preparedForm, formTemplate, mode))
         |  }
@@ -1675,7 +1683,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |    val userAnswers = request.userAnswers
         |    for {
         |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
-        |      _ <- fileUploadRepository.setProcessing(uploadId)
+        |      _ <- fileUploadRepository.setProcessing(uploadId, request.userId)
         |      _ <- sessionRepository.set(updatedAnswers)
         |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
         |  }
@@ -1773,14 +1781,16 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |        successRedirect = journeyRoutes.Iht401BaseController.onUploadSuccess(uploadId.id, mode),
         |        errorRedirect = journeyRoutes.Iht401BaseController.onUploadFailure(uploadId.id, mode)
         |      )
-        |      uploadId <- fileUploadRepository.initiate(uploadId, initiateResponse.reference)
+        |      uploadId <- fileUploadRepository.initiate(uploadId, request.userId, initiateResponse.reference)
         |      formTemplate = initiateResponse.uploadRequest
-        |      preparedForm = request.getQueryString("errorCode").fold(form()) { errorCode =>
-        |        val reference = request.getQueryString("key").orNull
-        |        val errorMessage = request.getQueryString("errorMessage").orNull
-        |        logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
-        |        val uploadError = UploadError.fromErrorCode(errorCode)
-        |        form().withError("file", uploadError.messageKey)
+        |      preparedForm <- request.getQueryString("errorCode").fold(Future.successful(form())) { errorCode =>
+        |        val reference = UpscanReference(request.getQueryString("key").orNull)
+        |        fileUploadRepository.setRejected(request.userId, reference).map { _ =>
+        |          val errorMessage = request.getQueryString("errorMessage").orNull
+        |          logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
+        |          val uploadError = UploadError.fromErrorCode(errorCode)
+        |          form().withError("file", uploadError.messageKey)
+        |        }
         |      }
         |    } yield Ok(view(preparedForm, formTemplate, mode))
         |  }
@@ -1793,7 +1803,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |      page = Iht401Page(whereDomiciled)
         |    } yield for {
         |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
-        |      _ <- fileUploadRepository.setProcessing(uploadId)
+        |      _ <- fileUploadRepository.setProcessing(uploadId, request.userId)
         |      _ <- sessionRepository.set(updatedAnswers)
         |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
         |    result.getOrElse(Future.successful(Redirect(routes.JourneyRecoveryController.onPageLoad())))

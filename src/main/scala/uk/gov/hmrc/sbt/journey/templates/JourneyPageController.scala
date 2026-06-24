@@ -236,14 +236,16 @@ object JourneyPageController extends Template {
         |        successRedirect = journeyRoutes.$controllerClassName.onUploadSuccess(${indexParams}uploadId.id, mode),
         |        errorRedirect = journeyRoutes.$controllerClassName.onUploadFailure(${indexParams}uploadId.id, mode)
         |      )
-        |      uploadId <- fileUploadRepository.initiate(uploadId, initiateResponse.reference)
+        |      uploadId <- fileUploadRepository.initiate(uploadId, request.userId, initiateResponse.reference)
         |      formTemplate = initiateResponse.uploadRequest
-        |      preparedForm = request.getQueryString("errorCode").fold(form()) { errorCode =>
-        |        val reference = request.getQueryString("key").orNull
-        |        val errorMessage = request.getQueryString("errorMessage").orNull
-        |        logger.error(s"File upload with reference $$reference failed with error code $$errorCode: $$errorMessage")
-        |        val uploadError = UploadError.fromErrorCode(errorCode)
-        |        form().withError("file", uploadError.messageKey)
+        |      preparedForm <- request.getQueryString("errorCode").fold(Future.successful(form())) { errorCode =>
+        |        val reference = UpscanReference(request.getQueryString("key").orNull)
+        |        fileUploadRepository.setRejected(request.userId, reference).map { _ =>
+        |          val errorMessage = request.getQueryString("errorMessage").orNull
+        |          logger.error(s"File upload with reference $$reference failed with error code $$errorCode: $$errorMessage")
+        |          val uploadError = UploadError.fromErrorCode(errorCode)
+        |          form().withError("file", uploadError.messageKey)
+        |        }
         |      }
         |    } yield Ok(view(preparedForm, formTemplate, mode))
         |  }""".stripMargin
@@ -264,7 +266,7 @@ object JourneyPageController extends Template {
           |    val userAnswers = request.userAnswers${initialiseAnswers(requiresData, 6)}
           |    for {
           |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
-          |      _ <- fileUploadRepository.setProcessing(uploadId)
+          |      _ <- fileUploadRepository.setProcessing(uploadId, request.userId)
           |      _ <- sessionRepository.set(updatedAnswers)
           |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
           |  }""".stripMargin
@@ -277,7 +279,7 @@ object JourneyPageController extends Template {
           |      page = $pageClassName$pageParams
           |    } yield for {
           |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
-          |      _ <- fileUploadRepository.setProcessing(uploadId)
+          |      _ <- fileUploadRepository.setProcessing(uploadId, request.userId)
           |      _ <- sessionRepository.set(updatedAnswers)
           |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
           |    result.getOrElse(Future.successful(Redirect(routes.JourneyRecoveryController.onPageLoad())))

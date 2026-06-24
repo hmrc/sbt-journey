@@ -52,7 +52,9 @@ object UploadRepository {
        |    domainFormat = FileUpload.format,
        |    extraCodecs = Seq(
        |      new UuidCodec(UuidRepresentation.STANDARD),
-       |      Codecs.playFormatCodec(UploadStatus.format)
+       |      Codecs.playFormatCodec(UploadStatus.format),
+       |      Codecs.playFormatCodec(UploadDetails.format),
+       |      Codecs.playFormatCodec(FailureDetails.format)
        |    ),
        |    indexes = Seq(
        |      new IndexModel(Indexes.ascending("id"), IndexOptions().unique(true)),
@@ -74,17 +76,32 @@ object UploadRepository {
        |    )
        |  ) {
        |
-       |  def initiate(uploadId: UploadId, reference: UpscanReference): Future[UploadId] = {
+       |  def initiate(uploadId: UploadId, userId: String, reference: UpscanReference): Future[UploadId] = {
        |    collection
-       |      .insertOne(FileUpload.Initiated(uploadId, reference, clock.instant()))
+       |      .insertOne(FileUpload.Initiated(uploadId, userId, reference, clock.instant()))
        |      .toFuture()
        |      .map(_ => uploadId)
        |  }
        |
-       |  def setProcessing(uploadId: UploadId): Future[Unit] = {
+       |  def setRejected(userId: String, reference: UpscanReference): Future[Unit] = {
+       |    collection
+       |      .deleteOne(and(
+       |        eqTo("reference", reference.reference),
+       |        eqTo("userId", userId),
+       |        in("uploadStatus", UploadStatus.Initiated, UploadStatus.Processing)
+       |      ))
+       |      .toFuture()
+       |      .map(_ => ())
+       |  }
+       |
+       |  def setProcessing(uploadId: UploadId, userId: String): Future[Unit] = {
        |    collection
        |      .findOneAndUpdate(
-       |        and(eqTo("id", uploadId.id), in("uploadStatus", UploadStatus.Initiated)),
+       |        and(
+       |          eqTo("id", uploadId.id),
+       |          eqTo("userId", userId),
+       |          in("uploadStatus", UploadStatus.Initiated)
+       |        ),
        |        combine(
        |          set("uploadStatus", UploadStatus.Processing),
        |          currentDate("updatedAt"),
@@ -97,25 +114,34 @@ object UploadRepository {
        |
        |  def handleNotification(uploadId: UploadId, notification: UpscanNotification): Future[Unit] = {
        |    collection
-       |      .findOneAndReplace(
+       |      .findOneAndUpdate(
        |        and(
        |          eqTo("id", uploadId.id),
        |          in("uploadStatus", UploadStatus.Initiated, UploadStatus.Processing)
        |        ),
        |        notification match {
        |          case UpscanNotification.Ready(reference, downloadUrl, uploadDetails) =>
-       |            FileUpload.Ready(uploadId, reference, downloadUrl, uploadDetails, clock.instant())
+       |            combine(
+       |              set("uploadStatus", UploadStatus.Ready),
+       |              set("downloadUrl", downloadUrl),
+       |              set("uploadDetails", uploadDetails),
+       |              currentDate("updatedAt")
+       |            )
        |          case UpscanNotification.Failed(reference, failureDetails) =>
-       |            FileUpload.Failed(uploadId, reference, failureDetails, clock.instant())
+       |            combine(
+       |              set("uploadStatus", UploadStatus.Failed),
+       |              set("failureDetails", failureDetails),
+       |              currentDate("updatedAt")
+       |            )
        |        }
        |      )
        |      .toFuture()
        |      .map(_ => ())
        |  }
        |
-       |  def get(uploadId: UploadId): Future[Option[FileUpload]] = {
+       |  def get(uploadId: UploadId, userId: String): Future[Option[FileUpload]] = {
        |    collection
-       |      .find(eqTo("id", uploadId.id))
+       |      .find(and(eqTo("id", uploadId.id), eqTo("userId", userId)))
        |      .toFuture()
        |      .map(_.headOption)
        |  }
