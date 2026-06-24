@@ -19,6 +19,7 @@ trait JourneyNavigator {
   def nextPage(page: Page, mode: Mode, userAnswers: UserAnswers, latestAnswer: page.AnswerType): Call
 }
 
+@Singleton
 class DefaultJourneyNavigator @Inject() () extends JourneyNavigator {
   private val normalRoutes: (page: Page) => UserAnswers => page.AnswerType => Call = {
     case CipAssessmentTicketPage => _ => _ =>

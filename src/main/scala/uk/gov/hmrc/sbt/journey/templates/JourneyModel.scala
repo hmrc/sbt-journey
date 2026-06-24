@@ -121,7 +121,7 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
 
   private def readDefaultCase(fields: List[(String, FieldType)]): String = {
     if (fields.isEmpty)
-      "    default = JsSuccess(default)"
+      "    default = Reads.pure(default)"
     else
       "    default = nestedDefaultReads"
   }
@@ -133,18 +133,7 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
     modelName: String,
     modelCases: Map[String, List[(String, FieldType)]]
   ): String = {
-    val playImports = Map(
-      PlayJsonPrefix -> Set(
-        "Json",
-        "JsonConfiguration",
-        "JsSuccess",
-        "JsError",
-        "JsObject",
-        "JsPath",
-        "JsValue",
-        "Reads"
-      )
-    )
+    val playImports = Map(PlayJsonPrefix -> Set("JsSuccess", "JsPath", "Reads"))
 
     val importPrefixes =
       playImports ++ collector.importedSymbols(modelCases.values.toList.flatten, recursive = false)
@@ -218,19 +207,7 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
     modelName: String,
     fields: List[(String, FieldType)]
   ): String = {
-    val playImports = Map(
-      PlayJsonPrefix -> Set(
-        "Json",
-        "JsonConfiguration",
-        "JsError",
-        "JsObject",
-        "JsPath",
-        "JsSuccess",
-        "JsValue",
-        "Reads"
-      )
-    )
-
+    val playImports    = Map(PlayJsonPrefix -> Set("JsPath", "Reads"))
     val importPrefixes = playImports ++ collector.importedSymbols(fields, recursive = false)
     val imports        = Imports.importsFor(modelsPackage, importPrefixes)
     val extendsClause  = FormatTraits.extendsClause(importPrefixes, modelsPackage / "EnumFormats")
@@ -271,13 +248,13 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
     modelName: String,
     fields: List[(String, FieldType)]
   ): String = {
-    val importPrefixes = collector.importedSymbols(fields, recursive = false)
+    val playImports    = Map(PlayJsonPrefix -> Set("JsPath", "Reads"))
+    val importPrefixes = playImports ++ collector.importedSymbols(fields, recursive = false)
     val imports        = Imports.importsFor(modelsPackage, importPrefixes)
     val extendsClause  = FormatTraits.extendsClause(importPrefixes)
 
     s"""package $modelsPackage
        |
-       |import play.api.libs.json.{Json, JsPath, Reads}
        |import play.api.libs.functional.syntax.*
        |$imports
        |

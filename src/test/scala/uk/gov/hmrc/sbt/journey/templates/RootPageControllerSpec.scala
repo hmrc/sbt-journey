@@ -56,7 +56,7 @@ class RootPageControllerSpec extends AnyFlatSpec with Matchers {
         |  identify: IdentifierAction,
         |  view: views.html.BeforeYouStartView,
         |  override val controllerComponents: MessagesControllerComponents
-        |)(implicit ec: ExecutionContext) extends BeforeYouStartBaseController {
+        |)(using ExecutionContext) extends BeforeYouStartBaseController {
         |  def onPageLoad: Action[AnyContent] = identify { implicit request =>
         |    Ok(view())
         |  }

@@ -21,6 +21,9 @@ import java.time.LocalDate
 /** The type of user answer.
   */
 sealed abstract class FieldType extends Product with Serializable {
+  def isFileUpload: Boolean =
+    typeName.contains("UploadId")
+
   def typeName: Option[String] = this match {
     case ClassType(clazz) => clazz.split("\\.").lastOption
     case _                => None
@@ -66,7 +69,7 @@ case class PrimitiveType(clazz: Class[? <: AnyVal]) extends FieldType
 case class ClassType(clazz: String) extends FieldType
 
 object ClassType {
-  def apply(clazz: Class[_]): ClassType =
+  def apply(clazz: Class[?]): ClassType =
     ClassType(clazz.getName)
   def apply(name: QualifiedName): ClassType =
     ClassType(name.toString)

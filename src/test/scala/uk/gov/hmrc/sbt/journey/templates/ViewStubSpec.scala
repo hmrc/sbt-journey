@@ -64,6 +64,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
 
   "ViewStub.renderForm" should "render a view stub for a String page" in {
     ViewStub.renderForm(
+      basePackage,
       Map.empty,
       journeyPage("serviceUrl", FieldType.STRING)
     ) shouldBe
@@ -104,6 +105,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
 
   it should "render a view stub for a Boolean page" in {
     ViewStub.renderForm(
+      basePackage,
       Map.empty,
       journeyPage("areYouSendingSamples", FieldType.BOOLEAN)
     ) shouldBe
@@ -141,6 +143,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
 
   it should "render a view stub for an Int page" in {
     ViewStub.renderForm(
+      basePackage,
       Map.empty,
       journeyPage("howManySamples", FieldType.INT)
     ) shouldBe
@@ -182,6 +185,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
 
   it should "render a form provider for a BigDecimal page" in {
     ViewStub.renderForm(
+      basePackage,
       Map.empty,
       journeyPage("whatIsTheValuation", FieldType.BIGDECIMAL)
     ) shouldBe
@@ -223,6 +227,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
 
   it should "render a view stub for a LocalDate page" in {
     ViewStub.renderForm(
+      basePackage,
       Map.empty,
       journeyPage("whenDidYouSendSamples", FieldType.LOCALDATE)
     ) shouldBe
@@ -261,6 +266,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
 
   it should "render a view stub for an optional LocalDate page" in {
     ViewStub.renderForm(
+      basePackage,
       Map.empty,
       journeyPage("whenDidYouSendSamples", OptionType(FieldType.LOCALDATE))
     ) shouldBe
@@ -299,6 +305,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
 
   it should "render a view stub for an unsupported type but provide no default inputs" in {
     ViewStub.renderForm(
+      basePackage,
       Map.empty,
       journeyPage("whichDayOfWeek", ClassType(classOf[DayOfWeek]))
     ) shouldBe
@@ -330,6 +337,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
 
   it should "render a view stub for an enum model" in {
     ViewStub.renderForm(
+      basePackage,
       Map("Choice" -> EnumModel("Choice", List("Yes", "No"))),
       journeyPage("areYouSendingSamples", ClassType(basePackage / "Choice"))
     ) shouldBe
@@ -379,6 +387,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
 
   it should "render a view stub for a set of enum model" in {
     ViewStub.renderForm(
+      basePackage,
       Map(
         "SurvivedBy" -> EnumModel(
           "SurvivedBy",
@@ -454,6 +463,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
 
   it should "render a view stub for a case class model" in {
     ViewStub.renderForm(
+      basePackage,
       Map(
         "AuditEvent" -> CaseClassModel(
           "AuditEvent",
@@ -531,6 +541,7 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
 
   it should "render a view stub for a case class model with an unsupported field type" in {
     ViewStub.renderForm(
+      basePackage,
       Map(
         "AuditEvent" -> CaseClassModel(
           "AuditEvent",
@@ -598,5 +609,47 @@ class ViewStubSpec extends AnyFlatSpec with Matchers {
         |    }
         |}
         |""".stripMargin
+  }
+
+  it should "render a view stub for file upload via Upscan" in {
+    ViewStub.renderForm(
+      basePackage,
+      Map.empty,
+      journeyPage("uploadWillAndCodicils", ClassType(basePackage / "UploadId"))
+    ) shouldBe
+      s"""@import uk.gov.hmrc.sbtjourneytest.models.upscan.UpscanFormTemplate
+         |
+         |@this(
+         |    layout: templates.Layout,
+         |    govukErrorSummary: GovukErrorSummary,
+         |    govukFileUpload: GovukFileUpload,
+         |    govukButton: GovukButton
+         |)
+         |
+         |@(form: Form[_], formTemplate: UpscanFormTemplate, mode: Mode)(implicit request: Request[_], messages: Messages)
+         |
+         |@layout(pageTitle = title(form, messages("uploadWillAndCodicils.title"))) {
+         |
+         |    <form method="POST" action="@formTemplate.href" enctype="multipart/form-data" novalidate autocomplete="off">
+         |        @if(form.errors.nonEmpty) {
+         |            @govukErrorSummary(ErrorSummaryViewModel(form))
+         |        }
+         |
+         |        @for((name, value) <- formTemplate.fields) {
+         |          <input type="hidden" name="@name" value="@value" />
+         |        }
+         |
+         |        @govukFileUpload(FileUpload(
+         |          name = "file",
+         |          label = LabelViewModel(messages("uploadWillAndCodicils.heading")).asPageHeading(),
+         |          javascript = Some(true)
+         |        ))
+         |
+         |        @govukButton(
+         |            ButtonViewModel(messages("site.continue"))
+         |        )
+         |    </form>
+         |}
+         |""".stripMargin
   }
 }

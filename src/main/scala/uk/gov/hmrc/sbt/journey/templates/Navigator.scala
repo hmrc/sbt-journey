@@ -289,6 +289,7 @@ class Navigator(models: Map[String, AnswerModel]) extends Template {
        |  def nextPage(page: Page, mode: Mode, userAnswers: UserAnswers, latestAnswer: page.AnswerType): Call
        |}
        |
+       |@Singleton
        |class DefaultJourneyNavigator @Inject() () extends JourneyNavigator {
        |  private val normalRoutes: (page: Page) => UserAnswers => page.AnswerType => Call = {
        |${normalRoutesFor(config)}

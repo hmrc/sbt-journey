@@ -1,7 +1,7 @@
 package uk.gov.hmrc.simplejourney.forms
 
 import play.api.data.Form
-import play.api.data.Forms.{mapping,optional,set}
+import play.api.data.Forms.*
 import _root_.forms.mappings.Mappings // uk.gov.hmrc.simplejourney.forms.mappings.Mappings
 
 

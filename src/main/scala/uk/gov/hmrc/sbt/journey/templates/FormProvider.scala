@@ -39,6 +39,8 @@ class FormProvider(collector: ImportCollector) extends Template {
             hasMappingsFor(models, fieldType)
           case PrimitiveType(clazz) =>
             Set[Class[? <: AnyVal]](classOf[Int], classOf[Boolean]).contains(clazz)
+          case clazz @ ClassType(_) if clazz.isFileUpload =>
+            true
           case ClassType(clazz) =>
             Set(classOf[LocalDate], classOf[BigDecimal], classOf[String])
               .map(_.getName)
@@ -144,6 +146,9 @@ class FormProvider(collector: ImportCollector) extends Template {
                 |$p)""".stripMargin
           case ClassType(clazz) if clazz == classOf[String].getName =>
             s"""text("$pageName.error.${parentField}${subField}required")""".stripMargin
+          case clazz @ ClassType(_) if clazz.isFileUpload =>
+            // File uploads don't actually reach the service, but we can render errors next to the form field
+            s"""uuid.transform(UploadId.apply, _.id)""".stripMargin
           case SetType(fieldType) =>
             s"set(${mappingsFor(models, pageName, indent, enclosing, fieldName, fieldType)})"
           case OptionType(fieldType) =>
@@ -206,7 +211,7 @@ class FormProvider(collector: ImportCollector) extends Template {
     s"""package $formsPackage
        |
        |import play.api.data.Form
-       |import play.api.data.Forms.{mapping,optional,set}
+       |import play.api.data.Forms.*
        |import _root_.forms.mappings.Mappings // ${basePackage / "forms.mappings.Mappings"}
        |$imports
        |
@@ -250,7 +255,7 @@ class FormProvider(collector: ImportCollector) extends Template {
     s"""package $formsPackage
        |
        |import play.api.data.Form
-       |import play.api.data.Forms.{mapping,optional,set}
+       |import play.api.data.Forms.*
        |import _root_.forms.mappings.Mappings // ${basePackage / "forms.mappings.Mappings"}
        |$imports
        |

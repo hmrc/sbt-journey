@@ -20,7 +20,7 @@ class DefaultBeforeYouBeginController @Inject() (
   identify: IdentifierAction,
   view: views.html.BeforeYouBeginView,
   override val controllerComponents: MessagesControllerComponents
-)(implicit ec: ExecutionContext) extends BeforeYouBeginBaseController {
+)(using ExecutionContext) extends BeforeYouBeginBaseController {
   def onPageLoad: Action[AnyContent] = identify { implicit request =>
     Ok(view())
   }

@@ -32,7 +32,7 @@ class CustomModelSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.models
         |
         |import models.Enumerable // import uk.gov.hmrc.sbtjourneytest.models.Enumerable
-        |import play.api.libs.json.{Format,JsError,JsObject,JsPath,JsSuccess,JsValue,Json,JsonConfiguration,Reads,Writes}
+        |import play.api.libs.json.{Format,Json,JsonConfiguration,Reads,Writes}
         |
         |enum TestEnum {
         |  case A, B, C

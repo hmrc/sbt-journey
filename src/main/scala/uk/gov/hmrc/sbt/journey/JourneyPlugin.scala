@@ -313,7 +313,7 @@ object JourneyPlugin extends AutoPlugin {
       classOf[scala.math.BigDecimal]
     ).map(clazz => clazz.getSimpleName -> ClassType(clazz.getName)).toMap
 
-    val journeyBuiltIns = Map("FileUpload" -> ClassType(modelsPackage / "FileUpload"))
+    val journeyBuiltIns = Map("FileUpload" -> ClassType(modelsPackage / "UploadId"))
 
     javaBuiltIns ++ journeyBuiltIns
   }
@@ -953,13 +953,22 @@ object JourneyPlugin extends AutoPlugin {
           packageFolder / "controllers" / s"${pascalCase(pageName)}Controller.scala"
         IO.write(
           journeyPageController,
-          JourneyPageController.render(
-            basePackage,
-            requiresData = pageName != journey.startPage,
-            journey,
-            pageName,
-            page
-          )
+          if (page.answerType.isFileUpload)
+            JourneyPageController.fileUploadController(
+              basePackage,
+              requiresData = pageName != journey.startPage,
+              journey,
+              pageName,
+              page
+            )
+          else
+            JourneyPageController.journeyController(
+              basePackage,
+              requiresData = pageName != journey.startPage,
+              journey,
+              pageName,
+              page
+            )
         )
         logger.info(s"Generated journey controller $journeyPageController")
         journeyPageController
@@ -988,11 +997,97 @@ object JourneyPlugin extends AutoPlugin {
     IO.write(enumFormatsFile, FormatTraits.enumFormats(basePackage))
     logger.info(s"Generated format traits file $enumFormatsFile")
 
+    val hasFileUploadPage = config.journeys.values
+      .flatMap(_.pages.values)
+      .exists(_.answerType.isFileUpload)
+
+    val upscanFiles =
+      if (!hasFileUploadPage) Seq.empty
+      else {
+        val upscanConnectorFile = packageFolder / "connectors" / "UpscanConnector.scala"
+        IO.write(upscanConnectorFile, UpscanConnector.render(basePackage))
+        logger.info(s"Generated connector file $upscanConnectorFile")
+
+        val uploadRepositoryFile = packageFolder / "repositories" / "FileUploadRepository.scala"
+        IO.write(uploadRepositoryFile, UploadRepository.render(basePackage))
+        logger.info(s"Generated repository file $uploadRepositoryFile")
+
+        val upscanControllerFile =
+          packageFolder / "controllers" / "upscan" / "UpscanNotificationController.scala"
+        IO.write(upscanControllerFile, UpscanNotificationController.render(basePackage))
+        logger.info(s"Generated controller file $upscanControllerFile")
+
+        val upscanRefModelFile = packageFolder / "models" / "upscan" / "UpscanReference.scala"
+        IO.write(upscanRefModelFile, UpscanModel.upscanReference(basePackage))
+        logger.info(s"Generated model file $upscanRefModelFile")
+
+        val upscanInitiateRequestModelFile =
+          packageFolder / "models" / "upscan" / "UpscanInitiateRequest.scala"
+        IO.write(upscanInitiateRequestModelFile, UpscanModel.upscanInitiateRequest(basePackage))
+        logger.info(s"Generated model file $upscanInitiateRequestModelFile")
+
+        val upscanInitiateResponseModelFile =
+          packageFolder / "models" / "upscan" / "UpscanInitiateResponse.scala"
+        IO.write(upscanInitiateResponseModelFile, UpscanModel.upscanInitiateResponse(basePackage))
+        logger.info(s"Generated model file $upscanInitiateResponseModelFile")
+
+        val upscanFormTemplateModelFile =
+          packageFolder / "models" / "upscan" / "UpscanFormTemplate.scala"
+        IO.write(upscanFormTemplateModelFile, UpscanModel.upscanFormTemplate(basePackage))
+        logger.info(s"Generated model file $upscanFormTemplateModelFile")
+
+        val uploadErrorModelFile = packageFolder / "models" / "upscan" / "UploadError.scala"
+        IO.write(uploadErrorModelFile, UpscanModel.uploadError(basePackage))
+        logger.info(s"Generated model file $uploadErrorModelFile")
+
+        val uploadDetailsModelFile = packageFolder / "models" / "upscan" / "UploadDetails.scala"
+        IO.write(uploadDetailsModelFile, UpscanModel.uploadDetails(basePackage))
+        logger.info(s"Generated model file $uploadDetailsModelFile")
+
+        val failureDetailsModelFile = packageFolder / "models" / "upscan" / "FailureDetails.scala"
+        IO.write(failureDetailsModelFile, UpscanModel.failureDetails(basePackage))
+        logger.info(s"Generated model file $failureDetailsModelFile")
+
+        val upscanNotificationModelFile =
+          packageFolder / "models" / "upscan" / "UpscanNotification.scala"
+        IO.write(upscanNotificationModelFile, UpscanModel.upscanNotification(basePackage))
+        logger.info(s"Generated model file $upscanNotificationModelFile")
+
+        val uploadIdModelFile = packageFolder / "models" / "UploadId.scala"
+        IO.write(uploadIdModelFile, UpscanModel.uploadId(basePackage))
+        logger.info(s"Generated model file $uploadIdModelFile")
+
+        val uploadStatusModelFile = packageFolder / "models" / "UploadStatus.scala"
+        IO.write(uploadStatusModelFile, UpscanModel.uploadStatus(basePackage))
+        logger.info(s"Generated model file $uploadStatusModelFile")
+
+        val fileUploadModelFile = packageFolder / "models" / "FileUpload.scala"
+        IO.write(fileUploadModelFile, UpscanModel.fileUpload(basePackage))
+        logger.info(s"Generated model file $fileUploadModelFile")
+
+        Seq(
+          upscanConnectorFile,
+          uploadRepositoryFile,
+          upscanControllerFile,
+          upscanRefModelFile,
+          upscanInitiateRequestModelFile,
+          upscanInitiateResponseModelFile,
+          upscanFormTemplateModelFile,
+          uploadErrorModelFile,
+          uploadDetailsModelFile,
+          failureDetailsModelFile,
+          upscanNotificationModelFile,
+          uploadIdModelFile,
+          uploadStatusModelFile,
+          fileUploadModelFile
+        )
+      }
+
     val navigatorFile = packageFolder / "navigation" / s"JourneyNavigator.scala"
     IO.write(navigatorFile, new Navigator(config.models).render(config))
     logger.info(s"Generated navigator $navigatorFile")
 
-    rootPageFiles ++ modelFiles ++ journeyFiles :+ enumFormatsFile :+ navigatorFile
+    rootPageFiles ++ modelFiles ++ journeyFiles ++ upscanFiles :+ enumFormatsFile :+ navigatorFile
   }
 
   private[journey] def cleanJourneyRouteFiles(lastFiles: Option[Seq[File]]): Unit = {
@@ -1004,10 +1099,22 @@ object JourneyPlugin extends AutoPlugin {
     baseDirectory: FileRef,
     config: JourneyConfig
   ): Seq[File] = {
+    val basePackage = QualifiedName(config.basePackage)
     val journeyRoutes = baseDirectory / "journey.routes"
-    IO.write(journeyRoutes, Routes.render(config))
-    logger.info(s"Generated routes file $journeyRoutes")
-    Seq(journeyRoutes)
+    IO.write(journeyRoutes, Routes.journeyRoutes(config))
+    logger.info(s"Generated journey routes file $journeyRoutes")
+
+    val hasFileUploadPage = config.journeys.values
+      .flatMap(_.pages.values)
+      .exists(_.answerType.isFileUpload)
+
+    if (!hasFileUploadPage) Seq(journeyRoutes)
+    else {
+      val internalRoutes = baseDirectory / "internal.routes"
+      IO.write(internalRoutes, Routes.internalRoutes(basePackage))
+      logger.info(s"Generated internal routes file $internalRoutes")
+      Seq(journeyRoutes, internalRoutes)
+    }
   }
 
   private[journey] def generateJourneyDiagramFiles(
@@ -1079,6 +1186,8 @@ object JourneyPlugin extends AutoPlugin {
 
     val viewsFolder = packageFolder / "views"
 
+    val basePackage = QualifiedName(config.basePackage)
+
     config.rootPages.foreach { case (pageName, _) =>
       val viewFile = viewsFolder / s"${pascalCase(pageName)}View.scala.html"
       if (overwrite || !viewFile.exists()) {
@@ -1093,7 +1202,7 @@ object JourneyPlugin extends AutoPlugin {
       journey.pages.foreach { case (pageName, page) =>
         val viewFile = viewsFolder / s"${pascalCase(pageName)}View.scala.html"
         if (overwrite || !viewFile.exists()) {
-          IO.write(viewFile, ViewStub.renderForm(config.models, page))
+          IO.write(viewFile, ViewStub.renderForm(basePackage, config.models, page))
           logger.info(s"Generated view file $viewFile for page $pageName")
         } else {
           logger.warn(s"Skipping view file $viewFile because it already exists")

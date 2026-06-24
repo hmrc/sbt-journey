@@ -5,6 +5,7 @@ import controllers.routes // uk.gov.hmrc.simplejourney.controllers.routes
 import models.Mode // uk.gov.hmrc.simplejourney.models.Mode
 import models.UserAnswers // uk.gov.hmrc.simplejourney.models.UserAnswers
 import repositories.SessionRepository // uk.gov.hmrc.simplejourney.repositories.SessionRepository
+import uk.gov.hmrc.simplejourney.controllers.{routes as journeyRoutes}
 import uk.gov.hmrc.simplejourney.models.*
 import uk.gov.hmrc.simplejourney.forms.*
 import uk.gov.hmrc.simplejourney.navigation.*
@@ -19,7 +20,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[DefaultDataDomainController])
-trait DataDomainBaseController extends FrontendBaseController with I18nSupport {
+trait DataDomainBaseController extends FrontendBaseController, I18nSupport {
   def onPageLoad(dataDomainsIndex: Int, mode: Mode): Action[AnyContent]
   def onSubmit(dataDomainsIndex: Int, mode: Mode): Action[AnyContent]
 }
@@ -34,24 +35,26 @@ class DefaultDataDomainController @Inject() (
   form: DataDomainBaseFormProvider,
   view: views.html.DataDomainView,
   override val controllerComponents: MessagesControllerComponents
-)(implicit ec: ExecutionContext) extends DataDomainBaseController {
+)(using ExecutionContext) extends DataDomainBaseController {
 
   def onPageLoad(dataDomainsIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+    val submitRoute = journeyRoutes.DataDomainBaseController.onSubmit(dataDomainsIndex, mode)
     val page = DataDomainPage(dataDomainsIndex)
     val userAnswers = request.userAnswers
     val preparedForm = userAnswers
       .get(page)
       .map(form().fill)
       .getOrElse(form())
-    Ok(view(preparedForm, page.submitRoute(mode), mode))
+    Ok(view(preparedForm, submitRoute, mode))
   }
 
   def onSubmit(dataDomainsIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+    val submitRoute = journeyRoutes.DataDomainBaseController.onSubmit(dataDomainsIndex, mode)
     val page = DataDomainPage(dataDomainsIndex)
     val userAnswers = request.userAnswers
     form().bindFromRequest().fold(
       formWithErrors =>
-        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
       answer =>
         for {
           updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))

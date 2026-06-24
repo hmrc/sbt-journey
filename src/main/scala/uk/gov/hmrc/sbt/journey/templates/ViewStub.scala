@@ -269,32 +269,68 @@ object ViewStub extends Template {
     }
   }
 
-  def renderForm(models: Map[String, AnswerModel], page: JourneyPage): String = {
+  def renderForm(basePackage: QualifiedName, models: Map[String, AnswerModel], page: JourneyPage): String = {
     val pageName   = page.pageKey
     val answerType = page.answerType
 
-    val imports = {
-      val imports = importsFor(models, answerType)
-      if (imports.isEmpty)
-        ""
-      else
-        imports.distinct.mkString("", NL, NL * 2)
-    }
+    if (page.answerType.isFileUpload) {
+      s"""@import ${basePackage / "models" / "upscan" / "UpscanFormTemplate"}
+         |
+         |@this(
+         |    layout: templates.Layout,
+         |    govukErrorSummary: GovukErrorSummary,
+         |    govukFileUpload: GovukFileUpload,
+         |    govukButton: GovukButton
+         |)
+         |
+         |@(form: Form[_], formTemplate: UpscanFormTemplate, mode: Mode)(implicit request: Request[_], messages: Messages)
+         |
+         |@layout(pageTitle = title(form, messages("$pageName.title"))) {
+         |
+         |    <form method="POST" action="@formTemplate.href" enctype="multipart/form-data" novalidate autocomplete="off">
+         |        @if(form.errors.nonEmpty) {
+         |            @govukErrorSummary(ErrorSummaryViewModel(form))
+         |        }
+         |
+         |        @for((name, value) <- formTemplate.fields) {
+         |          <input type="hidden" name="@name" value="@value" />
+         |        }
+         |
+         |        @govukFileUpload(FileUpload(
+         |          name = "file",
+         |          label = LabelViewModel(messages("$pageName.heading")).asPageHeading(),
+         |          javascript = Some(true)
+         |        ))
+         |
+         |        @govukButton(
+         |            ButtonViewModel(messages("site.continue"))
+         |        )
+         |    </form>
+         |}
+         |""".stripMargin
+    } else {
+      val imports = {
+        val imports = importsFor(models, answerType)
+        if (imports.isEmpty)
+          ""
+        else
+          imports.distinct.mkString("", NL, NL * 2)
+      }
 
-    val inputs = {
-      val inputs = inputsFor(models, answerType)
-      if (inputs.isEmpty)
-        ""
-      else
-        inputs.distinct.mkString(NL, NL, "")
-    }
+      val inputs = {
+        val inputs = inputsFor(models, answerType)
+        if (inputs.isEmpty)
+          ""
+        else
+          inputs.distinct.mkString(NL, NL, "")
+      }
 
-    val fields = fieldsFor(models, pageName, "", "value", answerType)
+      val fields = fieldsFor(models, pageName, "", "value", answerType)
 
-    val heading =
-      if (fields.length == 1) ""
-      else
-        s"""        <h1 class="govuk-heading-xl">@messages("$pageName.heading")</h1>${NL * 2}"""
+      val heading =
+        if (fields.length == 1) ""
+        else
+          s"""        <h1 class="govuk-heading-xl">@messages("$pageName.heading")</h1>${NL * 2}"""
 
       s"""$imports@this(
        |    layout: templates.Layout,
@@ -320,5 +356,6 @@ object ViewStub extends Template {
        |    }
        |}
        |""".stripMargin
+    }
   }
 }

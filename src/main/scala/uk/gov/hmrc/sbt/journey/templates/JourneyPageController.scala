@@ -32,6 +32,12 @@ object JourneyPageController extends Template {
   def onSubmitDeclFor(indexParams: String): String =
     s"  def onSubmit(${indexParams}mode: Mode): Action[AnyContent]"
 
+  def onUploadSuccessDeclFor(indexParams: String): String =
+    s"  def onUploadSuccess(${indexParams}id: UUID, mode: Mode): Action[AnyContent]"
+
+  def onUploadFailureDeclFor(indexParams: String): String =
+    s"  def onUploadFailure(${indexParams}id: UUID, mode: Mode): Action[AnyContent]"
+
   def actionFor(requiresData: Boolean) =
     if (requiresData) "(identify andThen getData andThen requireData)"
     else "(identify andThen getData)"
@@ -40,6 +46,16 @@ object JourneyPageController extends Template {
     val paths = path.indexPaths
     if (paths.isEmpty) ""
     else paths.map(p => s"${p.pageKey}Index: Int").mkString("", ", ", ", ")
+  }
+
+  def indexParamNamesFor(path: JourneyPath): String = {
+    val paths = path.indexPaths
+    if (paths.isEmpty) ""
+    else paths.map(p => s"${p.pageKey}Index").mkString("", ", ", ", ")
+  }
+
+  def submitRouteFor(controllerClassName: String, path: JourneyPath): String = {
+    s"journeyRoutes.$controllerClassName.onSubmit(${indexParamNamesFor(path)}mode)"
   }
 
   def pageParamsFor(paths: List[PathAtom]): String = {
@@ -78,6 +94,7 @@ object JourneyPageController extends Template {
   }
 
   def onPageLoadImplFor(
+    controllerClassName: String,
     pageClassName: String,
     path: JourneyPath,
     indexParams: String,
@@ -86,34 +103,39 @@ object JourneyPageController extends Template {
     requiresData: Boolean
   ): String = {
     val action = actionFor(requiresData)
+    val submitRoute = submitRouteFor(controllerClassName, path)
     if (path.isIndex && answerGenerators.isEmpty) {
       // TODO: Decide whether to fill this based upon the existing answers
       //  Problem: we can't tell the difference between "No" to add another element and "not filled yet"
       s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
+          |    val submitRoute = $submitRoute
           |    val page = $pageClassName$pageParams
-          |    Ok(view(form(), page.submitRoute(mode), mode))
+          |    Ok(view(form(), submitRoute, mode))
           |  }""".stripMargin
     } else if (path.isIndex) {
       s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
+          |    val submitRoute = $submitRoute
           |    val userAnswers = request.userAnswers${initialiseAnswers(requiresData, 6)}
           |    val result = for {
           |${answerGenerators.mkString(NL)}
           |      page = $pageClassName$pageParams
-          |    } yield Ok(view(form(), page.submitRoute(mode), mode))
+          |    } yield Ok(view(form(), submitRoute, mode))
           |    result.getOrElse(Redirect(routes.JourneyRecoveryController.onPageLoad()))
           |  }""".stripMargin
     } else if (answerGenerators.isEmpty) {
       s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
+          |    val submitRoute = $submitRoute
           |    val page = $pageClassName$pageParams
           |    val userAnswers = request.userAnswers${initialiseAnswers(requiresData, 6)}
           |    val preparedForm = userAnswers
           |      .get(page)
           |      .map(form().fill)
           |      .getOrElse(form())
-          |    Ok(view(preparedForm, page.submitRoute(mode), mode))
+          |    Ok(view(preparedForm, submitRoute, mode))
           |  }""".stripMargin
     } else {
       s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
+          |    val submitRoute = $submitRoute
           |    val userAnswers = request.userAnswers${initialiseAnswers(requiresData, 6)}
           |    val result = for {
           |${answerGenerators.mkString(NL)}
@@ -121,13 +143,14 @@ object JourneyPageController extends Template {
           |      preparedForm = userAnswers.get(page)
           |        .map(form().fill)
           |        .getOrElse(form())
-          |    } yield Ok(view(preparedForm, page.submitRoute(mode), mode))
+          |    } yield Ok(view(preparedForm, submitRoute, mode))
           |    result.getOrElse(Redirect(routes.JourneyRecoveryController.onPageLoad()))
           |  }""".stripMargin
     }
   }
 
   def onSubmitImplFor(
+    controllerClassName: String,
     pageClassName: String,
     path: JourneyPath,
     indexParams: String,
@@ -136,26 +159,29 @@ object JourneyPageController extends Template {
     requiresData: Boolean
   ): String = {
     val action = actionFor(requiresData)
+    val submitRoute = submitRouteFor(controllerClassName, path)
     if (path.isIndex && answerGenerators.isEmpty) {
       s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
+          |    val submitRoute = $submitRoute
           |    val page = $pageClassName$pageParams
           |    val userAnswers = request.userAnswers${initialiseAnswers(requiresData, 6)}
           |    form().bindFromRequest().fold(
           |      formWithErrors =>
-          |        BadRequest(view(formWithErrors, page.submitRoute(mode), mode)),
+          |        BadRequest(view(formWithErrors, submitRoute, mode)),
           |      answer =>
           |        Redirect(navigator.nextPage(page, mode, request.userAnswers, answer))
           |    )
           |  }""".stripMargin
     } else if (path.isIndex) {
       s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action { implicit request =>
+          |    val submitRoute = $submitRoute
           |    val userAnswers = request.userAnswers${initialiseAnswers(requiresData, 6)}
           |    val result = for {
           |${answerGenerators.mkString(NL)}
           |      page = $pageClassName$pageParams
           |    } yield form().bindFromRequest().fold(
           |      formWithErrors =>
-          |        BadRequest(view(formWithErrors, page.submitRoute(mode), mode)),
+          |        BadRequest(view(formWithErrors, submitRoute, mode)),
           |      answer =>
           |        Redirect(navigator.nextPage(page, mode, request.userAnswers, answer))
           |    )
@@ -163,11 +189,12 @@ object JourneyPageController extends Template {
           |  }""".stripMargin
     } else if (answerGenerators.isEmpty)
       s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+          |    val submitRoute = $submitRoute
           |    val page = $pageClassName$pageParams
           |    val userAnswers = request.userAnswers${initialiseAnswers(requiresData, 6)}
           |    form().bindFromRequest().fold(
           |      formWithErrors =>
-          |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+          |        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
           |      answer =>
           |        for {
           |          updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))
@@ -177,13 +204,14 @@ object JourneyPageController extends Template {
           |  }""".stripMargin
     else
       s"""|  def onSubmit(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+          |    val submitRoute = $submitRoute
           |    val userAnswers = request.userAnswers${initialiseAnswers(requiresData, 6)}
           |    val result = for {
           |${answerGenerators.mkString(NL)}
           |      page = $pageClassName$pageParams
           |    } yield form().bindFromRequest().fold(
           |      formWithErrors =>
-          |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+          |        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
           |      answer =>
           |        for {
           |          updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))
@@ -194,7 +222,82 @@ object JourneyPageController extends Template {
           |  }""".stripMargin
   }
 
-  def render(
+  def onUpscanPageLoadImplFor(
+    controllerClassName: String,
+    indexParams: String,
+    requiresData: Boolean
+  ): String = {
+    val action = actionFor(requiresData)
+    s"""|  def onPageLoad(${indexParams}mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+        |    val uploadId = UploadId.next()
+        |    for {
+        |      initiateResponse <- upscanConnector.initiate(
+        |        callbackUrl = upscanRoutes.UpscanNotificationBaseController.onNotificationReceived(uploadId.id),
+        |        successRedirect = journeyRoutes.$controllerClassName.onUploadSuccess(${indexParams}uploadId.id, mode),
+        |        errorRedirect = journeyRoutes.$controllerClassName.onUploadFailure(${indexParams}uploadId.id, mode)
+        |      )
+        |      uploadId <- fileUploadRepository.initiate(uploadId, initiateResponse.reference)
+        |      formTemplate = initiateResponse.uploadRequest
+        |      preparedForm = request.getQueryString("errorCode").fold(form()) { errorCode =>
+        |        val reference = request.getQueryString("key").orNull
+        |        val errorMessage = request.getQueryString("errorMessage").orNull
+        |        logger.error(s"File upload with reference $$reference failed with error code $$errorCode: $$errorMessage")
+        |        val uploadError = UploadError.fromErrorCode(errorCode)
+        |        form().withError("file", uploadError.messageKey)
+        |      }
+        |    } yield Ok(view(preparedForm, formTemplate, mode))
+        |  }""".stripMargin
+  }
+
+  def onUploadSuccessImplFor(
+    pageClassName: String,
+    indexParams: String,
+    pageParams: String,
+    answerGenerators: List[String],
+    requiresData: Boolean
+  ): String = {
+    val action = actionFor(requiresData)
+    if (answerGenerators.isEmpty) {
+      s"""|  def onUploadSuccess(${indexParams}id: UUID, mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+          |    val uploadId = UploadId(id)
+          |    val page = $pageClassName$pageParams
+          |    val userAnswers = request.userAnswers${initialiseAnswers(requiresData, 6)}
+          |    for {
+          |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
+          |      _ <- fileUploadRepository.setProcessing(uploadId)
+          |      _ <- sessionRepository.set(updatedAnswers)
+          |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
+          |  }""".stripMargin
+    } else {
+      s"""|  def onUploadSuccess(${indexParams}id: UUID, mode: Mode): Action[AnyContent] = $action.async { implicit request =>
+          |    val uploadId = UploadId(id)
+          |    val userAnswers = request.userAnswers${initialiseAnswers(requiresData, 6)}
+          |    val result = for {
+          |${answerGenerators.mkString(NL)}
+          |      page = $pageClassName$pageParams
+          |    } yield for {
+          |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
+          |      _ <- fileUploadRepository.setProcessing(uploadId)
+          |      _ <- sessionRepository.set(updatedAnswers)
+          |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
+          |    result.getOrElse(Future.successful(Redirect(routes.JourneyRecoveryController.onPageLoad())))
+          |  }""".stripMargin
+    }
+  }
+
+  def onUploadFailureImplFor(
+    controllerClassName: String,
+    indexParams: String,
+    indexParamNames: String,
+    requiresData: Boolean
+  ): String = {
+    val action = actionFor(requiresData)
+    s"""|  def onUploadFailure(${indexParams}id: UUID, mode: Mode): Action[AnyContent] = $action { implicit request =>
+          |    Redirect(journeyRoutes.$controllerClassName.onPageLoad(${indexParamNames}mode).path, request.queryString)
+          |  }""".stripMargin
+  }
+
+  def journeyController(
     basePackage: QualifiedName,
     requiresData: Boolean,
     journey: Journey,
@@ -223,6 +326,7 @@ object JourneyPageController extends Template {
         val answerGenerators = fetchAnswerGeneratorsFor(path)
 
         val onPageLoadImpl = onPageLoadImplFor(
+          interfaceName,
           pageClassName,
           path,
           indexParams,
@@ -232,6 +336,7 @@ object JourneyPageController extends Template {
         )
 
         val onSubmitImpl = onSubmitImplFor(
+          interfaceName,
           pageClassName,
           path,
           indexParams,
@@ -261,7 +366,7 @@ object JourneyPageController extends Template {
            |  form: ${formProviderName.parts.last},
            |  view: ${journeyPage.viewClass},
            |  override val controllerComponents: MessagesControllerComponents
-           |)(implicit ec: ExecutionContext) extends $interfaceName {
+           |)(using ExecutionContext) extends $interfaceName {
            |
            |${onPageLoadImpls.distinct.mkString(NL * 2)}
            |
@@ -276,6 +381,7 @@ object JourneyPageController extends Template {
        |import models.Mode // ${basePackage / "models.Mode"}
        |import models.UserAnswers // ${basePackage / "models.UserAnswers"}
        |import repositories.SessionRepository // ${basePackage / "repositories.SessionRepository"}
+       |import ${basePackage / "controllers"}.{routes as journeyRoutes}
        |import ${basePackage / "models.*"}
        |import ${basePackage / "forms.*"}
        |import ${basePackage / "navigation.*"}
@@ -289,11 +395,130 @@ object JourneyPageController extends Template {
        |import javax.inject.{Inject, Singleton}
        |import scala.concurrent.{ExecutionContext, Future}
        |
-       |${implementedBy}trait $interfaceName extends FrontendBaseController with I18nSupport {
+       |${implementedBy}trait $interfaceName extends FrontendBaseController, I18nSupport {
        |${onPageLoadDecls.distinct.mkString(NL)}
        |${onSubmitDecls.distinct.mkString(NL)}
        |}
        |$defaultImpl""".stripMargin
   }
 
+  def fileUploadController(
+    basePackage: QualifiedName,
+    requiresData: Boolean,
+    journey: Journey,
+    pageName: String,
+    journeyPage: JourneyPage
+  ): String = {
+    val capitalPageName = pascalCase(pageName)
+    val withDefault     = journeyPage.withDefaultController
+    val interfaceName   = s"${capitalPageName}BaseController"
+
+    val defaultImplName  = s"Default${capitalPageName}Controller"
+    val pageClassName    = s"${capitalPageName}Page"
+    val formProviderName = QualifiedName(journeyPage.formProviderClass)
+
+    val overloads = journey.pathsFor(pageName)
+
+    val indexes = overloads.map(indexParamsFor)
+
+    val onPageLoadDecls      = indexes.map(onPageLoadDeclFor)
+    val onUploadSuccessDecls = indexes.map(onUploadSuccessDeclFor)
+    val onUploadFailureDecls = indexes.map(onUploadFailureDeclFor)
+
+    val implParams = overloads.zip(indexes).map { case (path, indexParams) =>
+      val pageParams       = pageParamsFor(path.paths)
+      val answerGenerators = fetchAnswerGeneratorsFor(path)
+      (path, indexParams, pageParams, answerGenerators)
+    }
+
+    val onPageLoadImpls = implParams.map { case (_, indexParams, _, _) =>
+      onUpscanPageLoadImplFor(interfaceName, indexParams, requiresData)
+    }
+
+    val onUploadSuccessImpls = implParams.map {
+      case (_, indexParams, pageParams, answerGenerators) =>
+        onUploadSuccessImplFor(
+          pageClassName,
+          indexParams,
+          pageParams,
+          answerGenerators,
+          requiresData
+        )
+    }
+
+    val onUploadFailureImpls = implParams.map {
+      case (path, indexParams, _, _) =>
+        val indexParamNames = indexParamNamesFor(path)
+        onUploadFailureImplFor(
+          interfaceName,
+          indexParams,
+          indexParamNames,
+          requiresData
+        )
+    }
+
+    val implementedBy =
+      if (!withDefault) ""
+      else s"@ImplementedBy(classOf[$defaultImplName])$NL"
+
+    val defaultImpl =
+      if (!withDefault) ""
+      else
+        s"""
+           |@Singleton
+           |class $defaultImplName @Inject() (
+           |  identify: IdentifierAction,
+           |  getData: DataRetrievalAction,
+           |  requireData: DataRequiredAction,
+           |  navigator: JourneyNavigator,
+           |  sessionRepository: SessionRepository,
+           |  upscanConnector: UpscanConnector,
+           |  fileUploadRepository: FileUploadRepository,
+           |  form: ${formProviderName.parts.last},
+           |  view: ${journeyPage.viewClass},
+           |  override val controllerComponents: MessagesControllerComponents
+           |)(using ExecutionContext) extends $interfaceName {
+           |
+           |${onPageLoadImpls.distinct.mkString(NL * 2)}
+           |
+           |${onUploadSuccessImpls.distinct.mkString(NL * 2)}
+           |
+           |${onUploadFailureImpls.distinct.mkString(NL * 2)}
+           |}
+           |""".stripMargin
+
+    s"""package ${basePackage / "controllers"}
+       |
+       |import controllers.actions.*  // ${basePackage / "controllers.actions.*"}
+       |import controllers.routes // ${basePackage / "controllers.routes"}
+       |import models.Mode // ${basePackage / "models.Mode"}
+       |import models.UserAnswers // ${basePackage / "models.UserAnswers"}
+       |import repositories.SessionRepository // ${basePackage / "repositories.SessionRepository"}
+       |import ${basePackage / "controllers"}.{routes as journeyRoutes}
+       |import ${basePackage / "controllers" / "upscan"}.{routes as upscanRoutes}
+       |import ${basePackage / "connectors" / "UpscanConnector"}
+       |import ${basePackage / "models.*"}
+       |import ${basePackage / "models.upscan.*"}
+       |import ${basePackage / "forms.*"}
+       |import ${basePackage / "navigation.*"}
+       |import ${basePackage / "repositories" / "FileUploadRepository"}
+       |import ${basePackage / "pages.*"}
+       |
+       |import play.api.Logging
+       |import play.api.i18n.I18nSupport
+       |import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
+       |import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendBaseController
+       |
+       |import com.google.inject.ImplementedBy
+       |import java.util.UUID
+       |import javax.inject.{Inject, Singleton}
+       |import scala.concurrent.{ExecutionContext, Future}
+       |
+       |${implementedBy}trait $interfaceName extends FrontendBaseController, I18nSupport, Logging {
+       |${onPageLoadDecls.distinct.mkString(NL)}
+       |${onUploadSuccessDecls.distinct.mkString(NL)}
+       |${onUploadFailureDecls.distinct.mkString(NL)}
+       |}
+       |$defaultImpl""".stripMargin
+  }
 }

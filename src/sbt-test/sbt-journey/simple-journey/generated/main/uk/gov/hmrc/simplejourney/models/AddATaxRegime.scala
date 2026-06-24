@@ -1,7 +1,7 @@
 package uk.gov.hmrc.simplejourney.models
 
 import play.api.libs.functional.syntax.*
-import play.api.libs.json.{JsError,JsObject,JsPath,JsSuccess,JsValue,Json,JsonConfiguration,Reads}
+import play.api.libs.json.{JsPath,Reads}
 
 enum AddATaxRegime {
   case Yes(

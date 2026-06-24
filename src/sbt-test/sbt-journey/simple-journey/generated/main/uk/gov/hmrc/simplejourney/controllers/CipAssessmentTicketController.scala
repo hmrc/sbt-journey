@@ -5,6 +5,7 @@ import controllers.routes // uk.gov.hmrc.simplejourney.controllers.routes
 import models.Mode // uk.gov.hmrc.simplejourney.models.Mode
 import models.UserAnswers // uk.gov.hmrc.simplejourney.models.UserAnswers
 import repositories.SessionRepository // uk.gov.hmrc.simplejourney.repositories.SessionRepository
+import uk.gov.hmrc.simplejourney.controllers.{routes as journeyRoutes}
 import uk.gov.hmrc.simplejourney.models.*
 import uk.gov.hmrc.simplejourney.forms.*
 import uk.gov.hmrc.simplejourney.navigation.*
@@ -19,7 +20,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[DefaultCipAssessmentTicketController])
-trait CipAssessmentTicketBaseController extends FrontendBaseController with I18nSupport {
+trait CipAssessmentTicketBaseController extends FrontendBaseController, I18nSupport {
   def onPageLoad(mode: Mode): Action[AnyContent]
   def onSubmit(mode: Mode): Action[AnyContent]
 }
@@ -34,9 +35,10 @@ class DefaultCipAssessmentTicketController @Inject() (
   form: CipAssessmentTicketBaseFormProvider,
   view: views.html.CipAssessmentTicketView,
   override val controllerComponents: MessagesControllerComponents
-)(implicit ec: ExecutionContext) extends CipAssessmentTicketBaseController {
+)(using ExecutionContext) extends CipAssessmentTicketBaseController {
 
   def onPageLoad(mode: Mode): Action[AnyContent] = (identify andThen getData) { implicit request =>
+    val submitRoute = journeyRoutes.CipAssessmentTicketBaseController.onSubmit(mode)
     val page = CipAssessmentTicketPage
     val userAnswers = request.userAnswers
       .getOrElse(UserAnswers(request.userId))
@@ -44,16 +46,17 @@ class DefaultCipAssessmentTicketController @Inject() (
       .get(page)
       .map(form().fill)
       .getOrElse(form())
-    Ok(view(preparedForm, page.submitRoute(mode), mode))
+    Ok(view(preparedForm, submitRoute, mode))
   }
 
   def onSubmit(mode: Mode): Action[AnyContent] = (identify andThen getData).async { implicit request =>
+    val submitRoute = journeyRoutes.CipAssessmentTicketBaseController.onSubmit(mode)
     val page = CipAssessmentTicketPage
     val userAnswers = request.userAnswers
       .getOrElse(UserAnswers(request.userId))
     form().bindFromRequest().fold(
       formWithErrors =>
-        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
       answer =>
         for {
           updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))

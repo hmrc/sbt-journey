@@ -5,6 +5,7 @@ import controllers.routes // uk.gov.hmrc.simplejourney.controllers.routes
 import models.Mode // uk.gov.hmrc.simplejourney.models.Mode
 import models.UserAnswers // uk.gov.hmrc.simplejourney.models.UserAnswers
 import repositories.SessionRepository // uk.gov.hmrc.simplejourney.repositories.SessionRepository
+import uk.gov.hmrc.simplejourney.controllers.{routes as journeyRoutes}
 import uk.gov.hmrc.simplejourney.models.*
 import uk.gov.hmrc.simplejourney.forms.*
 import uk.gov.hmrc.simplejourney.navigation.*
@@ -19,7 +20,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[DefaultTaxRegimeController])
-trait TaxRegimeBaseController extends FrontendBaseController with I18nSupport {
+trait TaxRegimeBaseController extends FrontendBaseController, I18nSupport {
   def onPageLoad(taxRegimesIndex: Int, mode: Mode): Action[AnyContent]
   def onSubmit(taxRegimesIndex: Int, mode: Mode): Action[AnyContent]
 }
@@ -34,9 +35,10 @@ class DefaultTaxRegimeController @Inject() (
   form: TaxRegimeBaseFormProvider,
   view: views.html.TaxRegimeView,
   override val controllerComponents: MessagesControllerComponents
-)(implicit ec: ExecutionContext) extends TaxRegimeBaseController {
+)(using ExecutionContext) extends TaxRegimeBaseController {
 
   def onPageLoad(taxRegimesIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+    val submitRoute = journeyRoutes.TaxRegimeBaseController.onSubmit(taxRegimesIndex, mode)
     val userAnswers = request.userAnswers
     val result = for {
       addATaxRegime <- userAnswers.get(AddATaxRegimePage)
@@ -44,18 +46,19 @@ class DefaultTaxRegimeController @Inject() (
       preparedForm = userAnswers.get(page)
         .map(form().fill)
         .getOrElse(form())
-    } yield Ok(view(preparedForm, page.submitRoute(mode), mode))
+    } yield Ok(view(preparedForm, submitRoute, mode))
     result.getOrElse(Redirect(routes.JourneyRecoveryController.onPageLoad()))
   }
 
   def onSubmit(taxRegimesIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+    val submitRoute = journeyRoutes.TaxRegimeBaseController.onSubmit(taxRegimesIndex, mode)
     val userAnswers = request.userAnswers
     val result = for {
       addATaxRegime <- userAnswers.get(AddATaxRegimePage)
       page = TaxRegimePage(addATaxRegime, taxRegimesIndex)
     } yield form().bindFromRequest().fold(
       formWithErrors =>
-        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
       answer =>
         for {
           updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))

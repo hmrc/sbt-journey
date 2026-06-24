@@ -30,20 +30,6 @@ class PageObject(collector: ImportCollector) extends Template {
         s"$pageKey: $choiceType"
     }
 
-  private def submitRouteFor(pageName: String, path: JourneyPath): String = {
-    val indexPaths = path.indexPaths
-    if (indexPaths.isEmpty)
-      s"routes.${pageName}BaseController.onSubmit"
-    else
-      path.indexPaths
-        .map(idx => s"${camelCase(idx.pageKey)}Index")
-        .mkString(
-          s"mode => routes.${pageName}BaseController.onSubmit(",
-          ", ",
-          ", mode)"
-        )
-  }
-
   private def jsPathFor(path: JourneyPath): String =
     path.paths
       .flatMap {
@@ -104,11 +90,9 @@ class PageObject(collector: ImportCollector) extends Template {
     val params       = applyParams(journey, path)
     val paramsString = if (params.isEmpty) "" else params.mkString("(", ", ", ")")
     val jsPath       = jsPathFor(path)
-    val submitRoute  = submitRouteFor(pageName, path)
     s"""|  def apply$paramsString: ${pageName}Page =
         |    new ${pageName}Page(
-        |      $jsPath,
-        |      $submitRoute
+        |      $jsPath
         |    )""".stripMargin
   }
 
@@ -145,16 +129,12 @@ class PageObject(collector: ImportCollector) extends Template {
     if (overloads.length == 1 && applyParams(journey, overloads.head).isEmpty) {
       s"""package ${basePackage / "pages"}
          |
-         |import models.Mode // ${basePackage / "models.Mode"}
          |import _root_.pages.* // TODO: Remove this once we have a better template
          |import play.api.libs.json.JsPath
-         |import play.api.mvc.Call
-         |import ${basePackage / "controllers.routes"}
          |$imports
          |
          |object ${capitalPageName}Page extends QuestionPage[$pageType] {
          |  override def path: JsPath = ${jsPathFor(overloads.head)}
-         |  override def submitRoute(mode: Mode): Call = routes.${capitalPageName}BaseController.onSubmit(mode)
          |  override def toString: String = "${journeyPage.pageKey}"
          |}
          |""".stripMargin
@@ -166,15 +146,11 @@ class PageObject(collector: ImportCollector) extends Template {
 
       s"""package ${basePackage / "pages"}
          |
-         |import models.Mode // ${basePackage / "models.Mode"}
          |import _root_.pages.* // TODO: Remove this once we have a better template
          |import play.api.libs.json.{JsPath, KeyPathNode, IdxPathNode}
-         |import play.api.mvc.Call
-         |import ${basePackage / "controllers.routes"}
          |$imports
          |
-         |case class ${capitalPageName}Page private (override val path: JsPath, makeRoute: Mode => Call) extends QuestionPage[$pageType] {
-         |  override def submitRoute(mode: Mode): Call = makeRoute(mode)
+         |case class ${capitalPageName}Page private (override val path: JsPath) extends QuestionPage[$pageType] {
          |  override def toString: String = "${journeyPage.pageKey}"
          |}
          |

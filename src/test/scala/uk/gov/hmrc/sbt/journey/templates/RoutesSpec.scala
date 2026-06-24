@@ -55,7 +55,7 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
       Map(journey)
     )
 
-  "Routes.render" should "render routes for root pages" in {
+  "Routes.journeyRoutes" should "render routes for root pages" in {
     val config = JourneyConfig(
       basePackage.toString,
       Map("index" -> rootPage("index", "/"), "checkYourAnswers" -> rootPage("checkYourAnswers")),
@@ -63,7 +63,7 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
       Map.empty
     )
 
-    Routes.render(config) shouldBe
+    Routes.journeyRoutes(config) shouldBe
       """GET  /  uk.gov.hmrc.sbtjourneytest.controllers.IndexBaseController.onPageLoad
         |
         |GET  /check-your-answers  uk.gov.hmrc.sbtjourneytest.controllers.CheckYourAnswersBaseController.onPageLoad""".stripMargin
@@ -82,11 +82,33 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Routes.render(config) shouldBe
+    Routes.journeyRoutes(config) shouldBe
       """GET  /contact-details         uk.gov.hmrc.sbtjourneytest.controllers.ContactDetailsBaseController.onPageLoad(mode: Mode = NormalMode)
         |POST /contact-details         uk.gov.hmrc.sbtjourneytest.controllers.ContactDetailsBaseController.onSubmit(mode: Mode = NormalMode)
         |GET  /change-contact-details  uk.gov.hmrc.sbtjourneytest.controllers.ContactDetailsBaseController.onPageLoad(mode: Mode = CheckMode)
         |POST /change-contact-details  uk.gov.hmrc.sbtjourneytest.controllers.ContactDetailsBaseController.onSubmit(mode: Mode = CheckMode)""".stripMargin
+  }
+
+  it should "render routes for a single journey page that is a file upload" in {
+    val pageKey = "uploadWillAndCodicils"
+
+    val uploadWillAndCodicils =
+      journeyPage(pageKey, ClassType(basePackage / "models" / "UploadId"))
+
+    val config = journeyConfig(
+      "uploadWillAndCodicils" -> Journey(
+        pages = Map(pageKey -> uploadWillAndCodicils),
+        journey = List(SinglePagePart(pageKey, None))
+      )
+    )
+
+    Routes.journeyRoutes(config) shouldBe
+      """GET /upload-will-and-codicils                     uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onPageLoad(mode: Mode = NormalMode)
+        |GET /upload-will-and-codicils/:id/success         uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onUploadSuccess(id: java.util.UUID, mode: Mode = NormalMode)
+        |GET /upload-will-and-codicils/:id/failure         uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onUploadFailure(id: java.util.UUID, mode: Mode = NormalMode)
+        |GET /change-upload-will-and-codicils              uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onPageLoad(mode: Mode = CheckMode)
+        |GET /change-upload-will-and-codicils/:id/success  uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onUploadSuccess(id: java.util.UUID, mode: Mode = CheckMode)
+        |GET /change-upload-will-and-codicils/:id/failure  uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onUploadFailure(id: java.util.UUID, mode: Mode = CheckMode)""".stripMargin
   }
 
   it should "render routes with index parameters for a subjourney page of a do-while journey" in {
@@ -113,8 +135,7 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-
-    Routes.render(config) shouldBe
+    Routes.journeyRoutes(config) shouldBe
       """GET  /audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onPageLoad(auditEvents: Int, mode: Mode = NormalMode)
         |POST /audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onSubmit(auditEvents: Int, mode: Mode = NormalMode)
         |GET  /audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onPageLoad(auditEvents: Int, mode: Mode = CheckMode)
@@ -124,6 +145,45 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
         |POST /audit-events/:auditEvents/audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onSubmit(auditEvents: Int, mode: Mode = NormalMode)
         |GET  /audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onPageLoad(auditEvents: Int, mode: Mode = CheckMode)
         |POST /audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onSubmit(auditEvents: Int, mode: Mode = CheckMode)""".stripMargin
+  }
+
+  it should "render routes with index parameters for a subjourney page of a do-while journey that is a file upload" in {
+    val uploadWillDocument =
+      journeyPage("uploadWillDocument", ClassType(basePackage / "models" / "UploadId"))
+
+    val addAnotherWillDocument = journeyPage(
+      "addAnotherWillDocument",
+      FieldType.BOOLEAN
+    )
+
+    val config = journeyConfig(
+      "willDocuments" -> Journey(
+        pages = Map(
+          "uploadWillDocument"     -> uploadWillDocument,
+          "addAnotherWillDocument" -> addAnotherWillDocument
+        ),
+        journey = List(
+          DoWhilePart(
+            "addAnotherWillDocument",
+            List(SinglePagePart("uploadWillDocument", None)),
+            "willDocuments"
+          )
+        )
+      )
+    )
+
+    Routes.journeyRoutes(config) shouldBe
+      """GET  /will-documents/:willDocuments/add-another-will-document         uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherWillDocumentBaseController.onPageLoad(willDocuments: Int, mode: Mode = NormalMode)
+        |POST /will-documents/:willDocuments/add-another-will-document         uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherWillDocumentBaseController.onSubmit(willDocuments: Int, mode: Mode = NormalMode)
+        |GET  /will-documents/:willDocuments/change-add-another-will-document  uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherWillDocumentBaseController.onPageLoad(willDocuments: Int, mode: Mode = CheckMode)
+        |POST /will-documents/:willDocuments/change-add-another-will-document  uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherWillDocumentBaseController.onSubmit(willDocuments: Int, mode: Mode = CheckMode)
+        |
+        |GET /will-documents/:willDocuments/upload-will-document                     uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onPageLoad(willDocuments: Int, mode: Mode = NormalMode)
+        |GET /will-documents/:willDocuments/upload-will-document/:id/success         uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onUploadSuccess(willDocuments: Int, id: java.util.UUID, mode: Mode = NormalMode)
+        |GET /will-documents/:willDocuments/upload-will-document/:id/failure         uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onUploadFailure(willDocuments: Int, id: java.util.UUID, mode: Mode = NormalMode)
+        |GET /will-documents/:willDocuments/change-upload-will-document              uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onPageLoad(willDocuments: Int, mode: Mode = CheckMode)
+        |GET /will-documents/:willDocuments/change-upload-will-document/:id/success  uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onUploadSuccess(willDocuments: Int, id: java.util.UUID, mode: Mode = CheckMode)
+        |GET /will-documents/:willDocuments/change-upload-will-document/:id/failure  uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onUploadFailure(willDocuments: Int, id: java.util.UUID, mode: Mode = CheckMode)""".stripMargin
   }
 
   it should "render non-parameterised routes for subjourney pages of switch-case journeys" in {
@@ -154,7 +214,7 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Routes.render(config) shouldBe
+    Routes.journeyRoutes(config) shouldBe
       """GET  /sa-info         uk.gov.hmrc.sbtjourneytest.controllers.SaInfoBaseController.onPageLoad(mode: Mode = NormalMode)
         |POST /sa-info         uk.gov.hmrc.sbtjourneytest.controllers.SaInfoBaseController.onSubmit(mode: Mode = NormalMode)
         |GET  /change-sa-info  uk.gov.hmrc.sbtjourneytest.controllers.SaInfoBaseController.onPageLoad(mode: Mode = CheckMode)
@@ -200,7 +260,7 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    Routes.render(config) shouldBe
+    Routes.journeyRoutes(config) shouldBe
       """GET  /audit-sources/:auditSources/audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
         |POST /audit-sources/:auditSources/audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
         |GET  /audit-sources/:auditSources/audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
@@ -215,5 +275,67 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
         |POST /audit-sources/:auditSources/audit-source         uk.gov.hmrc.sbtjourneytest.controllers.AuditSourceBaseController.onSubmit(auditSources: Int, mode: Mode = NormalMode)
         |GET  /audit-sources/:auditSources/change-audit-source  uk.gov.hmrc.sbtjourneytest.controllers.AuditSourceBaseController.onPageLoad(auditSources: Int, mode: Mode = CheckMode)
         |POST /audit-sources/:auditSources/change-audit-source  uk.gov.hmrc.sbtjourneytest.controllers.AuditSourceBaseController.onSubmit(auditSources: Int, mode: Mode = CheckMode)""".stripMargin
+  }
+
+  it should "render routes with multiple index parameters for subjourney file upload pages of nested do-while journeys" in {
+    val auditSource          = journeyPage("auditSource", FieldType.STRING)
+    val auditEvent           = journeyPage("auditEvent", FieldType.STRING)
+    val addAnotherAuditEvent = journeyPage("addAnotherAuditEvent", FieldType.BOOLEAN)
+    val evidenceFromQA =
+      journeyPage("evidenceFromQA", ClassType(basePackage / "models" / "UploadId"))
+
+    val config = journeyConfig(
+      "auditSources" -> Journey(
+        pages = Map(
+          "auditEvent"           -> auditEvent,
+          "auditSource"          -> auditSource,
+          "evidenceFromQA"       -> evidenceFromQA,
+          "addAnotherAuditEvent" -> addAnotherAuditEvent
+        ),
+        journey = List(
+          DoWhilePart(
+            "addAnotherAuditSource",
+            List(
+              SinglePagePart("auditSource", None),
+              DoWhilePart(
+                "addAnotherAuditEvent",
+                List(SinglePagePart("auditEvent", None), SinglePagePart("evidenceFromQA", None)),
+                "auditEvents"
+              )
+            ),
+            "auditSources"
+          )
+        )
+      )
+    )
+
+    Routes.journeyRoutes(config) shouldBe
+      """GET  /audit-sources/:auditSources/audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+        |POST /audit-sources/:auditSources/audit-events/:auditEvents/add-another-audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+        |GET  /audit-sources/:auditSources/audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+        |POST /audit-sources/:auditSources/audit-events/:auditEvents/change-add-another-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherAuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+        |
+        |GET  /audit-sources/:auditSources/audit-events/:auditEvents/audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+        |POST /audit-sources/:auditSources/audit-events/:auditEvents/audit-event         uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+        |GET  /audit-sources/:auditSources/audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+        |POST /audit-sources/:auditSources/audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.sbtjourneytest.controllers.AuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+        |
+        |GET  /audit-sources/:auditSources/audit-source         uk.gov.hmrc.sbtjourneytest.controllers.AuditSourceBaseController.onPageLoad(auditSources: Int, mode: Mode = NormalMode)
+        |POST /audit-sources/:auditSources/audit-source         uk.gov.hmrc.sbtjourneytest.controllers.AuditSourceBaseController.onSubmit(auditSources: Int, mode: Mode = NormalMode)
+        |GET  /audit-sources/:auditSources/change-audit-source  uk.gov.hmrc.sbtjourneytest.controllers.AuditSourceBaseController.onPageLoad(auditSources: Int, mode: Mode = CheckMode)
+        |POST /audit-sources/:auditSources/change-audit-source  uk.gov.hmrc.sbtjourneytest.controllers.AuditSourceBaseController.onSubmit(auditSources: Int, mode: Mode = CheckMode)
+        |
+        |GET /audit-sources/:auditSources/audit-events/:auditEvents/evidence-from-qa                     uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+        |GET /audit-sources/:auditSources/audit-events/:auditEvents/evidence-from-qa/:id/success         uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onUploadSuccess(auditSources: Int, auditEvents: Int, id: java.util.UUID, mode: Mode = NormalMode)
+        |GET /audit-sources/:auditSources/audit-events/:auditEvents/evidence-from-qa/:id/failure         uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onUploadFailure(auditSources: Int, auditEvents: Int, id: java.util.UUID, mode: Mode = NormalMode)
+        |GET /audit-sources/:auditSources/audit-events/:auditEvents/change-evidence-from-qa              uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+        |GET /audit-sources/:auditSources/audit-events/:auditEvents/change-evidence-from-qa/:id/success  uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onUploadSuccess(auditSources: Int, auditEvents: Int, id: java.util.UUID, mode: Mode = CheckMode)
+        |GET /audit-sources/:auditSources/audit-events/:auditEvents/change-evidence-from-qa/:id/failure  uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onUploadFailure(auditSources: Int, auditEvents: Int, id: java.util.UUID, mode: Mode = CheckMode)""".stripMargin
+  }
+
+  "Routes.internalRoutes" should "render routes for Upscan notifications relative to the base package" in {
+    Routes.internalRoutes(basePackage) shouldBe
+      s"""+ nocsrf
+         |POST /file-upload/:id/notification  uk.gov.hmrc.sbtjourneytest.controllers.upscan.UpscanNotificationBaseController.onNotificationReceived(id: java.util.UUID)""".stripMargin
   }
 }

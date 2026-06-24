@@ -40,7 +40,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       answerType
     )
 
-  "JourneyPageController" should "generate a controller for a top-level journey page that doesn't require data" in {
+  "JourneyPageController.journeyController" should "generate a controller for a top-level journey page that doesn't require data" in {
     val serviceName = journeyPage("serviceName", FieldType.STRING)
 
     val journey = Journey(
@@ -48,7 +48,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       List(SinglePagePart(serviceName.pageKey, None))
     )
 
-    JourneyPageController.render(
+    JourneyPageController.journeyController(
       basePackage,
       requiresData = false,
       journey,
@@ -62,6 +62,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |import uk.gov.hmrc.sbtjourneytest.forms.*
         |import uk.gov.hmrc.sbtjourneytest.navigation.*
@@ -76,7 +77,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import scala.concurrent.{ExecutionContext, Future}
         |
         |@ImplementedBy(classOf[DefaultServiceNameController])
-        |trait ServiceNameBaseController extends FrontendBaseController with I18nSupport {
+        |trait ServiceNameBaseController extends FrontendBaseController, I18nSupport {
         |  def onPageLoad(mode: Mode): Action[AnyContent]
         |  def onSubmit(mode: Mode): Action[AnyContent]
         |}
@@ -91,9 +92,10 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |  form: ServiceNameBaseFormProvider,
         |  view: views.html.ServiceNameView,
         |  override val controllerComponents: MessagesControllerComponents
-        |)(implicit ec: ExecutionContext) extends ServiceNameBaseController {
+        |)(using ExecutionContext) extends ServiceNameBaseController {
         |
         |  def onPageLoad(mode: Mode): Action[AnyContent] = (identify andThen getData) { implicit request =>
+        |    val submitRoute = journeyRoutes.ServiceNameBaseController.onSubmit(mode)
         |    val page = ServiceNamePage
         |    val userAnswers = request.userAnswers
         |      .getOrElse(UserAnswers(request.userId))
@@ -101,16 +103,17 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |      .get(page)
         |      .map(form().fill)
         |      .getOrElse(form())
-        |    Ok(view(preparedForm, page.submitRoute(mode), mode))
+        |    Ok(view(preparedForm, submitRoute, mode))
         |  }
         |
         |  def onSubmit(mode: Mode): Action[AnyContent] = (identify andThen getData).async { implicit request =>
+        |    val submitRoute = journeyRoutes.ServiceNameBaseController.onSubmit(mode)
         |    val page = ServiceNamePage
         |    val userAnswers = request.userAnswers
         |      .getOrElse(UserAnswers(request.userId))
         |    form().bindFromRequest().fold(
         |      formWithErrors =>
-        |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+        |        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
         |      answer =>
         |        for {
         |          updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))
@@ -122,7 +125,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |""".stripMargin
   }
 
-  "JourneyPageController" should "generate a controller for a top-level journey page that does require data" in {
+  it should "generate a controller for a top-level journey page that does require data" in {
     val serviceName = journeyPage("serviceName", FieldType.STRING)
 
     val journey = Journey(
@@ -130,7 +133,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       List(SinglePagePart(serviceName.pageKey, None))
     )
 
-    JourneyPageController.render(
+    JourneyPageController.journeyController(
       basePackage,
       requiresData = true,
       journey,
@@ -144,6 +147,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |import uk.gov.hmrc.sbtjourneytest.forms.*
         |import uk.gov.hmrc.sbtjourneytest.navigation.*
@@ -158,7 +162,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import scala.concurrent.{ExecutionContext, Future}
         |
         |@ImplementedBy(classOf[DefaultServiceNameController])
-        |trait ServiceNameBaseController extends FrontendBaseController with I18nSupport {
+        |trait ServiceNameBaseController extends FrontendBaseController, I18nSupport {
         |  def onPageLoad(mode: Mode): Action[AnyContent]
         |  def onSubmit(mode: Mode): Action[AnyContent]
         |}
@@ -173,24 +177,26 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |  form: ServiceNameBaseFormProvider,
         |  view: views.html.ServiceNameView,
         |  override val controllerComponents: MessagesControllerComponents
-        |)(implicit ec: ExecutionContext) extends ServiceNameBaseController {
+        |)(using ExecutionContext) extends ServiceNameBaseController {
         |
         |  def onPageLoad(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.ServiceNameBaseController.onSubmit(mode)
         |    val page = ServiceNamePage
         |    val userAnswers = request.userAnswers
         |    val preparedForm = userAnswers
         |      .get(page)
         |      .map(form().fill)
         |      .getOrElse(form())
-        |    Ok(view(preparedForm, page.submitRoute(mode), mode))
+        |    Ok(view(preparedForm, submitRoute, mode))
         |  }
         |
         |  def onSubmit(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val submitRoute = journeyRoutes.ServiceNameBaseController.onSubmit(mode)
         |    val page = ServiceNamePage
         |    val userAnswers = request.userAnswers
         |    form().bindFromRequest().fold(
         |      formWithErrors =>
-        |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+        |        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
         |      answer =>
         |        for {
         |          updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))
@@ -210,7 +216,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       List(SinglePagePart(serviceName.pageKey, None))
     )
 
-    JourneyPageController.render(
+    JourneyPageController.journeyController(
       basePackage,
       requiresData = false,
       journey,
@@ -224,6 +230,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |import uk.gov.hmrc.sbtjourneytest.forms.*
         |import uk.gov.hmrc.sbtjourneytest.navigation.*
@@ -237,7 +244,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import javax.inject.{Inject, Singleton}
         |import scala.concurrent.{ExecutionContext, Future}
         |
-        |trait ServiceNameBaseController extends FrontendBaseController with I18nSupport {
+        |trait ServiceNameBaseController extends FrontendBaseController, I18nSupport {
         |  def onPageLoad(mode: Mode): Action[AnyContent]
         |  def onSubmit(mode: Mode): Action[AnyContent]
         |}
@@ -264,7 +271,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       journey = List(ifThenPart)
     )
 
-    JourneyPageController.render(
+    JourneyPageController.journeyController(
       basePackage,
       requiresData = true,
       journey,
@@ -278,6 +285,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |import uk.gov.hmrc.sbtjourneytest.forms.*
         |import uk.gov.hmrc.sbtjourneytest.navigation.*
@@ -292,7 +300,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import scala.concurrent.{ExecutionContext, Future}
         |
         |@ImplementedBy(classOf[DefaultAddATaxRegimeController])
-        |trait AddATaxRegimeBaseController extends FrontendBaseController with I18nSupport {
+        |trait AddATaxRegimeBaseController extends FrontendBaseController, I18nSupport {
         |  def onPageLoad(mode: Mode): Action[AnyContent]
         |  def onSubmit(mode: Mode): Action[AnyContent]
         |}
@@ -307,24 +315,26 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |  form: AddATaxRegimeBaseFormProvider,
         |  view: views.html.AddATaxRegimeView,
         |  override val controllerComponents: MessagesControllerComponents
-        |)(implicit ec: ExecutionContext) extends AddATaxRegimeBaseController {
+        |)(using ExecutionContext) extends AddATaxRegimeBaseController {
         |
         |  def onPageLoad(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.AddATaxRegimeBaseController.onSubmit(mode)
         |    val page = AddATaxRegimePage
         |    val userAnswers = request.userAnswers
         |    val preparedForm = userAnswers
         |      .get(page)
         |      .map(form().fill)
         |      .getOrElse(form())
-        |    Ok(view(preparedForm, page.submitRoute(mode), mode))
+        |    Ok(view(preparedForm, submitRoute, mode))
         |  }
         |
         |  def onSubmit(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val submitRoute = journeyRoutes.AddATaxRegimeBaseController.onSubmit(mode)
         |    val page = AddATaxRegimePage
         |    val userAnswers = request.userAnswers
         |    form().bindFromRequest().fold(
         |      formWithErrors =>
-        |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+        |        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
         |      answer =>
         |        for {
         |          updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))
@@ -356,7 +366,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       journey = List(ifThenPart)
     )
 
-    JourneyPageController.render(
+    JourneyPageController.journeyController(
       basePackage,
       requiresData = true,
       journey,
@@ -370,6 +380,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |import uk.gov.hmrc.sbtjourneytest.forms.*
         |import uk.gov.hmrc.sbtjourneytest.navigation.*
@@ -384,7 +395,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import scala.concurrent.{ExecutionContext, Future}
         |
         |@ImplementedBy(classOf[DefaultTaxRegimeController])
-        |trait TaxRegimeBaseController extends FrontendBaseController with I18nSupport {
+        |trait TaxRegimeBaseController extends FrontendBaseController, I18nSupport {
         |  def onPageLoad(mode: Mode): Action[AnyContent]
         |  def onSubmit(mode: Mode): Action[AnyContent]
         |}
@@ -399,9 +410,10 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |  form: TaxRegimeBaseFormProvider,
         |  view: views.html.TaxRegimeView,
         |  override val controllerComponents: MessagesControllerComponents
-        |)(implicit ec: ExecutionContext) extends TaxRegimeBaseController {
+        |)(using ExecutionContext) extends TaxRegimeBaseController {
         |
         |  def onPageLoad(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.TaxRegimeBaseController.onSubmit(mode)
         |    val userAnswers = request.userAnswers
         |    val result = for {
         |      addATaxRegime <- userAnswers.get(AddATaxRegimePage)
@@ -409,18 +421,19 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |      preparedForm = userAnswers.get(page)
         |        .map(form().fill)
         |        .getOrElse(form())
-        |    } yield Ok(view(preparedForm, page.submitRoute(mode), mode))
+        |    } yield Ok(view(preparedForm, submitRoute, mode))
         |    result.getOrElse(Redirect(routes.JourneyRecoveryController.onPageLoad()))
         |  }
         |
         |  def onSubmit(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val submitRoute = journeyRoutes.TaxRegimeBaseController.onSubmit(mode)
         |    val userAnswers = request.userAnswers
         |    val result = for {
         |      addATaxRegime <- userAnswers.get(AddATaxRegimePage)
         |      page = TaxRegimePage(addATaxRegime)
         |    } yield form().bindFromRequest().fold(
         |      formWithErrors =>
-        |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+        |        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
         |      answer =>
         |        for {
         |          updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))
@@ -459,7 +472,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    JourneyPageController.render(
+    JourneyPageController.journeyController(
       basePackage,
       requiresData = true,
       journey,
@@ -473,6 +486,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |import uk.gov.hmrc.sbtjourneytest.forms.*
         |import uk.gov.hmrc.sbtjourneytest.navigation.*
@@ -487,7 +501,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import scala.concurrent.{ExecutionContext, Future}
         |
         |@ImplementedBy(classOf[DefaultWhichTaxRegimeController])
-        |trait WhichTaxRegimeBaseController extends FrontendBaseController with I18nSupport {
+        |trait WhichTaxRegimeBaseController extends FrontendBaseController, I18nSupport {
         |  def onPageLoad(mode: Mode): Action[AnyContent]
         |  def onSubmit(mode: Mode): Action[AnyContent]
         |}
@@ -502,24 +516,26 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |  form: WhichTaxRegimeBaseFormProvider,
         |  view: views.html.WhichTaxRegimeView,
         |  override val controllerComponents: MessagesControllerComponents
-        |)(implicit ec: ExecutionContext) extends WhichTaxRegimeBaseController {
+        |)(using ExecutionContext) extends WhichTaxRegimeBaseController {
         |
         |  def onPageLoad(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.WhichTaxRegimeBaseController.onSubmit(mode)
         |    val page = WhichTaxRegimePage
         |    val userAnswers = request.userAnswers
         |    val preparedForm = userAnswers
         |      .get(page)
         |      .map(form().fill)
         |      .getOrElse(form())
-        |    Ok(view(preparedForm, page.submitRoute(mode), mode))
+        |    Ok(view(preparedForm, submitRoute, mode))
         |  }
         |
         |  def onSubmit(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val submitRoute = journeyRoutes.WhichTaxRegimeBaseController.onSubmit(mode)
         |    val page = WhichTaxRegimePage
         |    val userAnswers = request.userAnswers
         |    form().bindFromRequest().fold(
         |      formWithErrors =>
-        |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+        |        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
         |      answer =>
         |        for {
         |          updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))
@@ -557,7 +573,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    JourneyPageController.render(
+    JourneyPageController.journeyController(
       basePackage,
       requiresData = true,
       journey,
@@ -571,6 +587,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |import uk.gov.hmrc.sbtjourneytest.forms.*
         |import uk.gov.hmrc.sbtjourneytest.navigation.*
@@ -585,7 +602,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import scala.concurrent.{ExecutionContext, Future}
         |
         |@ImplementedBy(classOf[DefaultVatInfoController])
-        |trait VatInfoBaseController extends FrontendBaseController with I18nSupport {
+        |trait VatInfoBaseController extends FrontendBaseController, I18nSupport {
         |  def onPageLoad(mode: Mode): Action[AnyContent]
         |  def onSubmit(mode: Mode): Action[AnyContent]
         |}
@@ -600,9 +617,10 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |  form: VatInfoBaseFormProvider,
         |  view: views.html.VatInfoView,
         |  override val controllerComponents: MessagesControllerComponents
-        |)(implicit ec: ExecutionContext) extends VatInfoBaseController {
+        |)(using ExecutionContext) extends VatInfoBaseController {
         |
         |  def onPageLoad(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.VatInfoBaseController.onSubmit(mode)
         |    val userAnswers = request.userAnswers
         |    val result = for {
         |      whichTaxRegime <- userAnswers.get(WhichTaxRegimePage)
@@ -610,18 +628,19 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |      preparedForm = userAnswers.get(page)
         |        .map(form().fill)
         |        .getOrElse(form())
-        |    } yield Ok(view(preparedForm, page.submitRoute(mode), mode))
+        |    } yield Ok(view(preparedForm, submitRoute, mode))
         |    result.getOrElse(Redirect(routes.JourneyRecoveryController.onPageLoad()))
         |  }
         |
         |  def onSubmit(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val submitRoute = journeyRoutes.VatInfoBaseController.onSubmit(mode)
         |    val userAnswers = request.userAnswers
         |    val result = for {
         |      whichTaxRegime <- userAnswers.get(WhichTaxRegimePage)
         |      page = VatInfoPage(whichTaxRegime)
         |    } yield form().bindFromRequest().fold(
         |      formWithErrors =>
-        |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+        |        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
         |      answer =>
         |        for {
         |          updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))
@@ -660,7 +679,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    JourneyPageController.render(
+    JourneyPageController.journeyController(
       basePackage,
       requiresData = true,
       journey,
@@ -674,6 +693,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |import uk.gov.hmrc.sbtjourneytest.forms.*
         |import uk.gov.hmrc.sbtjourneytest.navigation.*
@@ -688,7 +708,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import scala.concurrent.{ExecutionContext, Future}
         |
         |@ImplementedBy(classOf[DefaultAddAnotherTaxRegimeController])
-        |trait AddAnotherTaxRegimeBaseController extends FrontendBaseController with I18nSupport {
+        |trait AddAnotherTaxRegimeBaseController extends FrontendBaseController, I18nSupport {
         |  def onPageLoad(taxRegimesIndex: Int, mode: Mode): Action[AnyContent]
         |  def onSubmit(taxRegimesIndex: Int, mode: Mode): Action[AnyContent]
         |}
@@ -703,25 +723,27 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |  form: AddAnotherTaxRegimeBaseFormProvider,
         |  view: views.html.AddAnotherTaxRegimeView,
         |  override val controllerComponents: MessagesControllerComponents
-        |)(implicit ec: ExecutionContext) extends AddAnotherTaxRegimeBaseController {
+        |)(using ExecutionContext) extends AddAnotherTaxRegimeBaseController {
         |
         |  def onPageLoad(taxRegimesIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.AddAnotherTaxRegimeBaseController.onSubmit(taxRegimesIndex, mode)
         |    val userAnswers = request.userAnswers
         |    val result = for {
         |      addATaxRegime <- userAnswers.get(AddATaxRegimePage)
         |      page = AddAnotherTaxRegimePage(addATaxRegime, taxRegimesIndex)
-        |    } yield Ok(view(form(), page.submitRoute(mode), mode))
+        |    } yield Ok(view(form(), submitRoute, mode))
         |    result.getOrElse(Redirect(routes.JourneyRecoveryController.onPageLoad()))
         |  }
         |
         |  def onSubmit(taxRegimesIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.AddAnotherTaxRegimeBaseController.onSubmit(taxRegimesIndex, mode)
         |    val userAnswers = request.userAnswers
         |    val result = for {
         |      addATaxRegime <- userAnswers.get(AddATaxRegimePage)
         |      page = AddAnotherTaxRegimePage(addATaxRegime, taxRegimesIndex)
         |    } yield form().bindFromRequest().fold(
         |      formWithErrors =>
-        |        BadRequest(view(formWithErrors, page.submitRoute(mode), mode)),
+        |        BadRequest(view(formWithErrors, submitRoute, mode)),
         |      answer =>
         |        Redirect(navigator.nextPage(page, mode, request.userAnswers, answer))
         |    )
@@ -757,7 +779,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    JourneyPageController.render(
+    JourneyPageController.journeyController(
       basePackage,
       requiresData = true,
       journey,
@@ -771,6 +793,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |import uk.gov.hmrc.sbtjourneytest.forms.*
         |import uk.gov.hmrc.sbtjourneytest.navigation.*
@@ -785,7 +808,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import scala.concurrent.{ExecutionContext, Future}
         |
         |@ImplementedBy(classOf[DefaultTaxRegimeController])
-        |trait TaxRegimeBaseController extends FrontendBaseController with I18nSupport {
+        |trait TaxRegimeBaseController extends FrontendBaseController, I18nSupport {
         |  def onPageLoad(taxRegimesIndex: Int, mode: Mode): Action[AnyContent]
         |  def onSubmit(taxRegimesIndex: Int, mode: Mode): Action[AnyContent]
         |}
@@ -800,9 +823,10 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |  form: TaxRegimeBaseFormProvider,
         |  view: views.html.TaxRegimeView,
         |  override val controllerComponents: MessagesControllerComponents
-        |)(implicit ec: ExecutionContext) extends TaxRegimeBaseController {
+        |)(using ExecutionContext) extends TaxRegimeBaseController {
         |
         |  def onPageLoad(taxRegimesIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.TaxRegimeBaseController.onSubmit(taxRegimesIndex, mode)
         |    val userAnswers = request.userAnswers
         |    val result = for {
         |      addATaxRegime <- userAnswers.get(AddATaxRegimePage)
@@ -810,18 +834,19 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |      preparedForm = userAnswers.get(page)
         |        .map(form().fill)
         |        .getOrElse(form())
-        |    } yield Ok(view(preparedForm, page.submitRoute(mode), mode))
+        |    } yield Ok(view(preparedForm, submitRoute, mode))
         |    result.getOrElse(Redirect(routes.JourneyRecoveryController.onPageLoad()))
         |  }
         |
         |  def onSubmit(taxRegimesIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val submitRoute = journeyRoutes.TaxRegimeBaseController.onSubmit(taxRegimesIndex, mode)
         |    val userAnswers = request.userAnswers
         |    val result = for {
         |      addATaxRegime <- userAnswers.get(AddATaxRegimePage)
         |      page = TaxRegimePage(addATaxRegime, taxRegimesIndex)
         |    } yield form().bindFromRequest().fold(
         |      formWithErrors =>
-        |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+        |        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
         |      answer =>
         |        for {
         |          updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))
@@ -856,7 +881,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    JourneyPageController.render(
+    JourneyPageController.journeyController(
       basePackage,
       requiresData = true,
       journey,
@@ -870,6 +895,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |import uk.gov.hmrc.sbtjourneytest.forms.*
         |import uk.gov.hmrc.sbtjourneytest.navigation.*
@@ -884,7 +910,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import scala.concurrent.{ExecutionContext, Future}
         |
         |@ImplementedBy(classOf[DefaultAddAnotherAuditEventController])
-        |trait AddAnotherAuditEventBaseController extends FrontendBaseController with I18nSupport {
+        |trait AddAnotherAuditEventBaseController extends FrontendBaseController, I18nSupport {
         |  def onPageLoad(auditEventsIndex: Int, mode: Mode): Action[AnyContent]
         |  def onSubmit(auditEventsIndex: Int, mode: Mode): Action[AnyContent]
         |}
@@ -899,19 +925,21 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |  form: AddAnotherAuditEventBaseFormProvider,
         |  view: views.html.AddAnotherAuditEventView,
         |  override val controllerComponents: MessagesControllerComponents
-        |)(implicit ec: ExecutionContext) extends AddAnotherAuditEventBaseController {
+        |)(using ExecutionContext) extends AddAnotherAuditEventBaseController {
         |
         |  def onPageLoad(auditEventsIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.AddAnotherAuditEventBaseController.onSubmit(auditEventsIndex, mode)
         |    val page = AddAnotherAuditEventPage(auditEventsIndex)
-        |    Ok(view(form(), page.submitRoute(mode), mode))
+        |    Ok(view(form(), submitRoute, mode))
         |  }
         |
         |  def onSubmit(auditEventsIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.AddAnotherAuditEventBaseController.onSubmit(auditEventsIndex, mode)
         |    val page = AddAnotherAuditEventPage(auditEventsIndex)
         |    val userAnswers = request.userAnswers
         |    form().bindFromRequest().fold(
         |      formWithErrors =>
-        |        BadRequest(view(formWithErrors, page.submitRoute(mode), mode)),
+        |        BadRequest(view(formWithErrors, submitRoute, mode)),
         |      answer =>
         |        Redirect(navigator.nextPage(page, mode, request.userAnswers, answer))
         |    )
@@ -942,7 +970,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       )
     )
 
-    JourneyPageController.render(
+    JourneyPageController.journeyController(
       basePackage,
       requiresData = true,
       journey,
@@ -956,6 +984,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |import uk.gov.hmrc.sbtjourneytest.forms.*
         |import uk.gov.hmrc.sbtjourneytest.navigation.*
@@ -970,7 +999,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import scala.concurrent.{ExecutionContext, Future}
         |
         |@ImplementedBy(classOf[DefaultAuditEventController])
-        |trait AuditEventBaseController extends FrontendBaseController with I18nSupport {
+        |trait AuditEventBaseController extends FrontendBaseController, I18nSupport {
         |  def onPageLoad(auditEventsIndex: Int, mode: Mode): Action[AnyContent]
         |  def onSubmit(auditEventsIndex: Int, mode: Mode): Action[AnyContent]
         |}
@@ -985,24 +1014,26 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |  form: AuditEventBaseFormProvider,
         |  view: views.html.AuditEventView,
         |  override val controllerComponents: MessagesControllerComponents
-        |)(implicit ec: ExecutionContext) extends AuditEventBaseController {
+        |)(using ExecutionContext) extends AuditEventBaseController {
         |
         |  def onPageLoad(auditEventsIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.AuditEventBaseController.onSubmit(auditEventsIndex, mode)
         |    val page = AuditEventPage(auditEventsIndex)
         |    val userAnswers = request.userAnswers
         |    val preparedForm = userAnswers
         |      .get(page)
         |      .map(form().fill)
         |      .getOrElse(form())
-        |    Ok(view(preparedForm, page.submitRoute(mode), mode))
+        |    Ok(view(preparedForm, submitRoute, mode))
         |  }
         |
         |  def onSubmit(auditEventsIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val submitRoute = journeyRoutes.AuditEventBaseController.onSubmit(auditEventsIndex, mode)
         |    val page = AuditEventPage(auditEventsIndex)
         |    val userAnswers = request.userAnswers
         |    form().bindFromRequest().fold(
         |      formWithErrors =>
-        |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+        |        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
         |      answer =>
         |        for {
         |          updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))
@@ -1042,7 +1073,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       journey = List(outerDoWhilePart)
     )
 
-    JourneyPageController.render(
+    JourneyPageController.journeyController(
       basePackage,
       requiresData = true,
       journey,
@@ -1056,6 +1087,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |import uk.gov.hmrc.sbtjourneytest.forms.*
         |import uk.gov.hmrc.sbtjourneytest.navigation.*
@@ -1070,7 +1102,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import scala.concurrent.{ExecutionContext, Future}
         |
         |@ImplementedBy(classOf[DefaultAddAnotherAuditEventController])
-        |trait AddAnotherAuditEventBaseController extends FrontendBaseController with I18nSupport {
+        |trait AddAnotherAuditEventBaseController extends FrontendBaseController, I18nSupport {
         |  def onPageLoad(auditSourcesIndex: Int, auditEventsIndex: Int, mode: Mode): Action[AnyContent]
         |  def onSubmit(auditSourcesIndex: Int, auditEventsIndex: Int, mode: Mode): Action[AnyContent]
         |}
@@ -1085,19 +1117,21 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |  form: AddAnotherAuditEventBaseFormProvider,
         |  view: views.html.AddAnotherAuditEventView,
         |  override val controllerComponents: MessagesControllerComponents
-        |)(implicit ec: ExecutionContext) extends AddAnotherAuditEventBaseController {
+        |)(using ExecutionContext) extends AddAnotherAuditEventBaseController {
         |
         |  def onPageLoad(auditSourcesIndex: Int, auditEventsIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.AddAnotherAuditEventBaseController.onSubmit(auditSourcesIndex, auditEventsIndex, mode)
         |    val page = AddAnotherAuditEventPage(auditSourcesIndex, auditEventsIndex)
-        |    Ok(view(form(), page.submitRoute(mode), mode))
+        |    Ok(view(form(), submitRoute, mode))
         |  }
         |
         |  def onSubmit(auditSourcesIndex: Int, auditEventsIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.AddAnotherAuditEventBaseController.onSubmit(auditSourcesIndex, auditEventsIndex, mode)
         |    val page = AddAnotherAuditEventPage(auditSourcesIndex, auditEventsIndex)
         |    val userAnswers = request.userAnswers
         |    form().bindFromRequest().fold(
         |      formWithErrors =>
-        |        BadRequest(view(formWithErrors, page.submitRoute(mode), mode)),
+        |        BadRequest(view(formWithErrors, submitRoute, mode)),
         |      answer =>
         |        Redirect(navigator.nextPage(page, mode, request.userAnswers, answer))
         |    )
@@ -1134,7 +1168,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
       journey = List(outerDoWhilePart)
     )
 
-    JourneyPageController.render(
+    JourneyPageController.journeyController(
       basePackage,
       requiresData = true,
       journey,
@@ -1148,6 +1182,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
         |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
         |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |import uk.gov.hmrc.sbtjourneytest.forms.*
         |import uk.gov.hmrc.sbtjourneytest.navigation.*
@@ -1162,7 +1197,7 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |import scala.concurrent.{ExecutionContext, Future}
         |
         |@ImplementedBy(classOf[DefaultAuditEventController])
-        |trait AuditEventBaseController extends FrontendBaseController with I18nSupport {
+        |trait AuditEventBaseController extends FrontendBaseController, I18nSupport {
         |  def onPageLoad(auditSourcesIndex: Int, auditEventsIndex: Int, mode: Mode): Action[AnyContent]
         |  def onSubmit(auditSourcesIndex: Int, auditEventsIndex: Int, mode: Mode): Action[AnyContent]
         |}
@@ -1177,30 +1212,595 @@ class JourneyPageControllerSpec extends AnyFlatSpec with Matchers {
         |  form: AuditEventBaseFormProvider,
         |  view: views.html.AuditEventView,
         |  override val controllerComponents: MessagesControllerComponents
-        |)(implicit ec: ExecutionContext) extends AuditEventBaseController {
+        |)(using ExecutionContext) extends AuditEventBaseController {
         |
         |  def onPageLoad(auditSourcesIndex: Int, auditEventsIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    val submitRoute = journeyRoutes.AuditEventBaseController.onSubmit(auditSourcesIndex, auditEventsIndex, mode)
         |    val page = AuditEventPage(auditSourcesIndex, auditEventsIndex)
         |    val userAnswers = request.userAnswers
         |    val preparedForm = userAnswers
         |      .get(page)
         |      .map(form().fill)
         |      .getOrElse(form())
-        |    Ok(view(preparedForm, page.submitRoute(mode), mode))
+        |    Ok(view(preparedForm, submitRoute, mode))
         |  }
         |
         |  def onSubmit(auditSourcesIndex: Int, auditEventsIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val submitRoute = journeyRoutes.AuditEventBaseController.onSubmit(auditSourcesIndex, auditEventsIndex, mode)
         |    val page = AuditEventPage(auditSourcesIndex, auditEventsIndex)
         |    val userAnswers = request.userAnswers
         |    form().bindFromRequest().fold(
         |      formWithErrors =>
-        |        Future.successful(BadRequest(view(formWithErrors, page.submitRoute(mode), mode))),
+        |        Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),
         |      answer =>
         |        for {
         |          updatedAnswers <- Future.fromTry(userAnswers.set(page, answer))
         |          _ <- sessionRepository.set(updatedAnswers)
         |        } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, answer))
         |    )
+        |  }
+        |}
+        |""".stripMargin
+  }
+
+  "JourneyPageController.fileUploadController" should "generate a controller for a top-level file upload journey page that doesn't require data" in {
+    val uploadWillDocument =
+      journeyPage("uploadWillDocument", ClassType(basePackage / "models" / "UploadId"))
+
+    val journey = Journey(
+      Map(uploadWillDocument.pageKey -> uploadWillDocument),
+      List(SinglePagePart(uploadWillDocument.pageKey, None))
+    )
+
+    JourneyPageController.fileUploadController(
+      basePackage,
+      requiresData = false,
+      journey,
+      "uploadWillDocument",
+      uploadWillDocument
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.controllers
+        |
+        |import controllers.actions.*  // uk.gov.hmrc.sbtjourneytest.controllers.actions.*
+        |import controllers.routes // uk.gov.hmrc.sbtjourneytest.controllers.routes
+        |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
+        |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
+        |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
+        |import uk.gov.hmrc.sbtjourneytest.controllers.upscan.{routes as upscanRoutes}
+        |import uk.gov.hmrc.sbtjourneytest.connectors.UpscanConnector
+        |import uk.gov.hmrc.sbtjourneytest.models.*
+        |import uk.gov.hmrc.sbtjourneytest.models.upscan.*
+        |import uk.gov.hmrc.sbtjourneytest.forms.*
+        |import uk.gov.hmrc.sbtjourneytest.navigation.*
+        |import uk.gov.hmrc.sbtjourneytest.repositories.FileUploadRepository
+        |import uk.gov.hmrc.sbtjourneytest.pages.*
+        |
+        |import play.api.Logging
+        |import play.api.i18n.I18nSupport
+        |import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
+        |import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendBaseController
+        |
+        |import com.google.inject.ImplementedBy
+        |import java.util.UUID
+        |import javax.inject.{Inject, Singleton}
+        |import scala.concurrent.{ExecutionContext, Future}
+        |
+        |@ImplementedBy(classOf[DefaultUploadWillDocumentController])
+        |trait UploadWillDocumentBaseController extends FrontendBaseController, I18nSupport, Logging {
+        |  def onPageLoad(mode: Mode): Action[AnyContent]
+        |  def onUploadSuccess(id: UUID, mode: Mode): Action[AnyContent]
+        |  def onUploadFailure(id: UUID, mode: Mode): Action[AnyContent]
+        |}
+        |
+        |@Singleton
+        |class DefaultUploadWillDocumentController @Inject() (
+        |  identify: IdentifierAction,
+        |  getData: DataRetrievalAction,
+        |  requireData: DataRequiredAction,
+        |  navigator: JourneyNavigator,
+        |  sessionRepository: SessionRepository,
+        |  upscanConnector: UpscanConnector,
+        |  fileUploadRepository: FileUploadRepository,
+        |  form: UploadWillDocumentBaseFormProvider,
+        |  view: views.html.UploadWillDocumentView,
+        |  override val controllerComponents: MessagesControllerComponents
+        |)(using ExecutionContext) extends UploadWillDocumentBaseController {
+        |
+        |  def onPageLoad(mode: Mode): Action[AnyContent] = (identify andThen getData).async { implicit request =>
+        |    val uploadId = UploadId.next()
+        |    for {
+        |      initiateResponse <- upscanConnector.initiate(
+        |        callbackUrl = upscanRoutes.UpscanNotificationBaseController.onNotificationReceived(uploadId.id),
+        |        successRedirect = journeyRoutes.UploadWillDocumentBaseController.onUploadSuccess(uploadId.id, mode),
+        |        errorRedirect = journeyRoutes.UploadWillDocumentBaseController.onUploadFailure(uploadId.id, mode)
+        |      )
+        |      uploadId <- fileUploadRepository.initiate(uploadId, initiateResponse.reference)
+        |      formTemplate = initiateResponse.uploadRequest
+        |      preparedForm = request.getQueryString("errorCode").fold(form()) { errorCode =>
+        |        val reference = request.getQueryString("key").orNull
+        |        val errorMessage = request.getQueryString("errorMessage").orNull
+        |        logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
+        |        val uploadError = UploadError.fromErrorCode(errorCode)
+        |        form().withError("file", uploadError.messageKey)
+        |      }
+        |    } yield Ok(view(preparedForm, formTemplate, mode))
+        |  }
+        |
+        |  def onUploadSuccess(id: UUID, mode: Mode): Action[AnyContent] = (identify andThen getData).async { implicit request =>
+        |    val uploadId = UploadId(id)
+        |    val page = UploadWillDocumentPage
+        |    val userAnswers = request.userAnswers
+        |      .getOrElse(UserAnswers(request.userId))
+        |    for {
+        |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
+        |      _ <- fileUploadRepository.setProcessing(uploadId)
+        |      _ <- sessionRepository.set(updatedAnswers)
+        |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
+        |  }
+        |
+        |  def onUploadFailure(id: UUID, mode: Mode): Action[AnyContent] = (identify andThen getData) { implicit request =>
+        |    Redirect(journeyRoutes.UploadWillDocumentBaseController.onPageLoad(mode).path, request.queryString)
+        |  }
+        |}
+        |""".stripMargin
+  }
+
+  it should "generate a controller for a top-level file upload journey page that does require data" in {
+    val uploadWillDocument =
+      journeyPage("uploadWillDocument", ClassType(basePackage / "models" / "UploadId"))
+
+    val journey = Journey(
+      Map(uploadWillDocument.pageKey -> uploadWillDocument),
+      List(SinglePagePart(uploadWillDocument.pageKey, None))
+    )
+
+    JourneyPageController.fileUploadController(
+      basePackage,
+      requiresData = true,
+      journey,
+      "uploadWillDocument",
+      uploadWillDocument
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.controllers
+        |
+        |import controllers.actions.*  // uk.gov.hmrc.sbtjourneytest.controllers.actions.*
+        |import controllers.routes // uk.gov.hmrc.sbtjourneytest.controllers.routes
+        |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
+        |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
+        |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
+        |import uk.gov.hmrc.sbtjourneytest.controllers.upscan.{routes as upscanRoutes}
+        |import uk.gov.hmrc.sbtjourneytest.connectors.UpscanConnector
+        |import uk.gov.hmrc.sbtjourneytest.models.*
+        |import uk.gov.hmrc.sbtjourneytest.models.upscan.*
+        |import uk.gov.hmrc.sbtjourneytest.forms.*
+        |import uk.gov.hmrc.sbtjourneytest.navigation.*
+        |import uk.gov.hmrc.sbtjourneytest.repositories.FileUploadRepository
+        |import uk.gov.hmrc.sbtjourneytest.pages.*
+        |
+        |import play.api.Logging
+        |import play.api.i18n.I18nSupport
+        |import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
+        |import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendBaseController
+        |
+        |import com.google.inject.ImplementedBy
+        |import java.util.UUID
+        |import javax.inject.{Inject, Singleton}
+        |import scala.concurrent.{ExecutionContext, Future}
+        |
+        |@ImplementedBy(classOf[DefaultUploadWillDocumentController])
+        |trait UploadWillDocumentBaseController extends FrontendBaseController, I18nSupport, Logging {
+        |  def onPageLoad(mode: Mode): Action[AnyContent]
+        |  def onUploadSuccess(id: UUID, mode: Mode): Action[AnyContent]
+        |  def onUploadFailure(id: UUID, mode: Mode): Action[AnyContent]
+        |}
+        |
+        |@Singleton
+        |class DefaultUploadWillDocumentController @Inject() (
+        |  identify: IdentifierAction,
+        |  getData: DataRetrievalAction,
+        |  requireData: DataRequiredAction,
+        |  navigator: JourneyNavigator,
+        |  sessionRepository: SessionRepository,
+        |  upscanConnector: UpscanConnector,
+        |  fileUploadRepository: FileUploadRepository,
+        |  form: UploadWillDocumentBaseFormProvider,
+        |  view: views.html.UploadWillDocumentView,
+        |  override val controllerComponents: MessagesControllerComponents
+        |)(using ExecutionContext) extends UploadWillDocumentBaseController {
+        |
+        |  def onPageLoad(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val uploadId = UploadId.next()
+        |    for {
+        |      initiateResponse <- upscanConnector.initiate(
+        |        callbackUrl = upscanRoutes.UpscanNotificationBaseController.onNotificationReceived(uploadId.id),
+        |        successRedirect = journeyRoutes.UploadWillDocumentBaseController.onUploadSuccess(uploadId.id, mode),
+        |        errorRedirect = journeyRoutes.UploadWillDocumentBaseController.onUploadFailure(uploadId.id, mode)
+        |      )
+        |      uploadId <- fileUploadRepository.initiate(uploadId, initiateResponse.reference)
+        |      formTemplate = initiateResponse.uploadRequest
+        |      preparedForm = request.getQueryString("errorCode").fold(form()) { errorCode =>
+        |        val reference = request.getQueryString("key").orNull
+        |        val errorMessage = request.getQueryString("errorMessage").orNull
+        |        logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
+        |        val uploadError = UploadError.fromErrorCode(errorCode)
+        |        form().withError("file", uploadError.messageKey)
+        |      }
+        |    } yield Ok(view(preparedForm, formTemplate, mode))
+        |  }
+        |
+        |  def onUploadSuccess(id: UUID, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val uploadId = UploadId(id)
+        |    val page = UploadWillDocumentPage
+        |    val userAnswers = request.userAnswers
+        |    for {
+        |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
+        |      _ <- fileUploadRepository.setProcessing(uploadId)
+        |      _ <- sessionRepository.set(updatedAnswers)
+        |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
+        |  }
+        |
+        |  def onUploadFailure(id: UUID, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    Redirect(journeyRoutes.UploadWillDocumentBaseController.onPageLoad(mode).path, request.queryString)
+        |  }
+        |}
+        |""".stripMargin
+  }
+
+  it should "generate a controller for a file upload journey page nested within a do-while subjourney" in {
+    val uploadWillDocument =
+      journeyPage("uploadWillDocument", ClassType(basePackage / "models" / "UploadId"))
+
+    val addAnotherWillDocument = journeyPage(
+      "addAnotherWillDocument",
+      FieldType.BOOLEAN
+    )
+
+    val journey = Journey(
+      pages = Map(
+        "uploadWillDocument"     -> uploadWillDocument,
+        "addAnotherWillDocument" -> addAnotherWillDocument
+      ),
+      journey = List(
+        DoWhilePart(
+          "addAnotherWillDocument",
+          List(SinglePagePart("uploadWillDocument", None)),
+          "willDocuments"
+        )
+      )
+    )
+
+    JourneyPageController.fileUploadController(
+      basePackage,
+      requiresData = true,
+      journey,
+      "uploadWillDocument",
+      uploadWillDocument
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.controllers
+        |
+        |import controllers.actions.*  // uk.gov.hmrc.sbtjourneytest.controllers.actions.*
+        |import controllers.routes // uk.gov.hmrc.sbtjourneytest.controllers.routes
+        |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
+        |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
+        |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
+        |import uk.gov.hmrc.sbtjourneytest.controllers.upscan.{routes as upscanRoutes}
+        |import uk.gov.hmrc.sbtjourneytest.connectors.UpscanConnector
+        |import uk.gov.hmrc.sbtjourneytest.models.*
+        |import uk.gov.hmrc.sbtjourneytest.models.upscan.*
+        |import uk.gov.hmrc.sbtjourneytest.forms.*
+        |import uk.gov.hmrc.sbtjourneytest.navigation.*
+        |import uk.gov.hmrc.sbtjourneytest.repositories.FileUploadRepository
+        |import uk.gov.hmrc.sbtjourneytest.pages.*
+        |
+        |import play.api.Logging
+        |import play.api.i18n.I18nSupport
+        |import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
+        |import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendBaseController
+        |
+        |import com.google.inject.ImplementedBy
+        |import java.util.UUID
+        |import javax.inject.{Inject, Singleton}
+        |import scala.concurrent.{ExecutionContext, Future}
+        |
+        |@ImplementedBy(classOf[DefaultUploadWillDocumentController])
+        |trait UploadWillDocumentBaseController extends FrontendBaseController, I18nSupport, Logging {
+        |  def onPageLoad(willDocumentsIndex: Int, mode: Mode): Action[AnyContent]
+        |  def onUploadSuccess(willDocumentsIndex: Int, id: UUID, mode: Mode): Action[AnyContent]
+        |  def onUploadFailure(willDocumentsIndex: Int, id: UUID, mode: Mode): Action[AnyContent]
+        |}
+        |
+        |@Singleton
+        |class DefaultUploadWillDocumentController @Inject() (
+        |  identify: IdentifierAction,
+        |  getData: DataRetrievalAction,
+        |  requireData: DataRequiredAction,
+        |  navigator: JourneyNavigator,
+        |  sessionRepository: SessionRepository,
+        |  upscanConnector: UpscanConnector,
+        |  fileUploadRepository: FileUploadRepository,
+        |  form: UploadWillDocumentBaseFormProvider,
+        |  view: views.html.UploadWillDocumentView,
+        |  override val controllerComponents: MessagesControllerComponents
+        |)(using ExecutionContext) extends UploadWillDocumentBaseController {
+        |
+        |  def onPageLoad(willDocumentsIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val uploadId = UploadId.next()
+        |    for {
+        |      initiateResponse <- upscanConnector.initiate(
+        |        callbackUrl = upscanRoutes.UpscanNotificationBaseController.onNotificationReceived(uploadId.id),
+        |        successRedirect = journeyRoutes.UploadWillDocumentBaseController.onUploadSuccess(willDocumentsIndex: Int, uploadId.id, mode),
+        |        errorRedirect = journeyRoutes.UploadWillDocumentBaseController.onUploadFailure(willDocumentsIndex: Int, uploadId.id, mode)
+        |      )
+        |      uploadId <- fileUploadRepository.initiate(uploadId, initiateResponse.reference)
+        |      formTemplate = initiateResponse.uploadRequest
+        |      preparedForm = request.getQueryString("errorCode").fold(form()) { errorCode =>
+        |        val reference = request.getQueryString("key").orNull
+        |        val errorMessage = request.getQueryString("errorMessage").orNull
+        |        logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
+        |        val uploadError = UploadError.fromErrorCode(errorCode)
+        |        form().withError("file", uploadError.messageKey)
+        |      }
+        |    } yield Ok(view(preparedForm, formTemplate, mode))
+        |  }
+        |
+        |  def onUploadSuccess(willDocumentsIndex: Int, id: UUID, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val uploadId = UploadId(id)
+        |    val page = UploadWillDocumentPage(willDocumentsIndex)
+        |    val userAnswers = request.userAnswers
+        |    for {
+        |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
+        |      _ <- fileUploadRepository.setProcessing(uploadId)
+        |      _ <- sessionRepository.set(updatedAnswers)
+        |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
+        |  }
+        |
+        |  def onUploadFailure(willDocumentsIndex: Int, id: UUID, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    Redirect(journeyRoutes.UploadWillDocumentBaseController.onPageLoad(willDocumentsIndex, mode).path, request.queryString)
+        |  }
+        |}
+        |""".stripMargin
+  }
+
+  it should "generate a controller for a file upload journey page nested within two do-while subjourneys" in {
+    val auditSource          = journeyPage("auditSource", FieldType.STRING)
+    val auditEvent           = journeyPage("auditEvent", FieldType.STRING)
+    val addAnotherAuditEvent = journeyPage("addAnotherAuditEvent", FieldType.BOOLEAN)
+    val evidenceFromQA =
+      journeyPage("evidenceFromQA", ClassType(basePackage / "models" / "UploadId"))
+
+    val journey = Journey(
+      pages = Map(
+        "auditEvent"           -> auditEvent,
+        "auditSource"          -> auditSource,
+        "evidenceFromQA"       -> evidenceFromQA,
+        "addAnotherAuditEvent" -> addAnotherAuditEvent
+      ),
+      journey = List(
+        DoWhilePart(
+          "addAnotherAuditSource",
+          List(
+            SinglePagePart("auditSource", None),
+            DoWhilePart(
+              "addAnotherAuditEvent",
+              List(SinglePagePart("auditEvent", None), SinglePagePart("evidenceFromQA", None)),
+              "auditEvents"
+            )
+          ),
+          "auditSources"
+        )
+      )
+    )
+
+    JourneyPageController.fileUploadController(
+      basePackage,
+      requiresData = true,
+      journey,
+      "evidenceFromQA",
+      evidenceFromQA
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.controllers
+        |
+        |import controllers.actions.*  // uk.gov.hmrc.sbtjourneytest.controllers.actions.*
+        |import controllers.routes // uk.gov.hmrc.sbtjourneytest.controllers.routes
+        |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
+        |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
+        |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
+        |import uk.gov.hmrc.sbtjourneytest.controllers.upscan.{routes as upscanRoutes}
+        |import uk.gov.hmrc.sbtjourneytest.connectors.UpscanConnector
+        |import uk.gov.hmrc.sbtjourneytest.models.*
+        |import uk.gov.hmrc.sbtjourneytest.models.upscan.*
+        |import uk.gov.hmrc.sbtjourneytest.forms.*
+        |import uk.gov.hmrc.sbtjourneytest.navigation.*
+        |import uk.gov.hmrc.sbtjourneytest.repositories.FileUploadRepository
+        |import uk.gov.hmrc.sbtjourneytest.pages.*
+        |
+        |import play.api.Logging
+        |import play.api.i18n.I18nSupport
+        |import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
+        |import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendBaseController
+        |
+        |import com.google.inject.ImplementedBy
+        |import java.util.UUID
+        |import javax.inject.{Inject, Singleton}
+        |import scala.concurrent.{ExecutionContext, Future}
+        |
+        |@ImplementedBy(classOf[DefaultEvidenceFromQaController])
+        |trait EvidenceFromQaBaseController extends FrontendBaseController, I18nSupport, Logging {
+        |  def onPageLoad(auditSourcesIndex: Int, auditEventsIndex: Int, mode: Mode): Action[AnyContent]
+        |  def onUploadSuccess(auditSourcesIndex: Int, auditEventsIndex: Int, id: UUID, mode: Mode): Action[AnyContent]
+        |  def onUploadFailure(auditSourcesIndex: Int, auditEventsIndex: Int, id: UUID, mode: Mode): Action[AnyContent]
+        |}
+        |
+        |@Singleton
+        |class DefaultEvidenceFromQaController @Inject() (
+        |  identify: IdentifierAction,
+        |  getData: DataRetrievalAction,
+        |  requireData: DataRequiredAction,
+        |  navigator: JourneyNavigator,
+        |  sessionRepository: SessionRepository,
+        |  upscanConnector: UpscanConnector,
+        |  fileUploadRepository: FileUploadRepository,
+        |  form: EvidenceFromQaBaseFormProvider,
+        |  view: views.html.EvidenceFromQaView,
+        |  override val controllerComponents: MessagesControllerComponents
+        |)(using ExecutionContext) extends EvidenceFromQaBaseController {
+        |
+        |  def onPageLoad(auditSourcesIndex: Int, auditEventsIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val uploadId = UploadId.next()
+        |    for {
+        |      initiateResponse <- upscanConnector.initiate(
+        |        callbackUrl = upscanRoutes.UpscanNotificationBaseController.onNotificationReceived(uploadId.id),
+        |        successRedirect = journeyRoutes.EvidenceFromQaBaseController.onUploadSuccess(auditSourcesIndex: Int, auditEventsIndex: Int, uploadId.id, mode),
+        |        errorRedirect = journeyRoutes.EvidenceFromQaBaseController.onUploadFailure(auditSourcesIndex: Int, auditEventsIndex: Int, uploadId.id, mode)
+        |      )
+        |      uploadId <- fileUploadRepository.initiate(uploadId, initiateResponse.reference)
+        |      formTemplate = initiateResponse.uploadRequest
+        |      preparedForm = request.getQueryString("errorCode").fold(form()) { errorCode =>
+        |        val reference = request.getQueryString("key").orNull
+        |        val errorMessage = request.getQueryString("errorMessage").orNull
+        |        logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
+        |        val uploadError = UploadError.fromErrorCode(errorCode)
+        |        form().withError("file", uploadError.messageKey)
+        |      }
+        |    } yield Ok(view(preparedForm, formTemplate, mode))
+        |  }
+        |
+        |  def onUploadSuccess(auditSourcesIndex: Int, auditEventsIndex: Int, id: UUID, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val uploadId = UploadId(id)
+        |    val page = EvidenceFromQaPage(auditSourcesIndex, auditEventsIndex)
+        |    val userAnswers = request.userAnswers
+        |    for {
+        |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
+        |      _ <- fileUploadRepository.setProcessing(uploadId)
+        |      _ <- sessionRepository.set(updatedAnswers)
+        |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
+        |  }
+        |
+        |  def onUploadFailure(auditSourcesIndex: Int, auditEventsIndex: Int, id: UUID, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    Redirect(journeyRoutes.EvidenceFromQaBaseController.onPageLoad(auditSourcesIndex, auditEventsIndex, mode).path, request.queryString)
+        |  }
+        |}
+        |""".stripMargin
+  }
+
+  it should "generate a controller for a file upload journey page nested within a switch-case subjourney" in {
+    val iht401 =
+      journeyPage("iht401", ClassType(basePackage / "models" / "UploadId"))
+    val whereDomiciled =
+      journeyPage("whereDomiciled", ClassType(basePackage / "models" / "Domicile"))
+
+    val journey = Journey(
+      Map(
+        "iht401"         -> iht401,
+        "whereDomiciled" -> whereDomiciled
+      ),
+      List(
+        SwitchCasePart(
+          "whereDomiciled",
+          Map(
+            "OTHER"    -> List(SinglePagePart("iht401", None)),
+            "SCOTLAND" -> List(SinglePagePart("legitimFundDischarged", None))
+          ),
+          None
+        )
+      )
+    )
+
+    JourneyPageController.fileUploadController(
+      basePackage,
+      requiresData = true,
+      journey,
+      "iht401",
+      iht401
+    ) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.controllers
+        |
+        |import controllers.actions.*  // uk.gov.hmrc.sbtjourneytest.controllers.actions.*
+        |import controllers.routes // uk.gov.hmrc.sbtjourneytest.controllers.routes
+        |import models.Mode // uk.gov.hmrc.sbtjourneytest.models.Mode
+        |import models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
+        |import repositories.SessionRepository // uk.gov.hmrc.sbtjourneytest.repositories.SessionRepository
+        |import uk.gov.hmrc.sbtjourneytest.controllers.{routes as journeyRoutes}
+        |import uk.gov.hmrc.sbtjourneytest.controllers.upscan.{routes as upscanRoutes}
+        |import uk.gov.hmrc.sbtjourneytest.connectors.UpscanConnector
+        |import uk.gov.hmrc.sbtjourneytest.models.*
+        |import uk.gov.hmrc.sbtjourneytest.models.upscan.*
+        |import uk.gov.hmrc.sbtjourneytest.forms.*
+        |import uk.gov.hmrc.sbtjourneytest.navigation.*
+        |import uk.gov.hmrc.sbtjourneytest.repositories.FileUploadRepository
+        |import uk.gov.hmrc.sbtjourneytest.pages.*
+        |
+        |import play.api.Logging
+        |import play.api.i18n.I18nSupport
+        |import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
+        |import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendBaseController
+        |
+        |import com.google.inject.ImplementedBy
+        |import java.util.UUID
+        |import javax.inject.{Inject, Singleton}
+        |import scala.concurrent.{ExecutionContext, Future}
+        |
+        |@ImplementedBy(classOf[DefaultIht401Controller])
+        |trait Iht401BaseController extends FrontendBaseController, I18nSupport, Logging {
+        |  def onPageLoad(mode: Mode): Action[AnyContent]
+        |  def onUploadSuccess(id: UUID, mode: Mode): Action[AnyContent]
+        |  def onUploadFailure(id: UUID, mode: Mode): Action[AnyContent]
+        |}
+        |
+        |@Singleton
+        |class DefaultIht401Controller @Inject() (
+        |  identify: IdentifierAction,
+        |  getData: DataRetrievalAction,
+        |  requireData: DataRequiredAction,
+        |  navigator: JourneyNavigator,
+        |  sessionRepository: SessionRepository,
+        |  upscanConnector: UpscanConnector,
+        |  fileUploadRepository: FileUploadRepository,
+        |  form: Iht401BaseFormProvider,
+        |  view: views.html.Iht401View,
+        |  override val controllerComponents: MessagesControllerComponents
+        |)(using ExecutionContext) extends Iht401BaseController {
+        |
+        |  def onPageLoad(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val uploadId = UploadId.next()
+        |    for {
+        |      initiateResponse <- upscanConnector.initiate(
+        |        callbackUrl = upscanRoutes.UpscanNotificationBaseController.onNotificationReceived(uploadId.id),
+        |        successRedirect = journeyRoutes.Iht401BaseController.onUploadSuccess(uploadId.id, mode),
+        |        errorRedirect = journeyRoutes.Iht401BaseController.onUploadFailure(uploadId.id, mode)
+        |      )
+        |      uploadId <- fileUploadRepository.initiate(uploadId, initiateResponse.reference)
+        |      formTemplate = initiateResponse.uploadRequest
+        |      preparedForm = request.getQueryString("errorCode").fold(form()) { errorCode =>
+        |        val reference = request.getQueryString("key").orNull
+        |        val errorMessage = request.getQueryString("errorMessage").orNull
+        |        logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
+        |        val uploadError = UploadError.fromErrorCode(errorCode)
+        |        form().withError("file", uploadError.messageKey)
+        |      }
+        |    } yield Ok(view(preparedForm, formTemplate, mode))
+        |  }
+        |
+        |  def onUploadSuccess(id: UUID, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+        |    val uploadId = UploadId(id)
+        |    val userAnswers = request.userAnswers
+        |    val result = for {
+        |      whereDomiciled <- userAnswers.get(WhereDomiciledPage)
+        |      page = Iht401Page(whereDomiciled)
+        |    } yield for {
+        |      updatedAnswers <- Future.fromTry(userAnswers.set(page, uploadId))
+        |      _ <- fileUploadRepository.setProcessing(uploadId)
+        |      _ <- sessionRepository.set(updatedAnswers)
+        |    } yield Redirect(navigator.nextPage(page, mode, updatedAnswers, uploadId))
+        |    result.getOrElse(Future.successful(Redirect(routes.JourneyRecoveryController.onPageLoad())))
+        |  }
+        |
+        |  def onUploadFailure(id: UUID, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+        |    Redirect(journeyRoutes.Iht401BaseController.onPageLoad(mode).path, request.queryString)
         |  }
         |}
         |""".stripMargin

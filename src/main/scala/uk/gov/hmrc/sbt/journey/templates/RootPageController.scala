@@ -42,7 +42,7 @@ object RootPageController extends Template {
            |  identify: IdentifierAction,
            |  view: ${rootPage.viewClass},
            |  override val controllerComponents: MessagesControllerComponents
-           |)(implicit ec: ExecutionContext) extends $interfaceName {
+           |)(using ExecutionContext) extends $interfaceName {
            |  def onPageLoad: Action[AnyContent] = identify { implicit request =>
            |    Ok(view())
            |  }

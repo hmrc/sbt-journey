@@ -21,3 +21,5 @@ addSbtPlugin("com.github.sbt" % "sbt-concat" % "1.0.0")
 addSbtPlugin("com.github.sbt" % "sbt-digest" % "2.1.0")
 
 addSbtPlugin("uk.gov.hmrc" % "sbt-journey" % Option(System.getProperty("plugin.version")).getOrElse("0.1.0-SNAPSHOT"))
+
+addDependencyTreePlugin

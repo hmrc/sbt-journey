@@ -1,7 +1,7 @@
 package uk.gov.hmrc.simplejourney.models
 
 import models.Enumerable // import uk.gov.hmrc.simplejourney.models.Enumerable
-import play.api.libs.json.{Format,JsError,JsObject,JsPath,JsSuccess,JsValue,Json,JsonConfiguration,Reads,Writes}
+import play.api.libs.json.{Format,Json,JsonConfiguration,Reads,Writes}
 
 enum TaxRegime {
   case SA, VAT

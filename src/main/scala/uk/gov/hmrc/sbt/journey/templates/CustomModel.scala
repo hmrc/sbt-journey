@@ -41,20 +41,7 @@ class CustomModel(collector: ImportCollector) extends Template {
 
     val imports = Imports.importsFor(
       modelsPackage,
-      Map(
-        PlayJsonPrefix -> Set(
-          "Json",
-          "JsonConfiguration",
-          "JsError",
-          "JsObject",
-          "JsPath",
-          "JsSuccess",
-          "JsValue",
-          "Format",
-          "Reads",
-          "Writes"
-        )
-      )
+      Map(PlayJsonPrefix -> Set("Json", "JsonConfiguration", "Format", "Reads", "Writes"))
     )
 
     s"""package $modelsPackage

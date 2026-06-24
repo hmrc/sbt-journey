@@ -18,8 +18,11 @@ package uk.gov.hmrc.sbt.journey.templates
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import uk.gov.hmrc.sbt.journey.models.QualifiedName
 
 class FormatTraitsSpec extends AnyFlatSpec with Matchers {
+  val basePackage = QualifiedName("uk.gov.hmrc.sbtjourneytest")
+
   "FormatTraits.extendsClause" should "produce an empty String when the imported symbols do not include any hmrc-mongo Java time types" in {
     // LocalTime does not have a special hmrc-mongo Format instance
     FormatTraits.extendsClause(Map(Imports.JavaTimePrefix -> Set("LocalTime"))) shouldBe ""
@@ -29,5 +32,57 @@ class FormatTraitsSpec extends AnyFlatSpec with Matchers {
     FormatTraits.extendsClause(
       Map(Imports.JavaTimePrefix -> Set("LocalDate"))
     ) shouldBe "extends MongoJavatimeFormats.Implicits "
+  }
+
+  "FormatTraits.enumFormats" should "render a template for EnumFormats relative to the base package" in {
+    FormatTraits.enumFormats(basePackage) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.models
+        |
+        |import play.api.libs.json.{JsonConfiguration, JsError, JsObject, JsPath, Reads}
+        |
+        |trait EnumFormats {
+        |  def enumReads[A <: Product](
+        |    cases: (String, Reads[? <: A])*
+        |  )(using config: JsonConfiguration): Reads[A] =
+        |    enumReads(Reads.failed("error.invalid"), cases*)
+        |
+        |  def enumReads[A <: Product](
+        |    default: => Reads[? <: A],
+        |    cases: (String, Reads[? <: A])*
+        |  )(using config: JsonConfiguration): Reads[A] =
+        |    discriminatedReads(
+        |      config.discriminator,
+        |      default,
+        |      cases.map { case (dsc, fn) => (config.typeNaming(dsc), fn) }*
+        |    )
+        |
+        |  def discriminatedReads[A](
+        |    discriminatorKey: String,
+        |    cases: (String, Reads[? <: A])*
+        |  )(using config: JsonConfiguration): Reads[A] =
+        |    discriminatedReads(discriminatorKey, Reads.failed("error.invalid"), cases*)
+        |
+        |  def discriminatedReads[A](
+        |    discriminatorKey: String,
+        |    default: => Reads[? <: A],
+        |    cases: (String, Reads[? <: A])*
+        |  )(using config: JsonConfiguration): Reads[A] = {
+        |    val caseReads = cases.toMap
+        |    Reads {
+        |      case obj: JsObject =>
+        |        obj.value.get(discriminatorKey) match {
+        |          case Some(discriminatorValue) =>
+        |            discriminatorValue.validate[String].flatMap { discriminator =>
+        |              caseReads.getOrElse(discriminator, default).reads(obj)
+        |            }
+        |          case _ => JsError(JsPath \ discriminatorKey, "error.missing.path")
+        |        }
+        |      case _ => JsError("error.expected.jsobject")
+        |    }
+        |  }
+        |}
+        |
+        |object EnumFormats extends EnumFormats
+        |""".stripMargin
   }
 }

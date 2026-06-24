@@ -20,7 +20,7 @@ class DefaultIndexController @Inject() (
   identify: IdentifierAction,
   view: views.html.IndexView,
   override val controllerComponents: MessagesControllerComponents
-)(implicit ec: ExecutionContext) extends IndexBaseController {
+)(using ExecutionContext) extends IndexBaseController {
   def onPageLoad: Action[AnyContent] = identify { implicit request =>
     Ok(view())
   }
