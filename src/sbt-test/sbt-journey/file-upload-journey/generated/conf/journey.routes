@@ -1,0 +1,47 @@
+GET  /before-you-start  uk.gov.hmrc.fileuploadjourney.controllers.BeforeYouStartBaseController.onPageLoad
+
+GET  /check-your-answers  uk.gov.hmrc.fileuploadjourney.controllers.CheckYourAnswersBaseController.onPageLoad
+
+GET  /index  uk.gov.hmrc.fileuploadjourney.controllers.IndexBaseController.onPageLoad
+
+GET  /supporting-documents/:supportingDocuments/add-another-supporting-document         uk.gov.hmrc.fileuploadjourney.controllers.AddAnotherSupportingDocumentBaseController.onPageLoad(supportingDocuments: Int, mode: Mode = NormalMode)
+POST /supporting-documents/:supportingDocuments/add-another-supporting-document         uk.gov.hmrc.fileuploadjourney.controllers.AddAnotherSupportingDocumentBaseController.onSubmit(supportingDocuments: Int, mode: Mode = NormalMode)
+GET  /supporting-documents/:supportingDocuments/change-add-another-supporting-document  uk.gov.hmrc.fileuploadjourney.controllers.AddAnotherSupportingDocumentBaseController.onPageLoad(supportingDocuments: Int, mode: Mode = CheckMode)
+POST /supporting-documents/:supportingDocuments/change-add-another-supporting-document  uk.gov.hmrc.fileuploadjourney.controllers.AddAnotherSupportingDocumentBaseController.onSubmit(supportingDocuments: Int, mode: Mode = CheckMode)
+
+GET  /add-confidential-information         uk.gov.hmrc.fileuploadjourney.controllers.AddConfidentialInformationBaseController.onPageLoad(mode: Mode = NormalMode)
+POST /add-confidential-information         uk.gov.hmrc.fileuploadjourney.controllers.AddConfidentialInformationBaseController.onSubmit(mode: Mode = NormalMode)
+GET  /change-add-confidential-information  uk.gov.hmrc.fileuploadjourney.controllers.AddConfidentialInformationBaseController.onPageLoad(mode: Mode = CheckMode)
+POST /change-add-confidential-information  uk.gov.hmrc.fileuploadjourney.controllers.AddConfidentialInformationBaseController.onSubmit(mode: Mode = CheckMode)
+
+GET  /add-supporting-documents         uk.gov.hmrc.fileuploadjourney.controllers.AddSupportingDocumentsBaseController.onPageLoad(mode: Mode = NormalMode)
+POST /add-supporting-documents         uk.gov.hmrc.fileuploadjourney.controllers.AddSupportingDocumentsBaseController.onSubmit(mode: Mode = NormalMode)
+GET  /change-add-supporting-documents  uk.gov.hmrc.fileuploadjourney.controllers.AddSupportingDocumentsBaseController.onPageLoad(mode: Mode = CheckMode)
+POST /change-add-supporting-documents  uk.gov.hmrc.fileuploadjourney.controllers.AddSupportingDocumentsBaseController.onSubmit(mode: Mode = CheckMode)
+
+GET  /supporting-documents/:supportingDocuments/is-document-confidential         uk.gov.hmrc.fileuploadjourney.controllers.IsDocumentConfidentialBaseController.onPageLoad(supportingDocuments: Int, mode: Mode = NormalMode)
+POST /supporting-documents/:supportingDocuments/is-document-confidential         uk.gov.hmrc.fileuploadjourney.controllers.IsDocumentConfidentialBaseController.onSubmit(supportingDocuments: Int, mode: Mode = NormalMode)
+GET  /supporting-documents/:supportingDocuments/change-is-document-confidential  uk.gov.hmrc.fileuploadjourney.controllers.IsDocumentConfidentialBaseController.onPageLoad(supportingDocuments: Int, mode: Mode = CheckMode)
+POST /supporting-documents/:supportingDocuments/change-is-document-confidential  uk.gov.hmrc.fileuploadjourney.controllers.IsDocumentConfidentialBaseController.onSubmit(supportingDocuments: Int, mode: Mode = CheckMode)
+
+GET  /provide-confidential-information         uk.gov.hmrc.fileuploadjourney.controllers.ProvideConfidentialInformationBaseController.onPageLoad(mode: Mode = NormalMode)
+POST /provide-confidential-information         uk.gov.hmrc.fileuploadjourney.controllers.ProvideConfidentialInformationBaseController.onSubmit(mode: Mode = NormalMode)
+GET  /change-provide-confidential-information  uk.gov.hmrc.fileuploadjourney.controllers.ProvideConfidentialInformationBaseController.onPageLoad(mode: Mode = CheckMode)
+POST /change-provide-confidential-information  uk.gov.hmrc.fileuploadjourney.controllers.ProvideConfidentialInformationBaseController.onSubmit(mode: Mode = CheckMode)
+
+GET  /provide-goods-description         uk.gov.hmrc.fileuploadjourney.controllers.ProvideGoodsDescriptionBaseController.onPageLoad(mode: Mode = NormalMode)
+POST /provide-goods-description         uk.gov.hmrc.fileuploadjourney.controllers.ProvideGoodsDescriptionBaseController.onSubmit(mode: Mode = NormalMode)
+GET  /change-provide-goods-description  uk.gov.hmrc.fileuploadjourney.controllers.ProvideGoodsDescriptionBaseController.onPageLoad(mode: Mode = CheckMode)
+POST /change-provide-goods-description  uk.gov.hmrc.fileuploadjourney.controllers.ProvideGoodsDescriptionBaseController.onSubmit(mode: Mode = CheckMode)
+
+GET  /provide-goods-name         uk.gov.hmrc.fileuploadjourney.controllers.ProvideGoodsNameBaseController.onPageLoad(mode: Mode = NormalMode)
+POST /provide-goods-name         uk.gov.hmrc.fileuploadjourney.controllers.ProvideGoodsNameBaseController.onSubmit(mode: Mode = NormalMode)
+GET  /change-provide-goods-name  uk.gov.hmrc.fileuploadjourney.controllers.ProvideGoodsNameBaseController.onPageLoad(mode: Mode = CheckMode)
+POST /change-provide-goods-name  uk.gov.hmrc.fileuploadjourney.controllers.ProvideGoodsNameBaseController.onSubmit(mode: Mode = CheckMode)
+
+GET /supporting-documents/:supportingDocuments/upload-supporting-document                     uk.gov.hmrc.fileuploadjourney.controllers.UploadSupportingDocumentBaseController.onPageLoad(supportingDocuments: Int, mode: Mode = NormalMode)
+GET /supporting-documents/:supportingDocuments/upload-supporting-document/:id/success         uk.gov.hmrc.fileuploadjourney.controllers.UploadSupportingDocumentBaseController.onUploadSuccess(supportingDocuments: Int, id: java.util.UUID, mode: Mode = NormalMode)
+GET /supporting-documents/:supportingDocuments/upload-supporting-document/:id/failure         uk.gov.hmrc.fileuploadjourney.controllers.UploadSupportingDocumentBaseController.onUploadFailure(supportingDocuments: Int, id: java.util.UUID, mode: Mode = NormalMode)
+GET /supporting-documents/:supportingDocuments/change-upload-supporting-document              uk.gov.hmrc.fileuploadjourney.controllers.UploadSupportingDocumentBaseController.onPageLoad(supportingDocuments: Int, mode: Mode = CheckMode)
+GET /supporting-documents/:supportingDocuments/change-upload-supporting-document/:id/success  uk.gov.hmrc.fileuploadjourney.controllers.UploadSupportingDocumentBaseController.onUploadSuccess(supportingDocuments: Int, id: java.util.UUID, mode: Mode = CheckMode)
+GET /supporting-documents/:supportingDocuments/change-upload-supporting-document/:id/failure  uk.gov.hmrc.fileuploadjourney.controllers.UploadSupportingDocumentBaseController.onUploadFailure(supportingDocuments: Int, id: java.util.UUID, mode: Mode = CheckMode)

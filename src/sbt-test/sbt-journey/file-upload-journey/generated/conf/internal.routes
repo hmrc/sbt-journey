@@ -1,0 +1,2 @@
++ nocsrf
+POST /file-upload/:id/notification  uk.gov.hmrc.fileuploadjourney.controllers.upscan.UpscanNotificationBaseController.onNotificationReceived(id: java.util.UUID)
