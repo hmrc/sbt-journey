@@ -66,7 +66,6 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
-        |import play.api.libs.functional.syntax.*
         |import play.api.libs.json.{JsPath,Reads}
         |
         |enum WhichTaxRegime {
@@ -104,8 +103,7 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
-        |import play.api.libs.functional.syntax.*
-        |import play.api.libs.json.{JsPath,JsSuccess,Reads}
+        |import play.api.libs.json.{JsPath,Reads}
         |
         |enum WhichTaxRegime {
         |  case SA(
@@ -155,8 +153,7 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
-        |import play.api.libs.functional.syntax.*
-        |import play.api.libs.json.{JsPath,JsSuccess,Reads}
+        |import play.api.libs.json.{JsPath,Reads}
         |
         |enum WhereDomiciled {
         |  case OTHER(
@@ -212,8 +209,7 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
-        |import play.api.libs.functional.syntax.*
-        |import play.api.libs.json.{JsPath,JsSuccess,Reads}
+        |import play.api.libs.json.{JsPath,Reads}
         |
         |enum WhereDomiciled {
         |  case OTHER(
@@ -270,7 +266,6 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
     ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
-        |import play.api.libs.functional.syntax.*
         |import play.api.libs.json.{JsPath,Reads}
         |
         |enum AddATaxRegime {
@@ -326,8 +321,8 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
       ) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.models
         |
-        |import play.api.libs.functional.syntax.*
         |import play.api.libs.json.{JsPath,Reads}
+        |import play.api.libs.functional.syntax.*
         |
         |case class AuditSources(
         |  auditSource: String,

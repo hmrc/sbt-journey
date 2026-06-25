@@ -23,6 +23,7 @@ object Imports extends Template {
   val JavaTimePrefix: List[String]       = List("java", "time")
   val PlayI18nPrefix: List[String]       = List("play", "api", "i18n")
   val PlayJsonPrefix: List[String]       = List("play", "api", "libs", "json")
+  val PlayFuncPrefix: List[String]       = List("play", "api", "libs", "functional", "syntax")
   private val HmrcMongoJavaTimeInstances = Set("LocalDate", "Instant")
 
   private def needsImport(filePackage: QualifiedName, prefix: List[String]): Boolean =

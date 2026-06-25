@@ -17,7 +17,7 @@
 package uk.gov.hmrc.sbt.journey.templates
 
 import uk.gov.hmrc.sbt.journey.models.*
-import uk.gov.hmrc.sbt.journey.templates.Imports.PlayJsonPrefix
+import uk.gov.hmrc.sbt.journey.templates.Imports.{PlayFuncPrefix, PlayJsonPrefix}
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, pascalCase}
 
 class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerModel])
@@ -133,12 +133,13 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
     modelName: String,
     modelCases: Map[String, List[(String, FieldType)]]
   ): String = {
-    val playImports = Map(PlayJsonPrefix -> Set("JsPath", "Reads"))
-
-    val importPrefixes =
-      playImports ++ collector.importedSymbols(modelCases.values.toList.flatten, recursive = false)
-    val imports       = Imports.importsFor(modelsPackage, importPrefixes)
-    val extendsClause = FormatTraits.extendsClause(importPrefixes, modelsPackage / "EnumFormats")
+    val hasCaseWithFields = modelCases.exists { case (_, fields) => fields.length > 1 }
+    val playJsonImports   = Map(PlayJsonPrefix -> Set("JsPath", "Reads"))
+    val playFuncImports   = if (hasCaseWithFields) Map(PlayFuncPrefix -> Set("*")) else Map.empty
+    val fieldImports = collector.importedSymbols(modelCases.values.toList.flatten, recursive = false)
+    val importPrefixes = playJsonImports ++ playFuncImports ++ fieldImports
+    val imports        = Imports.importsFor(modelsPackage, importPrefixes)
+    val extendsClause  = FormatTraits.extendsClause(importPrefixes, modelsPackage / "EnumFormats")
 
     val answerType = pages(choicePage).answerType
 
@@ -186,7 +187,6 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
 
     s"""package $modelsPackage
        |
-       |import play.api.libs.functional.syntax.*
        |$imports
        |
        |enum $modelName {
@@ -207,14 +207,15 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
     modelName: String,
     fields: List[(String, FieldType)]
   ): String = {
-    val playImports    = Map(PlayJsonPrefix -> Set("JsPath", "Reads"))
-    val importPrefixes = playImports ++ collector.importedSymbols(fields, recursive = false)
-    val imports        = Imports.importsFor(modelsPackage, importPrefixes)
-    val extendsClause  = FormatTraits.extendsClause(importPrefixes, modelsPackage / "EnumFormats")
+    val playJsonImports = Map(PlayJsonPrefix -> Set("JsPath", "Reads"))
+    val playFuncImports = if (fields.length > 1) Map(PlayFuncPrefix -> Set("*")) else Map.empty
+    val fieldsImports   = collector.importedSymbols(fields, recursive = false)
+    val importPrefixes  = playJsonImports ++ playFuncImports ++ fieldsImports
+    val imports         = Imports.importsFor(modelsPackage, importPrefixes)
+    val extendsClause   = FormatTraits.extendsClause(importPrefixes, modelsPackage / "EnumFormats")
 
     s"""package $modelsPackage
        |
-       |import play.api.libs.functional.syntax.*
        |$imports
        |
        |enum $modelName {
@@ -248,14 +249,15 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
     modelName: String,
     fields: List[(String, FieldType)]
   ): String = {
-    val playImports    = Map(PlayJsonPrefix -> Set("JsPath", "Reads"))
-    val importPrefixes = playImports ++ collector.importedSymbols(fields, recursive = false)
+    val playJsonImports    = Map(PlayJsonPrefix -> Set("JsPath", "Reads"))
+    val playFuncImports = if (fields.length > 1) Map(PlayFuncPrefix -> Set("*")) else Map.empty
+    val fieldsImports = collector.importedSymbols(fields, recursive = false)
+    val importPrefixes = playJsonImports ++ playFuncImports ++ fieldsImports
     val imports        = Imports.importsFor(modelsPackage, importPrefixes)
     val extendsClause  = FormatTraits.extendsClause(importPrefixes)
 
     s"""package $modelsPackage
        |
-       |import play.api.libs.functional.syntax.*
        |$imports
        |
        |case class $modelName(
