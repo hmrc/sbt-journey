@@ -93,8 +93,7 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.pages
         |
         |import _root_.pages.* // TODO: Remove this once we have a better template
-        |import play.api.libs.json.{JsPath, KeyPathNode, IdxPathNode}
-        |
+        |import play.api.libs.json.{IdxPathNode,JsPath,KeyPathNode}
         |
         |case class AuditEventPage private (override val path: JsPath) extends QuestionPage[String] {
         |  override def toString: String = "auditEvent"
@@ -149,7 +148,7 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.pages
         |
         |import _root_.pages.* // TODO: Remove this once we have a better template
-        |import play.api.libs.json.{JsPath, KeyPathNode, IdxPathNode}
+        |import play.api.libs.json.{JsPath,KeyPathNode}
         |import uk.gov.hmrc.sbtjourneytest.models.TaxRegime
         |
         |case class SaInfoPage private (override val path: JsPath) extends QuestionPage[String] {
@@ -206,8 +205,7 @@ class PageObjectSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.pages
         |
         |import _root_.pages.* // TODO: Remove this once we have a better template
-        |import play.api.libs.json.{JsPath, KeyPathNode, IdxPathNode}
-        |
+        |import play.api.libs.json.{IdxPathNode,JsPath,KeyPathNode}
         |
         |case class AuditEventPage private (override val path: JsPath) extends QuestionPage[String] {
         |  override def toString: String = "auditEvent"

@@ -1,8 +1,7 @@
 package uk.gov.hmrc.simplejourney.pages
 
 import _root_.pages.* // TODO: Remove this once we have a better template
-import play.api.libs.json.{JsPath, KeyPathNode, IdxPathNode}
-
+import play.api.libs.json.{IdxPathNode,JsPath,KeyPathNode}
 
 case class AuditSourcePage private (override val path: JsPath) extends QuestionPage[String] {
   override def toString: String = "auditSource"

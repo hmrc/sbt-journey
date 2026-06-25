@@ -17,6 +17,7 @@
 package uk.gov.hmrc.sbt.journey.templates
 
 import uk.gov.hmrc.sbt.journey.models.*
+import uk.gov.hmrc.sbt.journey.templates.Imports.PlayJsonPrefix
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, pascalCase}
 
 class PageObject(collector: ImportCollector) extends Template {
@@ -112,10 +113,16 @@ class PageObject(collector: ImportCollector) extends Template {
     val capitalPageName = pascalCase(journeyPage.pageKey)
     val overloads       = journey.pathsFor(journeyPage.pageKey)
     val answerType      = journey.pages(journeyPage.pageKey).answerType
+    val isTopLevelPage  = overloads.length == 1 && applyParams(journey, overloads.head).isEmpty
 
     val pageType = ModelFields.fieldType(answerType)
 
+    val hasIndexPaths     = overloads.exists(_.indexPaths.nonEmpty)
+    val idxNode           = if (hasIndexPaths) Set("IdxPathNode") else Set.empty
+    val keyNode           = if (!isTopLevelPage) Set("KeyPathNode") else Set.empty
+    val playJsonImports   = Map(PlayJsonPrefix -> (Set("JsPath") ++ idxNode ++ keyNode))
     val answerTypeImports = collector.importedSymbols(answerType, recursive = false)
+    val baseImports       = playJsonImports ++ answerTypeImports
 
     val choiceModelImports = overloads
       .flatMap(_.choicePaths)
@@ -123,14 +130,13 @@ class PageObject(collector: ImportCollector) extends Template {
         collector.importedSymbols(journey.pages(pageKey).answerType, recursive = false)
       }
 
-    val importedPrefixes = choiceModelImports.foldLeft(answerTypeImports)(Imports.merge)
+    val importedPrefixes = choiceModelImports.foldLeft(baseImports)(Imports.merge)
     val imports = Imports.importsFor(pagesPackage, importedPrefixes, addFormatImports = false)
 
-    if (overloads.length == 1 && applyParams(journey, overloads.head).isEmpty) {
+    if (isTopLevelPage) {
       s"""package ${basePackage / "pages"}
          |
          |import _root_.pages.* // TODO: Remove this once we have a better template
-         |import play.api.libs.json.JsPath
          |$imports
          |
          |object ${capitalPageName}Page extends QuestionPage[$pageType] {
@@ -147,7 +153,6 @@ class PageObject(collector: ImportCollector) extends Template {
       s"""package ${basePackage / "pages"}
          |
          |import _root_.pages.* // TODO: Remove this once we have a better template
-         |import play.api.libs.json.{JsPath, KeyPathNode, IdxPathNode}
          |$imports
          |
          |case class ${capitalPageName}Page private (override val path: JsPath) extends QuestionPage[$pageType] {

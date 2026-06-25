@@ -1,6 +1,5 @@
 package uk.gov.hmrc.simplejourney.models
 
-import play.api.libs.functional.syntax.*
 import play.api.libs.json.{JsPath,Reads}
 
 case class AuditEvents(
