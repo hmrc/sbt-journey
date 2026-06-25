@@ -67,7 +67,7 @@ class JourneyModelSpec extends AnyFlatSpec with Matchers {
       """package uk.gov.hmrc.sbtjourneytest.models
         |
         |import play.api.libs.functional.syntax.*
-        |import play.api.libs.json.{JsPath,JsSuccess,Reads}
+        |import play.api.libs.json.{JsPath,Reads}
         |
         |enum WhichTaxRegime {
         |  case SA

@@ -133,7 +133,7 @@ class JourneyModel(pages: Map[String, JourneyPage], models: Map[String, AnswerMo
     modelName: String,
     modelCases: Map[String, List[(String, FieldType)]]
   ): String = {
-    val playImports = Map(PlayJsonPrefix -> Set("JsSuccess", "JsPath", "Reads"))
+    val playImports = Map(PlayJsonPrefix -> Set("JsPath", "Reads"))
 
     val importPrefixes =
       playImports ++ collector.importedSymbols(modelCases.values.toList.flatten, recursive = false)
