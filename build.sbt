@@ -23,13 +23,13 @@ lazy val plugin = Project("sbt-journey", file("."))
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.5.8"
-        case _      => "2.0.0-RC9"
+        case _      => "2.0.0"
       }
     },
     scriptedSbt := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.11.6"
-        case _      => "2.0.0-RC9"
+        case _      => "2.0.0"
       }
     }
   )

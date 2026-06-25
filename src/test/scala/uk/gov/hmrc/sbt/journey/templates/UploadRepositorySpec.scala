@@ -128,7 +128,7 @@ class UploadRepositorySpec extends AnyFlatSpec with Matchers {
         |          case UpscanNotification.Ready(reference, downloadUrl, uploadDetails) =>
         |            combine(
         |              set("uploadStatus", UploadStatus.Ready),
-        |              set("downloadUrl", downloadUrl),
+        |              set("downloadUrl", downloadUrl.toString),
         |              set("uploadDetails", uploadDetails),
         |              currentDate("updatedAt")
         |            )
