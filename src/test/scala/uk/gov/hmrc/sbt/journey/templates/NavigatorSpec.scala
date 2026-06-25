@@ -60,6 +60,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
 
   def journeyConfig(journey: (String, Journey), rootPages: Map[String, RootPage] = Map.empty) =
     JourneyConfig(
+      "sbt-journey-test",
       basePackage.toString,
       Map.empty,
       Map.empty,
@@ -844,7 +845,7 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
   }
 
   "Navigator.render" should "render a Navigator interface and default implementation" in {
-    val config = JourneyConfig(basePackage.toString, Map.empty, Map.empty, Map.empty)
+    val config = JourneyConfig("sbt-journey-test", basePackage.toString, Map.empty, Map.empty, Map.empty)
 
     navigator.render(config) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.navigation

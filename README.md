@@ -127,8 +127,6 @@ An empty **sbt-journey** configuration looks as follows:
 ```hocon
 serviceName: <your service name>
 
-basePackage: <your service's base package>
-
 rootPages {}
 
 models {}
@@ -138,11 +136,7 @@ journeys {}
 
 The `serviceName` property declares the name of the service. You should use the `appName` from your [application.conf](https://www.playframework.com/documentation/3.0.x/ConfigFile#Configuration-file-syntax-and-features).
 
-The `basePackage` property declares the base package for the service.
-
-You should provide either `serviceName` or `basePackage`. If you provide `serviceName`, the `basePackage` will default to `uk.gov.hmrc.<lower case service name>`.
-
-The `serviceName` is only used to configure the base package, so if you provide `basePackage`, it isn't needed.
+The `basePackage` property declares the base package for the service. If omitted it will default to `uk.gov.hmrc.<lower case service name>`.
 
 The `rootPages` property declares the pages of your application which aren't part of a specific user journey and which don't require the user to submit an answer.
 

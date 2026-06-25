@@ -771,12 +771,11 @@ object JourneyPlugin extends AutoPlugin {
   }
 
   private[journey] def deserialiseJourneyConfig(logger: Logger, config: Config): JourneyConfig = {
+    val serviceName = config.getString("serviceName")
+
     val basePackage =
       if (config.hasPath("basePackage")) config.getString("basePackage")
-      else {
-        val serviceName = config.getString("serviceName")
-        s"uk.gov.hmrc.${packageCase(serviceName)}"
-      }
+      else s"uk.gov.hmrc.${packageCase(serviceName)}"
 
     val roots =
       if (config.hasPath("rootPages"))
@@ -830,6 +829,7 @@ object JourneyPlugin extends AutoPlugin {
     if (errorList.nonEmpty) { throw JourneyConfigException }
 
     JourneyConfig(
+      serviceName,
       basePackage,
       rootPages,
       answerModels,
@@ -1099,7 +1099,7 @@ object JourneyPlugin extends AutoPlugin {
     baseDirectory: FileRef,
     config: JourneyConfig
   ): Seq[File] = {
-    val basePackage = QualifiedName(config.basePackage)
+    val basePackage   = QualifiedName(config.basePackage)
     val journeyRoutes = baseDirectory / "journey.routes"
     IO.write(journeyRoutes, Routes.journeyRoutes(config))
     logger.info(s"Generated journey routes file $journeyRoutes")
@@ -1169,7 +1169,27 @@ object JourneyPlugin extends AutoPlugin {
     baseDirectory: FileRef,
     config: JourneyConfig
   ): Seq[File] = {
-    Seq.empty
+    val serviceName = config.serviceName
+    val basePackage = QualifiedName(config.basePackage)
+
+    val packageFolder = config.basePackage
+      .split("\\.")
+      .foldLeft(baseDirectory)(_ / _)
+
+    val hasFileUploadPage = config.journeys.values
+      .flatMap(_.pages.values)
+      .exists(_.answerType.isFileUpload)
+
+    val upscanFiles =
+      if (!hasFileUploadPage) Seq.empty
+      else {
+        val upscanConnectorFile = packageFolder / "connectors" / "UpscanConnectorSpec.scala"
+        IO.write(upscanConnectorFile, UpscanConnector.renderSpec(serviceName, basePackage))
+        logger.info(s"Generated connector spec $upscanConnectorFile")
+        Seq(upscanConnectorFile)
+      }
+
+    upscanFiles
   }
 
   private[journey] def initialiseJourneyViewFiles(

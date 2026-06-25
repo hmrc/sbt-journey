@@ -207,7 +207,9 @@ class JourneyPluginSpec extends AnyFlatSpec with Matchers with Inside with Optio
   }
 
   "JourneyPlugin.deserialiseJourneyConfig" should "use basePackage if provided" in {
-    val configObject  = ConfigFactory.parseMap(Map("basePackage" -> basePackage.toString).asJava)
+    val configObject = ConfigFactory.parseMap(
+      Map("serviceName" -> "test-microservice", "basePackage" -> basePackage.toString).asJava
+    )
     val journeyConfig = JourneyPlugin.deserialiseJourneyConfig(Logger.Null, configObject)
     journeyConfig.basePackage shouldBe basePackage.toString
   }

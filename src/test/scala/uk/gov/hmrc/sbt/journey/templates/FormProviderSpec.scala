@@ -30,6 +30,7 @@ class FormProviderSpec extends AnyFlatSpec with Matchers {
 
   def journeyConfig(journey: (String, Journey)) =
     JourneyConfig(
+      "sbt-journey-test",
       basePackage.toString,
       Map.empty,
       Map.empty,
