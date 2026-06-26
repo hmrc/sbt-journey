@@ -1186,7 +1186,12 @@ object JourneyPlugin extends AutoPlugin {
         val upscanConnectorFile = packageFolder / "connectors" / "UpscanConnectorSpec.scala"
         IO.write(upscanConnectorFile, UpscanConnector.renderSpec(serviceName, basePackage))
         logger.info(s"Generated connector spec $upscanConnectorFile")
-        Seq(upscanConnectorFile)
+
+        val uploadRepositoryFile = packageFolder / "repositories" / "FileUploadRepositorySpec.scala"
+        IO.write(uploadRepositoryFile, UploadRepository.renderSpec(basePackage))
+        logger.info(s"Generated repository spec $uploadRepositoryFile")
+
+        Seq(upscanConnectorFile, uploadRepositoryFile)
       }
 
     upscanFiles
