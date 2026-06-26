@@ -19,17 +19,17 @@ lazy val plugin = Project("sbt-journey", file("."))
     scriptedBufferLog := false,
     // This config is in preparation for sbt2 cross-building, but this won't work
     // until Play Framework publishes sbt2 versions of their plugins.
-    crossScalaVersions += "3.8.1",
-    (pluginCrossBuild / sbtVersion) := {
-      scalaBinaryVersion.value match {
-        case "2.12" => "1.5.8"
-        case _      => "2.0.0"
-      }
-    },
-    scriptedSbt := {
-      scalaBinaryVersion.value match {
-        case "2.12" => "1.11.6"
-        case _      => "2.0.0"
-      }
-    }
+    // crossScalaVersions += "3.8.1",
+    // (pluginCrossBuild / sbtVersion) := {
+    //   scalaBinaryVersion.value match {
+    //     case "2.12" => "1.5.8"
+    //     case _      => "2.0.0"
+    //   }
+    // },
+    // scriptedSbt := {
+    //   scalaBinaryVersion.value match {
+    //     case "2.12" => "1.11.6"
+    //     case _      => "2.0.0"
+    //   }
+    // }
   )
