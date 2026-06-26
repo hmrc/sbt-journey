@@ -17,7 +17,7 @@
 package uk.gov.hmrc.sbt.journey.templates
 
 import uk.gov.hmrc.sbt.journey.models.{QualifiedName, RootPage}
-import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.pascalCase
+import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, pascalCase}
 
 object RootPageController extends Template {
   def render(
@@ -65,5 +65,55 @@ object RootPageController extends Template {
        |  def onPageLoad: Action[AnyContent]
        |}
        |$defaultImpl""".stripMargin
+  }
+
+  def renderSpec(
+    basePackage: QualifiedName,
+    pageName: String,
+    rootPage: RootPage
+  ): String = {
+    val capitalPageName = pascalCase(pageName)
+    val defaultImplName = s"Default${capitalPageName}Controller"
+    val viewClass = QualifiedName(rootPage.viewClass)
+    val camelViewClass = camelCase(viewClass.parts.last)
+    s"""package ${basePackage / "controllers"}
+      |
+      |import controllers.actions.FakeIdentifierAction // ${basePackage / "controllers" / "actions" / "FakeIdentifierAction"}
+      |import org.apache.pekko.actor.ActorSystem
+      |import org.mockito.ArgumentMatchers.any
+      |import org.mockito.Mockito.when
+      |import org.scalatest.flatspec.AnyFlatSpec
+      |import org.scalatest.matchers.should.Matchers
+      |import org.scalatestplus.mockito.MockitoSugar
+      |import play.api.http.{MimeTypes, Status}
+      |import play.api.test.FakeRequest
+      |import play.api.test.Helpers.*
+      |import play.twirl.api.HtmlFormat
+      |import $viewClass
+      |
+      |import scala.concurrent.ExecutionContext
+      |
+      |class ${defaultImplName}Spec extends AnyFlatSpec, Matchers, MockitoSugar {
+      |  given system: ActorSystem = ActorSystem("test")
+      |  given ExecutionContext    = system.dispatcher
+      |
+      |  private val $camelViewClass = mock[${viewClass.parts.last}]
+      |
+      |  private val controller = new $defaultImplName(
+      |    new FakeIdentifierAction(stubPlayBodyParsers),
+      |    $camelViewClass,
+      |    stubMessagesControllerComponents()
+      |  )
+      |
+      |  "$defaultImplName.onPageLoad" should "return a 200 OK response containing the view HTML" in {
+      |    val mockResponse = "<html>Hello</html>"
+      |    when($camelViewClass()(any(), any())).thenReturn(HtmlFormat.raw(mockResponse))
+      |    val result = controller.onPageLoad(FakeRequest())
+      |    status(result) shouldBe Status.OK
+      |    contentType(result) shouldBe Some(MimeTypes.HTML)
+      |    contentAsString(result) shouldBe mockResponse
+      |  }
+      |}
+      |""".stripMargin
   }
 }

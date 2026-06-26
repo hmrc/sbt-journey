@@ -21,9 +21,9 @@ import org.scalatest.matchers.should.Matchers
 import uk.gov.hmrc.sbt.journey.models.{QualifiedName, RootPage}
 
 class RootPageControllerSpec extends AnyFlatSpec with Matchers {
-  "RootPageController.render" should "render a controller class for a root page of the application" in {
-    val basePackage = QualifiedName("uk.gov.hmrc.sbtjourneytest")
+  val basePackage = QualifiedName("uk.gov.hmrc.sbtjourneytest")
 
+  "RootPageController.render" should "render a controller class for a root page of the application" in {
     val rootPage = RootPage(
       titleKey = "beforeYouStart.title",
       headingKey = "beforeYouStart.heading",
@@ -65,8 +65,6 @@ class RootPageControllerSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "provide no default controller implementation if requested" in {
-    val basePackage = QualifiedName("uk.gov.hmrc.sbtjourneytest")
-
     val rootPage = RootPage(
       titleKey = "beforeYouStart.title",
       headingKey = "beforeYouStart.heading",
@@ -91,6 +89,58 @@ class RootPageControllerSpec extends AnyFlatSpec with Matchers {
         |
         |trait BeforeYouStartBaseController extends FrontendBaseController with I18nSupport {
         |  def onPageLoad: Action[AnyContent]
+        |}
+        |""".stripMargin
+  }
+
+  "RootPageController.renderSpec" should "render a controller test suite for a root page of the application" in {
+    val rootPage = RootPage(
+      titleKey = "beforeYouStart.title",
+      headingKey = "beforeYouStart.heading",
+      viewRoute = "before-you-start",
+      controllerClass = (basePackage / "controllers" / "DefaultBeforeYouStartController").toString,
+      viewClass = "views.html.BeforeYouStartView",
+      withDefaultController = true
+    )
+
+    RootPageController.renderSpec(basePackage, "beforeYouStart", rootPage) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.controllers
+        |
+        |import controllers.actions.FakeIdentifierAction // uk.gov.hmrc.sbtjourneytest.controllers.actions.FakeIdentifierAction
+        |import org.apache.pekko.actor.ActorSystem
+        |import org.mockito.ArgumentMatchers.any
+        |import org.mockito.Mockito.when
+        |import org.scalatest.flatspec.AnyFlatSpec
+        |import org.scalatest.matchers.should.Matchers
+        |import org.scalatestplus.mockito.MockitoSugar
+        |import play.api.http.{MimeTypes, Status}
+        |import play.api.test.FakeRequest
+        |import play.api.test.Helpers.*
+        |import play.twirl.api.HtmlFormat
+        |import views.html.BeforeYouStartView
+        |
+        |import scala.concurrent.ExecutionContext
+        |
+        |class DefaultBeforeYouStartControllerSpec extends AnyFlatSpec, Matchers, MockitoSugar {
+        |  given system: ActorSystem = ActorSystem("test")
+        |  given ExecutionContext    = system.dispatcher
+        |
+        |  private val beforeYouStartView = mock[BeforeYouStartView]
+        |
+        |  private val controller = new DefaultBeforeYouStartController(
+        |    new FakeIdentifierAction(stubPlayBodyParsers),
+        |    beforeYouStartView,
+        |    stubMessagesControllerComponents()
+        |  )
+        |
+        |  "DefaultBeforeYouStartController.onPageLoad" should "return a 200 OK response containing the view HTML" in {
+        |    val mockResponse = "<html>Hello</html>"
+        |    when(beforeYouStartView()(any(), any())).thenReturn(HtmlFormat.raw(mockResponse))
+        |    val result = controller.onPageLoad(FakeRequest())
+        |    status(result) shouldBe Status.OK
+        |    contentType(result) shouldBe Some(MimeTypes.HTML)
+        |    contentAsString(result) shouldBe mockResponse
+        |  }
         |}
         |""".stripMargin
   }

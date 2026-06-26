@@ -1176,12 +1176,25 @@ object JourneyPlugin extends AutoPlugin {
       .split("\\.")
       .foldLeft(baseDirectory)(_ / _)
 
+    val rootPageFiles = config.rootPages.flatMap { case (pageName, page) =>
+      if (!page.withDefaultController)
+        List.empty
+      else {
+        val rootPageController =
+          packageFolder / "controllers" / s"${pascalCase(pageName)}ControllerSpec.scala"
+        IO.write(rootPageController, RootPageController.renderSpec(basePackage, pageName, page))
+        logger.info(s"Generated controller spec $rootPageController")
+        List(rootPageController)
+      }
+    }.toList
+
     val hasFileUploadPage = config.journeys.values
       .flatMap(_.pages.values)
       .exists(_.answerType.isFileUpload)
 
     val upscanFiles =
-      if (!hasFileUploadPage) Seq.empty
+      if (!hasFileUploadPage)
+        List.empty
       else {
         val upscanConnectorFile = packageFolder / "connectors" / "UpscanConnectorSpec.scala"
         IO.write(upscanConnectorFile, UpscanConnector.renderSpec(serviceName, basePackage))
@@ -1191,10 +1204,10 @@ object JourneyPlugin extends AutoPlugin {
         IO.write(uploadRepositoryFile, UploadRepository.renderSpec(basePackage))
         logger.info(s"Generated repository spec $uploadRepositoryFile")
 
-        Seq(upscanConnectorFile, uploadRepositoryFile)
+        List(upscanConnectorFile, uploadRepositoryFile)
       }
 
-    upscanFiles
+    rootPageFiles ++ upscanFiles
   }
 
   private[journey] def initialiseJourneyViewFiles(
