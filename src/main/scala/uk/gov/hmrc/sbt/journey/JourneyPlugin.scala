@@ -1188,6 +1188,16 @@ object JourneyPlugin extends AutoPlugin {
       }
     }.toList
 
+    val journeyGenFiles =
+      if (config.models.isEmpty) List.empty
+      else {
+        val journeyGenerators    = new JourneyGenerators(config.models)
+        val journeyGeneratorFile = packageFolder / "generators" / "JourneyGenerators.scala"
+        IO.write(journeyGeneratorFile, journeyGenerators.render(basePackage))
+        logger.info(s"Generated journey model generators $journeyGeneratorFile")
+        List(journeyGeneratorFile)
+      }
+
     val hasFileUploadPage = config.journeys.values
       .flatMap(_.pages.values)
       .exists(_.answerType.isFileUpload)
@@ -1207,7 +1217,7 @@ object JourneyPlugin extends AutoPlugin {
         List(upscanConnectorFile, uploadRepositoryFile)
       }
 
-    rootPageFiles ++ upscanFiles
+    rootPageFiles ++ journeyGenFiles ++ upscanFiles
   }
 
   private[journey] def initialiseJourneyViewFiles(

@@ -351,6 +351,8 @@ The data stored as the user's "answer" on file upload pages will be the `UploadI
 
 You can use `get` method of the file upload repository to retrieve the `FileUpload` associated with an `UploadId`.
 
+We recommend that you integrate with [object-store](https://github.com/hmrc/object-store) via [object-store-client](https://github.com/hmrc/object-store-client#upload-object-from-url) for long-term storage of artifacts.
+
 ### Tasks
 
 This plugin contributes several sbt tasks once it is enabled:
