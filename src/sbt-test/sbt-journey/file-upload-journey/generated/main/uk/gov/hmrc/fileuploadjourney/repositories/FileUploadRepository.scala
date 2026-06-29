@@ -103,13 +103,15 @@ class FileUploadRepository @Inject() (
               set("uploadStatus", UploadStatus.Ready),
               set("downloadUrl", downloadUrl.toString),
               set("uploadDetails", uploadDetails),
-              currentDate("updatedAt")
+              currentDate("updatedAt"),
+              unset("initiatedAt")
             )
           case UpscanNotification.Failed(reference, failureDetails) =>
             combine(
               set("uploadStatus", UploadStatus.Failed),
               set("failureDetails", failureDetails),
-              currentDate("updatedAt")
+              currentDate("updatedAt"),
+              unset("initiatedAt")
             )
         }
       )
