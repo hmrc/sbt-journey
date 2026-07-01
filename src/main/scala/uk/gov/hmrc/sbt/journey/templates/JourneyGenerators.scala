@@ -17,8 +17,8 @@
 package uk.gov.hmrc.sbt.journey.templates
 
 import uk.gov.hmrc.sbt.journey.models.*
-import uk.gov.hmrc.sbt.journey.templates.Imports.{JavaLangPrefix, JavaTimePrefix}
-import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, pascalCase}
+import uk.gov.hmrc.sbt.journey.templates.Imports.JavaTimePrefix
+import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.camelCase
 
 import java.time.LocalDate
 
@@ -87,8 +87,12 @@ class JourneyGenerators(models: Map[String, AnswerModel]) extends Template {
     }
   }
 
-  private def generatorsFor(models: Map[String, AnswerModel]): String = {
-    val allGenerators = models.flatMap {
+  private def generatorsFor(models: Map[String, AnswerModel], hasFileUpload: Boolean): String = {
+    val uploadIdGen =
+      if (!hasFileUpload) List.empty
+      else List(s"  given Arbitrary[UploadId] = Arbitrary(Gen.uuid.map(UploadId.apply))")
+
+    val modelGenerators = models.flatMap {
       case (_, EnumModel(name, _)) =>
         List(s"  given Arbitrary[$name] = Arbitrary(Gen.oneOf($name.values.toIndexedSeq))")
       case (_, CaseClassModel(name, fields)) =>
@@ -111,11 +115,13 @@ class JourneyGenerators(models: Map[String, AnswerModel]) extends Template {
         }.toList
     }
 
+    val allGenerators = uploadIdGen ++ modelGenerators
+
     if (allGenerators.isEmpty) ""
     else allGenerators.mkString(NL * 2)
   }
 
-  def render(basePackage: QualifiedName): String = {
+  def render(basePackage: QualifiedName, hasFileUpload: Boolean = false): String = {
     val importedSymbols = models
       .collect { case (_, CaseClassModel(_, fields)) =>
         importCollector.importedSymbols(fields, recursive = true)
@@ -139,9 +145,9 @@ class JourneyGenerators(models: Map[String, AnswerModel]) extends Template {
        |import org.scalacheck.Arbitrary.arbitrary
        |import ${basePackage / "models" / "*"}
        |
-       |trait JourneyGenerators extends Generators {
+       |trait JourneyGenerators {
        |
-       |${generatorsFor(models)}
+       |${generatorsFor(models, hasFileUpload)}
        |}
        |""".stripMargin
   }

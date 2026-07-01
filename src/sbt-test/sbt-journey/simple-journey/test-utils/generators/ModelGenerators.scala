@@ -1,8 +1,9 @@
 package generators
 
-import models._
+import models.*
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.{Arbitrary, Gen}
+import uk.gov.hmrc.simplejourney.generators.JourneyGenerators
 
-trait ModelGenerators {
+trait ModelGenerators extends JourneyGenerators {
 }

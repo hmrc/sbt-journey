@@ -40,7 +40,7 @@ class JourneyGeneratorsSpec extends AnyFlatSpec with Matchers {
          |import org.scalacheck.Arbitrary.arbitrary
          |import uk.gov.hmrc.sbtjourneytest.models.*
          |
-         |trait JourneyGenerators extends Generators {
+         |trait JourneyGenerators {
          |
          |  given Arbitrary[Choice] = Arbitrary(Gen.oneOf(Choice.values.toIndexedSeq))
          |}
@@ -69,7 +69,7 @@ class JourneyGeneratorsSpec extends AnyFlatSpec with Matchers {
          |import org.scalacheck.Arbitrary.arbitrary
          |import uk.gov.hmrc.sbtjourneytest.models.*
          |
-         |trait JourneyGenerators extends Generators {
+         |trait JourneyGenerators {
          |
          |  given Arbitrary[AuditEvent] = Arbitrary {
          |    for {
@@ -104,7 +104,7 @@ class JourneyGeneratorsSpec extends AnyFlatSpec with Matchers {
          |import org.scalacheck.Arbitrary.arbitrary
          |import uk.gov.hmrc.sbtjourneytest.models.*
          |
-         |trait JourneyGenerators extends Generators {
+         |trait JourneyGenerators {
          |
          |  given Arbitrary[RateOfRelief] = Arbitrary(Gen.oneOf(RateOfRelief.values.toIndexedSeq))
          |
@@ -117,5 +117,21 @@ class JourneyGeneratorsSpec extends AnyFlatSpec with Matchers {
          |  }
          |}
          |""".stripMargin
+  }
+
+  it should "generate a ScalaCheck generator for UploadId if the journey has a file upload" in {
+    new JourneyGenerators(Map.empty).render(basePackage, hasFileUpload = true) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.generators
+        |
+        |import _root_.generators.Generators // TODO: Remove this once we have a better template
+        |import org.scalacheck.{Arbitrary, Gen}
+        |import org.scalacheck.Arbitrary.arbitrary
+        |import uk.gov.hmrc.sbtjourneytest.models.*
+        |
+        |trait JourneyGenerators {
+        |
+        |  given Arbitrary[UploadId] = Arbitrary(Gen.uuid.map(UploadId.apply))
+        |}
+        |""".stripMargin
   }
 }

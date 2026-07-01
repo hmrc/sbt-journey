@@ -17,9 +17,12 @@
 package uk.gov.hmrc.sbt.journey.templates
 
 import uk.gov.hmrc.sbt.journey.models.*
+import uk.gov.hmrc.sbt.journey.templates.Imports.JavaTimePrefix
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.pascalCase
 
 class Navigator(models: Map[String, AnswerModel]) extends Template {
+  val importCollector = new ImportCollector(models)
+
   private def unapplyParams(pages: Map[String, JourneyPage], journeyPath: JourneyPath): String = {
     val paths = journeyPath.paths
       .map {
@@ -36,7 +39,7 @@ class Navigator(models: Map[String, AnswerModel]) extends Template {
   }
 
   private def routeParams(
-    mode: String,
+    mode: Mode,
     fromIndexPaths: List[IndexPath],
     toIndexPaths: List[IndexPath]
   ): String = {
@@ -62,7 +65,7 @@ class Navigator(models: Map[String, AnswerModel]) extends Template {
   }
 
   private def nextRouteParams(
-    mode: String,
+    mode: Mode,
     pages: Map[String, JourneyPage],
     fromPath: JourneyPath,
     nextPart: JourneyPart,
@@ -74,7 +77,7 @@ class Navigator(models: Map[String, AnswerModel]) extends Template {
       routeParams(mode, fromPath.indexPaths, nextPartPaths)
   }
 
-  private def incRouteParams(mode: String, indexPaths: List[IndexPath]): String = {
+  private def incRouteParams(mode: Mode, indexPaths: List[IndexPath]): String = {
     if (indexPaths.isEmpty) s"($mode)"
     else {
       // Set the last index path to index + 1 to head to the next iteration
@@ -90,7 +93,7 @@ class Navigator(models: Map[String, AnswerModel]) extends Template {
   }
 
   private def switchCaseRoute(
-    mode: String,
+    mode: Mode,
     journeyPath: JourneyPath,
     answerType: FieldType,
     nextPartPage: String,
@@ -113,7 +116,7 @@ class Navigator(models: Map[String, AnswerModel]) extends Template {
   }
 
   private def routesFor(
-    mode: String,
+    mode: Mode,
     pages: Map[String, JourneyPage],
     journeyPart: JourneyPart,
     journeyPath: JourneyPath,
@@ -129,12 +132,11 @@ class Navigator(models: Map[String, AnswerModel]) extends Template {
       )
 
     case IfThenPart(choicePage, subJourney, as) =>
-      val firstPage      = pascalCase(subJourney.head.startPage)
-      val firstPartPaths = journeyPath.indexPaths ++ subJourney.head.startPageIndexes
-      val firstParams    = routeParams(mode, journeyPath.indexPaths, firstPartPaths)
-      val nextPartPage   = pascalCase(nextPart.startPage)
-      val nextParams     = nextRouteParams(mode, pages, journeyPath, nextPart, nextPath)
-      val choicePath     = journeyPath / ChoicePath(as.getOrElse(choicePage), "Yes")
+      val firstPage    = pascalCase(subJourney.head.startPage)
+      val firstParams  = nextRouteParams(mode, pages, journeyPath, subJourney.head, journeyPath)
+      val nextPartPage = pascalCase(nextPart.startPage)
+      val nextParams   = nextRouteParams(mode, pages, journeyPath, nextPart, nextPath)
+      val choicePath   = journeyPath / ChoicePath(as.getOrElse(choicePage), "Yes")
       val choicePageRoutes =
         s"""    case ${pascalCase(choicePage)}Page${unapplyParams(pages, journeyPath)} => _ => {
            |      case Choice.Yes => routes.${firstPage}BaseController.onPageLoad$firstParams
@@ -214,7 +216,7 @@ class Navigator(models: Map[String, AnswerModel]) extends Template {
   }
 
   private def routesFor(
-    mode: String,
+    mode: Mode,
     pages: Map[String, JourneyPage],
     journeyParts: List[JourneyPart],
     journeyPath: JourneyPath,
@@ -240,7 +242,7 @@ class Navigator(models: Map[String, AnswerModel]) extends Template {
     // We should go to the next journey part after completing each part in "Normal" mode
     journey.journey.sliding(2).toList.flatMap {
       case part :: nextPart :: Nil =>
-        routesFor("NormalMode", journey.pages, part, Root, nextPart, Root)
+        routesFor(NormalMode, journey.pages, part, Root, nextPart, Root)
       case _ => Nil
     }
 
@@ -255,7 +257,7 @@ class Navigator(models: Map[String, AnswerModel]) extends Template {
     val initialParts = journey.journey.dropRight(1)
     lastPart
       .map { lastPart =>
-        initialParts.flatMap(routesFor("CheckMode", journey.pages, _, Root, lastPart, Root))
+        initialParts.flatMap(routesFor(CheckMode, journey.pages, _, Root, lastPart, Root))
       }
       .getOrElse(List.empty)
   }
@@ -304,6 +306,293 @@ class Navigator(models: Map[String, AnswerModel]) extends Template {
        |      case NormalMode => normalRoutes(page)(userAnswers)(latestAnswer)
        |      case CheckMode  => checkRoutes(page)(userAnswers)(latestAnswer)
        |    }
+       |}
+       |""".stripMargin
+  }
+
+  private def indexParamDecls(journeyPath: JourneyPath): String = {
+    val indexParams = journeyPath.indexPaths.map { case IndexPath(pageKey) =>
+      s"""    val ${pageKey}Index = 0"""
+    }
+
+    if (indexParams.isEmpty) ""
+    else indexParams.mkString("", NL, NL)
+  }
+
+  private def applyParams(pages: Map[String, JourneyPage], journeyPath: JourneyPath): String = {
+    val paths = journeyPath.paths
+      .map {
+        case IndexPath(pageKey) =>
+          s"${pageKey}Index"
+        case ChoicePath(pageKey, choice) =>
+          val choiceType = ModelFields.fieldType(pages(pageKey).answerType)
+          s"$choiceType.$choice"
+        case _ => ""
+      }
+      .filterNot(_.isEmpty)
+
+    if (paths.isEmpty) "" else paths.mkString("(", ", ", ")")
+  }
+
+  private def testDescParams(journeyPath: JourneyPath): String = {
+    val (_, paths) = journeyPath.paths
+      .foldLeft((0, List.empty[String])) {
+        case ((idx, ps), IndexPath(_))          => (idx + 1, ('i' + idx).toChar.toString :: ps)
+        case ((idx, ps), ChoicePath(_, choice)) => (idx, choice :: ps)
+        case ((idx, ps), _)                     => (idx, ps)
+      }
+
+    if (paths.isEmpty) "" else paths.reverse.mkString("(", ", ", ")")
+  }
+
+  private def switchCaseTest(
+    mode: Mode,
+    indexParams: String,
+    descParams: String,
+    currentPage: String,
+    currentParams: String
+  )(nextPage: String, nextParams: String, choiceType: String, choice: String) = {
+    s"""should "navigate from ${currentPage}Page$descParams to ${nextPage}Page when the user chooses $choice in ${mode.testDescription}" in {
+       |${indexParams}    navigator.nextPage(${currentPage}Page$currentParams, $mode, userAnswers, $choiceType.$choice) shouldBe routes.${nextPage}BaseController.onPageLoad$nextParams
+       |  }""".stripMargin
+  }
+
+  private def testsFor(
+    mode: Mode,
+    pages: Map[String, JourneyPage],
+    journeyPart: JourneyPart,
+    journeyPath: JourneyPath,
+    nextPart: JourneyPart,
+    nextPath: JourneyPath
+  ): List[String] = journeyPart match {
+    case SinglePagePart(pageKey, _) =>
+      val answerType    = pages(pageKey).answerType
+      val generatorType = ModelFields.fieldType(answerType)
+      val currentPage   = pascalCase(pageKey)
+      val currentParams = applyParams(pages, journeyPath)
+      val indexParams   = indexParamDecls(journeyPath)
+      val descParams    = testDescParams(journeyPath)
+      val nextPartPage  = pascalCase(nextPart.startPage)
+      val nextParams    = nextRouteParams(mode, pages, journeyPath, nextPart, nextPath)
+      List(
+        s"""should "navigate from ${currentPage}Page$descParams to ${nextPartPage}Page for all answers in ${mode.testDescription}" in forAll(minSuccessful(5)) { (answer: $generatorType) =>
+           |${indexParams}    navigator.nextPage(${currentPage}Page$currentParams, $mode, userAnswers, answer) shouldBe routes.${nextPartPage}BaseController.onPageLoad$nextParams
+           |  }""".stripMargin
+      )
+    case IfThenPart(choicePage, subJourney, as) =>
+      val currentPage   = pascalCase(choicePage)
+      val currentParams = applyParams(pages, journeyPath)
+      val indexParams   = indexParamDecls(journeyPath)
+      val descParams    = testDescParams(journeyPath)
+      val firstPage     = pascalCase(subJourney.head.startPage)
+      val firstParams   = nextRouteParams(mode, pages, journeyPath, subJourney.head, journeyPath)
+      val nextPartPage  = pascalCase(nextPart.startPage)
+      val nextParams    = nextRouteParams(mode, pages, journeyPath, nextPart, nextPath)
+      val choicePath    = journeyPath / ChoicePath(as.getOrElse(choicePage), "Yes")
+      val choicePageTests = List(
+        s"""should "navigate from ${currentPage}Page$descParams to ${firstPage}Page when the user chooses Yes in ${mode.testDescription}" in {
+           |${indexParams}    navigator.nextPage(${currentPage}Page$currentParams, $mode, userAnswers, Choice.Yes) shouldBe routes.${firstPage}BaseController.onPageLoad$firstParams
+           |  }""".stripMargin,
+        s"""should "navigate from ${currentPage}Page$descParams to ${nextPartPage}Page when the user chooses No in ${mode.testDescription}" in {
+           |${indexParams}    navigator.nextPage(${currentPage}Page$currentParams, $mode, userAnswers, Choice.No) shouldBe routes.${nextPartPage}BaseController.onPageLoad$nextParams
+           |  }""".stripMargin
+      )
+      val subJourneyTests = testsFor(mode, pages, subJourney, choicePath, nextPart, nextPath)
+      choicePageTests ++ subJourneyTests
+    case DoWhilePart(choicePage, subJourney, as) =>
+      val indexPath     = journeyPath / IndexPath(as)
+      val indexParams   = indexParamDecls(indexPath)
+      val descParams    = testDescParams(indexPath)
+      val currentPage   = pascalCase(choicePage)
+      val currentParams = applyParams(pages, indexPath)
+      val firstPage     = pascalCase(subJourney.head.startPage)
+      val firstParams   = incRouteParams(mode, indexPath.indexPaths)
+      val nextPartPage  = pascalCase(nextPart.startPage)
+      val nextParams    = nextRouteParams(mode, pages, journeyPath, nextPart, nextPath)
+      val choicePageTests = List(
+        s"""should "navigate from ${currentPage}Page$descParams to ${firstPage}Page at the next index when the user chooses Yes in ${mode.testDescription}" in {
+           |${indexParams}    navigator.nextPage(${currentPage}Page$currentParams, $mode, userAnswers, Choice.Yes) shouldBe routes.${firstPage}BaseController.onPageLoad$firstParams
+           |  }""".stripMargin,
+        s"""should "navigate from ${currentPage}Page$descParams to ${nextPartPage}Page when the user chooses No in ${mode.testDescription}" in {
+           |${indexParams}    navigator.nextPage(${currentPage}Page$currentParams, $mode, userAnswers, Choice.No) shouldBe routes.${nextPartPage}BaseController.onPageLoad$nextParams
+           |  }""".stripMargin
+      )
+      val choicePagePart  = SinglePagePart(choicePage, None)
+      val subJourneyTests = testsFor(mode, pages, subJourney, indexPath, choicePagePart, indexPath)
+      subJourneyTests ++ choicePageTests
+
+    case SwitchCasePart(choicePage, subJourneys, as) =>
+      val currentPage   = pascalCase(choicePage)
+      val currentParams = applyParams(pages, journeyPath)
+      val indexParams   = indexParamDecls(journeyPath)
+      val descParams    = testDescParams(journeyPath)
+
+      val answerType = pages(choicePage).answerType
+      val choiceType = ModelFields.fieldType(answerType)
+
+      val Some(model @ EnumModel(_, _)) = answerType.typeName.flatMap(models.get)
+      val uncoveredCases                = model.uncoveredCases(subJourneys.keySet)
+
+      val nextPartPage = pascalCase(nextPart.startPage)
+      val nextParams   = nextRouteParams(mode, pages, journeyPath, nextPart, nextPath)
+
+      val testFor = switchCaseTest(mode, indexParams, descParams, currentPage, currentParams) _
+
+      val choiceTests = subJourneys
+        .filterKeys(_ != "default")
+        .map { case (choice, subJourney) =>
+          subJourney.headOption
+            .map { firstPart =>
+              val firstPage   = pascalCase(firstPart.startPage)
+              val firstParams = nextRouteParams(mode, pages, journeyPath, firstPart, journeyPath)
+              testFor(firstPage, firstParams, choiceType, choice)
+            }
+            .getOrElse {
+              testFor(nextPartPage, nextParams, choiceType, choice)
+            }
+        }
+        .toList
+
+      val defaultTests = subJourneys
+        .get("default")
+        .toList
+        .flatMap { subJourney =>
+          for (choice <- uncoveredCases) yield {
+            val firstPage =
+              pascalCase(subJourney.head.startPage)
+            val firstParams =
+              nextRouteParams(mode, pages, journeyPath, subJourney.head, journeyPath)
+            testFor(firstPage, firstParams, choiceType, choice)
+          }
+        }
+
+      val uncoveredCaseTests =
+        if (model.isCoveredBy(subJourneys.keySet)) List.empty
+        else
+          uncoveredCases.toList.map { choice =>
+            testFor(nextPartPage, nextParams, choiceType, choice)
+          }
+
+      val subJourneyTests = subJourneys.flatMap {
+        case ("default", subJourney) =>
+          val choicePath = journeyPath / ChoicePath(as.getOrElse(choicePage), uncoveredCases.head)
+          testsFor(mode, pages, subJourney, choicePath, nextPart, nextPath)
+        case (choice, subJourney) =>
+          val choicePath = journeyPath / ChoicePath(as.getOrElse(choicePage), choice)
+          testsFor(mode, pages, subJourney, choicePath, nextPart, nextPath)
+      }
+
+      choiceTests ++ defaultTests ++ uncoveredCaseTests ++ subJourneyTests
+  }
+
+  private def testsFor(
+    mode: Mode,
+    pages: Map[String, JourneyPage],
+    journeyParts: List[JourneyPart],
+    journeyPath: JourneyPath,
+    nextPart: JourneyPart,
+    nextPath: JourneyPath
+  ): List[String] = {
+    // Routes that navigate from one page to the next between the journey parts
+    val sequentialRoutes = journeyParts.sliding(2).toList.flatMap {
+      case firstPart :: secondPart :: Nil =>
+        testsFor(mode, pages, firstPart, journeyPath, secondPart, journeyPath)
+      case _ => Nil
+    }
+
+    // Routes that navigate from the end of this journey part to the next outer part
+    val continuationRoutes = journeyParts.lastOption.toList.flatMap { lastPart =>
+      testsFor(mode, pages, lastPart, journeyPath, nextPart, nextPath)
+    }
+
+    sequentialRoutes ++ continuationRoutes
+  }
+
+  def normalModeTestsFor(journey: Journey): List[String] = {
+    journey.journey.sliding(2).toList.flatMap {
+      case part :: nextPart :: Nil =>
+        testsFor(NormalMode, journey.pages, part, Root, nextPart, Root)
+      case _ => Nil
+    }
+  }
+
+  private[templates] def normalModeTestsFor(config: JourneyConfig): List[String] = {
+    config.journeys.values.toList.flatMap { journey =>
+      normalModeTestsFor(journey)
+    }
+  }
+
+  def checkModeTestsFor(journey: Journey): List[String] = {
+    val lastPart     = journey.journey.lastOption
+    val initialParts = journey.journey.dropRight(1)
+    lastPart
+      .map { lastPart =>
+        initialParts.flatMap(testsFor(CheckMode, journey.pages, _, Root, lastPart, Root))
+      }
+      .getOrElse(List.empty)
+  }
+
+  private[templates] def checkModeTestsFor(config: JourneyConfig): List[String] = {
+    config.journeys.values.toList.flatMap { journey =>
+      checkModeTestsFor(journey)
+    }
+  }
+
+  def renderSpec(config: JourneyConfig): String = {
+    val basePackage = QualifiedName(config.basePackage)
+
+    val allTests = normalModeTestsFor(config) ++ checkModeTestsFor(config)
+
+    val testCases =
+      if (allTests.isEmpty) ""
+      else
+        allTests.mkString(
+          s"""$NL  "DefaultJourneyNavigator" """,
+          s"${NL * 2}  it ",
+          ""
+        )
+
+    val answerTypeImports = config.journeys.flatMap { case (_, journey) =>
+      journey.pages.map { case (_, page) =>
+        importCollector.importedSymbols(page.answerType, recursive = false)
+      }
+    }
+
+    val modelImports = models.collect { case (_, CaseClassModel(_, fields)) =>
+      importCollector.importedSymbols(fields, recursive = true)
+    }
+
+    val allImports = (answerTypeImports ++ modelImports).foldLeft(
+      Map.empty[List[String], Set[String]]
+    )(Imports.merge)
+
+    val usesLocalDate =
+      allImports.contains(JavaTimePrefix) &&
+        allImports(JavaTimePrefix).contains("LocalDate")
+
+    val localDateImport =
+      if (usesLocalDate)
+        s"import java.time.LocalDate$NL"
+      else
+        ""
+
+    s"""package ${basePackage / "navigation"}
+       |
+       |import _root_.generators.Generators // ${basePackage / "generators.Generators"}
+       |import _root_.models.CheckMode // ${basePackage / "models.CheckMode"}
+       |import _root_.models.NormalMode // ${basePackage / "models.NormalMode"}
+       |import _root_.models.UserAnswers // ${basePackage / "models.UserAnswers"}
+       |import ${basePackage / "controllers.routes"}
+       |import ${basePackage / "models.*"}
+       |import ${basePackage / "pages.*"}
+       |${localDateImport}import org.scalatest.flatspec.AnyFlatSpec
+       |import org.scalatest.matchers.should.Matchers
+       |import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
+       |
+       |class DefaultJourneyNavigatorSpec extends AnyFlatSpec, Matchers, ScalaCheckPropertyChecks, Generators {
+       |  private val navigator = new DefaultJourneyNavigator()
+       |  private val userAnswers = UserAnswers("userId")
+       |$testCases
        |}
        |""".stripMargin
   }

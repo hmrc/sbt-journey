@@ -6,7 +6,7 @@ import org.scalacheck.{Arbitrary, Gen}
 import org.scalacheck.Arbitrary.arbitrary
 import uk.gov.hmrc.simplejourney.models.*
 
-trait JourneyGenerators extends Generators {
+trait JourneyGenerators {
 
   given Arbitrary[TaxRegime] = Arbitrary(Gen.oneOf(TaxRegime.values.toIndexedSeq))
 

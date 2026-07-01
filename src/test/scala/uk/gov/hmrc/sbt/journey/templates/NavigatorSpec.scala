@@ -845,7 +845,8 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
   }
 
   "Navigator.render" should "render a Navigator interface and default implementation" in {
-    val config = JourneyConfig("sbt-journey-test", basePackage.toString, Map.empty, Map.empty, Map.empty)
+    val config =
+      JourneyConfig("sbt-journey-test", basePackage.toString, Map.empty, Map.empty, Map.empty)
 
     navigator.render(config) shouldBe
       """package uk.gov.hmrc.sbtjourneytest.navigation
@@ -884,6 +885,699 @@ class NavigatorSpec extends AnyFlatSpec with Matchers {
         |      case NormalMode => normalRoutes(page)(userAnswers)(latestAnswer)
         |      case CheckMode  => checkRoutes(page)(userAnswers)(latestAnswer)
         |    }
+        |}
+        |""".stripMargin
+  }
+
+  def renderCases(cases: List[String]) = {
+    val NL = System.lineSeparator()
+    if (cases.isEmpty) ""
+    else
+      cases.mkString(
+        s"""  "DefaultJourneyNavigator" """,
+        s"${NL * 2}  it ",
+        ""
+      )
+  }
+
+  "Navigator.normalModeTestsFor" should "render tests for navigations between the pages of a linear journey" in {
+    val cipAssessmentTicket =
+      journeyPage("cipAssessmentTicket", FieldType.STRING)
+    val cipAssessmentPage =
+      journeyPage("cipAssessmentPage", FieldType.STRING)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "cipAssessment" -> Journey(
+        pages = Map(
+          "cipAssessmentTicket" -> cipAssessmentTicket,
+          "cipAssessmentPage"   -> cipAssessmentPage
+        ),
+        journey = List(
+          SinglePagePart("cipAssessmentTicket", None),
+          SinglePagePart("cipAssessmentPage", None),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.normalModeTestsFor(config)) shouldBe
+      s"""  "DefaultJourneyNavigator" should "navigate from CipAssessmentTicketPage to CipAssessmentPagePage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: String) =>
+         |    navigator.nextPage(CipAssessmentTicketPage, NormalMode, userAnswers, answer) shouldBe routes.CipAssessmentPageBaseController.onPageLoad(NormalMode)
+         |  }
+         |
+         |  it should "navigate from CipAssessmentPagePage to CheckYourAnswersPage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: String) =>
+         |    navigator.nextPage(CipAssessmentPagePage, NormalMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+         |  }""".stripMargin
+  }
+
+  it should "render tests for navigations between the pages of a do-while journey" in {
+    val auditEvent = journeyPage("auditEvent", FieldType.STRING)
+
+    val addAnotherAuditEvent = journeyPage(
+      "addAnotherAuditEvent",
+      FieldType.BOOLEAN
+    )
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "auditEvents" -> Journey(
+        pages = Map(
+          "auditEvent"           -> auditEvent,
+          "addAnotherAuditEvent" -> addAnotherAuditEvent
+        ),
+        journey = List(
+          DoWhilePart(
+            "addAnotherAuditEvent",
+            List(SinglePagePart("auditEvent", None)),
+            "auditEvents"
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.normalModeTestsFor(config)) shouldBe
+      """  "DefaultJourneyNavigator" should "navigate from AuditEventPage(i) to AddAnotherAuditEventPage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    val auditEventsIndex = 0
+        |    navigator.nextPage(AuditEventPage(auditEventsIndex), NormalMode, userAnswers, answer) shouldBe routes.AddAnotherAuditEventBaseController.onPageLoad(auditEventsIndex, NormalMode)
+        |  }
+        |
+        |  it should "navigate from AddAnotherAuditEventPage(i) to AuditEventPage at the next index when the user chooses Yes in normal mode" in {
+        |    val auditEventsIndex = 0
+        |    navigator.nextPage(AddAnotherAuditEventPage(auditEventsIndex), NormalMode, userAnswers, Choice.Yes) shouldBe routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, NormalMode)
+        |  }
+        |
+        |  it should "navigate from AddAnotherAuditEventPage(i) to CheckYourAnswersPage when the user chooses No in normal mode" in {
+        |    val auditEventsIndex = 0
+        |    navigator.nextPage(AddAnotherAuditEventPage(auditEventsIndex), NormalMode, userAnswers, Choice.No) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }""".stripMargin
+  }
+
+  it should "render tests for navigations between the pages of an if-then journey" in {
+    val addATaxRegime =
+      journeyPage("addATaxRegime", ClassType(basePackage / "Choice"))
+    val taxRegime =
+      journeyPage("taxRegime", FieldType.STRING)
+    val addAnotherTaxRegime =
+      journeyPage("addAnotherTaxRegime", ClassType(basePackage / "Choice"))
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whichTaxRegime" -> Journey(
+        pages = Map(
+          "addATaxRegime"       -> addATaxRegime,
+          "taxRegime"           -> taxRegime,
+          "addAnotherTaxRegime" -> addAnotherTaxRegime
+        ),
+        journey = List(
+          IfThenPart(
+            addATaxRegime.pageKey,
+            List(
+              DoWhilePart(
+                addAnotherTaxRegime.pageKey,
+                List(SinglePagePart(taxRegime.pageKey, None)),
+                "taxRegimes"
+              )
+            ),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.normalModeTestsFor(config)) shouldBe
+      """  "DefaultJourneyNavigator" should "navigate from AddATaxRegimePage to TaxRegimePage when the user chooses Yes in normal mode" in {
+        |    navigator.nextPage(AddATaxRegimePage, NormalMode, userAnswers, Choice.Yes) shouldBe routes.TaxRegimeBaseController.onPageLoad(0, NormalMode)
+        |  }
+        |
+        |  it should "navigate from AddATaxRegimePage to CheckYourAnswersPage when the user chooses No in normal mode" in {
+        |    navigator.nextPage(AddATaxRegimePage, NormalMode, userAnswers, Choice.No) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from TaxRegimePage(Yes, i) to AddAnotherTaxRegimePage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    val taxRegimesIndex = 0
+        |    navigator.nextPage(TaxRegimePage(Choice.Yes, taxRegimesIndex), NormalMode, userAnswers, answer) shouldBe routes.AddAnotherTaxRegimeBaseController.onPageLoad(taxRegimesIndex, NormalMode)
+        |  }
+        |
+        |  it should "navigate from AddAnotherTaxRegimePage(Yes, i) to TaxRegimePage at the next index when the user chooses Yes in normal mode" in {
+        |    val taxRegimesIndex = 0
+        |    navigator.nextPage(AddAnotherTaxRegimePage(Choice.Yes, taxRegimesIndex), NormalMode, userAnswers, Choice.Yes) shouldBe routes.TaxRegimeBaseController.onPageLoad(taxRegimesIndex + 1, NormalMode)
+        |  }
+        |
+        |  it should "navigate from AddAnotherTaxRegimePage(Yes, i) to CheckYourAnswersPage when the user chooses No in normal mode" in {
+        |    val taxRegimesIndex = 0
+        |    navigator.nextPage(AddAnotherTaxRegimePage(Choice.Yes, taxRegimesIndex), NormalMode, userAnswers, Choice.No) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }""".stripMargin
+  }
+
+  it should "render tests for navigations between the pages of a switch-case journey" in {
+    val whichTaxRegime =
+      journeyPage("whichTaxRegime", ClassType(basePackage / "models" / "TaxRegime"))
+    val vatInfo =
+      journeyPage("vatInfo", FieldType.STRING)
+    val saInfo =
+      journeyPage("saInfo", FieldType.STRING)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whichTaxRegime" -> Journey(
+        pages = Map(
+          "whichTaxRegime" -> whichTaxRegime,
+          "saInfo"         -> saInfo,
+          "vatInfo"        -> vatInfo
+        ),
+        journey = List(
+          SwitchCasePart(
+            "whichTaxRegime",
+            Map(
+              "SA"  -> List(SinglePagePart("saInfo", None)),
+              "VAT" -> List(SinglePagePart("vatInfo", None))
+            ),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.normalModeTestsFor(config)) shouldBe
+      """  "DefaultJourneyNavigator" should "navigate from WhichTaxRegimePage to SaInfoPage when the user chooses SA in normal mode" in {
+        |    navigator.nextPage(WhichTaxRegimePage, NormalMode, userAnswers, TaxRegime.SA) shouldBe routes.SaInfoBaseController.onPageLoad(NormalMode)
+        |  }
+        |
+        |  it should "navigate from WhichTaxRegimePage to VatInfoPage when the user chooses VAT in normal mode" in {
+        |    navigator.nextPage(WhichTaxRegimePage, NormalMode, userAnswers, TaxRegime.VAT) shouldBe routes.VatInfoBaseController.onPageLoad(NormalMode)
+        |  }
+        |
+        |  it should "navigate from SaInfoPage(SA) to CheckYourAnswersPage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(SaInfoPage(TaxRegime.SA), NormalMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from VatInfoPage(VAT) to CheckYourAnswersPage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(VatInfoPage(TaxRegime.VAT), NormalMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }""".stripMargin
+  }
+
+  it should "render tests for navigations between the pages of a switch-case journey with a default case" in {
+    val whichTaxRegime =
+      journeyPage("whichTaxRegime", ClassType(basePackage / "models" / "TaxRegime"))
+    val vatInfo =
+      journeyPage("vatInfo", FieldType.STRING)
+    val saInfo =
+      journeyPage("saInfo", FieldType.STRING)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whichTaxRegime" -> Journey(
+        pages = Map(
+          "whichTaxRegime" -> whichTaxRegime,
+          "saInfo"         -> saInfo,
+          "vatInfo"        -> vatInfo
+        ),
+        journey = List(
+          SwitchCasePart(
+            "whichTaxRegime",
+            Map(
+              "SA"      -> List(SinglePagePart("saInfo", None)),
+              "default" -> List(SinglePagePart("vatInfo", None))
+            ),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.normalModeTestsFor(config)) shouldBe
+      """  "DefaultJourneyNavigator" should "navigate from WhichTaxRegimePage to SaInfoPage when the user chooses SA in normal mode" in {
+        |    navigator.nextPage(WhichTaxRegimePage, NormalMode, userAnswers, TaxRegime.SA) shouldBe routes.SaInfoBaseController.onPageLoad(NormalMode)
+        |  }
+        |
+        |  it should "navigate from WhichTaxRegimePage to VatInfoPage when the user chooses VAT in normal mode" in {
+        |    navigator.nextPage(WhichTaxRegimePage, NormalMode, userAnswers, TaxRegime.VAT) shouldBe routes.VatInfoBaseController.onPageLoad(NormalMode)
+        |  }
+        |
+        |  it should "navigate from SaInfoPage(SA) to CheckYourAnswersPage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(SaInfoPage(TaxRegime.SA), NormalMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from VatInfoPage(VAT) to CheckYourAnswersPage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(VatInfoPage(TaxRegime.VAT), NormalMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }""".stripMargin
+  }
+
+  it should "render tests for navigations between the pages of a switch-case journey when there is one uncovered case" in {
+    val whichTaxRegime =
+      journeyPage("whichTaxRegime", ClassType(basePackage / "models" / "TaxRegime"))
+    val saInfo =
+      journeyPage("saInfo", FieldType.STRING)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whichTaxRegime" -> Journey(
+        pages = Map(
+          "whichTaxRegime" -> whichTaxRegime,
+          "saInfo"         -> saInfo
+        ),
+        journey = List(
+          SwitchCasePart(
+            "whichTaxRegime",
+            Map("SA" -> List(SinglePagePart("saInfo", None))),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.normalModeTestsFor(config)) shouldBe
+      """  "DefaultJourneyNavigator" should "navigate from WhichTaxRegimePage to SaInfoPage when the user chooses SA in normal mode" in {
+        |    navigator.nextPage(WhichTaxRegimePage, NormalMode, userAnswers, TaxRegime.SA) shouldBe routes.SaInfoBaseController.onPageLoad(NormalMode)
+        |  }
+        |
+        |  it should "navigate from WhichTaxRegimePage to CheckYourAnswersPage when the user chooses VAT in normal mode" in {
+        |    navigator.nextPage(WhichTaxRegimePage, NormalMode, userAnswers, TaxRegime.VAT) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from SaInfoPage(SA) to CheckYourAnswersPage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(SaInfoPage(TaxRegime.SA), NormalMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }""".stripMargin
+  }
+
+  it should "render navigations between the pages of a switch-case journey when there are multiple uncovered cases" in {
+    val whereDomiciled =
+      journeyPage("whereDomiciled", ClassType(basePackage / "models" / "Domicile"))
+    val longTermResident =
+      journeyPage("longTermResident", FieldType.BOOLEAN)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whereDomiciled" -> Journey(
+        pages = Map(
+          "whereDomiciled"   -> whereDomiciled,
+          "longTermResident" -> longTermResident
+        ),
+        journey = List(
+          SwitchCasePart(
+            "whereDomiciled",
+            Map("OTHER" -> List(SinglePagePart("longTermResident", None))),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.normalModeTestsFor(config)) shouldBe
+      """  "DefaultJourneyNavigator" should "navigate from WhereDomiciledPage to LongTermResidentPage when the user chooses OTHER in normal mode" in {
+        |    navigator.nextPage(WhereDomiciledPage, NormalMode, userAnswers, Domicile.OTHER) shouldBe routes.LongTermResidentBaseController.onPageLoad(NormalMode)
+        |  }
+        |
+        |  it should "navigate from WhereDomiciledPage to CheckYourAnswersPage when the user chooses ENGLAND_WALES in normal mode" in {
+        |    navigator.nextPage(WhereDomiciledPage, NormalMode, userAnswers, Domicile.ENGLAND_WALES) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from WhereDomiciledPage to CheckYourAnswersPage when the user chooses SCOTLAND in normal mode" in {
+        |    navigator.nextPage(WhereDomiciledPage, NormalMode, userAnswers, Domicile.SCOTLAND) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from WhereDomiciledPage to CheckYourAnswersPage when the user chooses NORTHERN_IRELAND in normal mode" in {
+        |    navigator.nextPage(WhereDomiciledPage, NormalMode, userAnswers, Domicile.NORTHERN_IRELAND) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from LongTermResidentPage(OTHER) to CheckYourAnswersPage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: Boolean) =>
+        |    navigator.nextPage(LongTermResidentPage(Domicile.OTHER), NormalMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }""".stripMargin
+  }
+
+  "Navigator.checkModeTestsFor" should "render tests for navigations between the pages of a linear journey" in {
+    val cipAssessmentTicket =
+      journeyPage("cipAssessmentTicket", FieldType.STRING)
+    val cipAssessmentPage =
+      journeyPage("cipAssessmentPage", FieldType.STRING)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "cipAssessment" -> Journey(
+        pages = Map(
+          "cipAssessmentTicket" -> cipAssessmentTicket,
+          "cipAssessmentPage"   -> cipAssessmentPage
+        ),
+        journey = List(
+          SinglePagePart("cipAssessmentTicket", None),
+          SinglePagePart("cipAssessmentPage", None),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.checkModeTestsFor(config)) shouldBe
+      s"""  "DefaultJourneyNavigator" should "navigate from CipAssessmentTicketPage to CheckYourAnswersPage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: String) =>
+         |    navigator.nextPage(CipAssessmentTicketPage, CheckMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+         |  }
+         |
+         |  it should "navigate from CipAssessmentPagePage to CheckYourAnswersPage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: String) =>
+         |    navigator.nextPage(CipAssessmentPagePage, CheckMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+         |  }""".stripMargin
+  }
+
+  it should "render tests for navigations between the pages of a do-while journey" in {
+    val auditEvent = journeyPage("auditEvent", FieldType.STRING)
+
+    val addAnotherAuditEvent = journeyPage(
+      "addAnotherAuditEvent",
+      FieldType.BOOLEAN
+    )
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "auditEvents" -> Journey(
+        pages = Map(
+          "auditEvent"           -> auditEvent,
+          "addAnotherAuditEvent" -> addAnotherAuditEvent
+        ),
+        journey = List(
+          DoWhilePart(
+            "addAnotherAuditEvent",
+            List(SinglePagePart("auditEvent", None)),
+            "auditEvents"
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.checkModeTestsFor(config)) shouldBe
+      """  "DefaultJourneyNavigator" should "navigate from AuditEventPage(i) to AddAnotherAuditEventPage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    val auditEventsIndex = 0
+        |    navigator.nextPage(AuditEventPage(auditEventsIndex), CheckMode, userAnswers, answer) shouldBe routes.AddAnotherAuditEventBaseController.onPageLoad(auditEventsIndex, CheckMode)
+        |  }
+        |
+        |  it should "navigate from AddAnotherAuditEventPage(i) to AuditEventPage at the next index when the user chooses Yes in check mode" in {
+        |    val auditEventsIndex = 0
+        |    navigator.nextPage(AddAnotherAuditEventPage(auditEventsIndex), CheckMode, userAnswers, Choice.Yes) shouldBe routes.AuditEventBaseController.onPageLoad(auditEventsIndex + 1, CheckMode)
+        |  }
+        |
+        |  it should "navigate from AddAnotherAuditEventPage(i) to CheckYourAnswersPage when the user chooses No in check mode" in {
+        |    val auditEventsIndex = 0
+        |    navigator.nextPage(AddAnotherAuditEventPage(auditEventsIndex), CheckMode, userAnswers, Choice.No) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }""".stripMargin
+  }
+
+  it should "render tests for navigations between the pages of an if-then journey" in {
+    val addATaxRegime =
+      journeyPage("addATaxRegime", ClassType(basePackage / "Choice"))
+    val taxRegime =
+      journeyPage("taxRegime", FieldType.STRING)
+    val addAnotherTaxRegime =
+      journeyPage("addAnotherTaxRegime", ClassType(basePackage / "Choice"))
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whichTaxRegime" -> Journey(
+        pages = Map(
+          "addATaxRegime"       -> addATaxRegime,
+          "taxRegime"           -> taxRegime,
+          "addAnotherTaxRegime" -> addAnotherTaxRegime
+        ),
+        journey = List(
+          IfThenPart(
+            addATaxRegime.pageKey,
+            List(
+              DoWhilePart(
+                addAnotherTaxRegime.pageKey,
+                List(SinglePagePart(taxRegime.pageKey, None)),
+                "taxRegimes"
+              )
+            ),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.checkModeTestsFor(config)) shouldBe
+      """  "DefaultJourneyNavigator" should "navigate from AddATaxRegimePage to TaxRegimePage when the user chooses Yes in check mode" in {
+        |    navigator.nextPage(AddATaxRegimePage, CheckMode, userAnswers, Choice.Yes) shouldBe routes.TaxRegimeBaseController.onPageLoad(0, CheckMode)
+        |  }
+        |
+        |  it should "navigate from AddATaxRegimePage to CheckYourAnswersPage when the user chooses No in check mode" in {
+        |    navigator.nextPage(AddATaxRegimePage, CheckMode, userAnswers, Choice.No) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from TaxRegimePage(Yes, i) to AddAnotherTaxRegimePage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    val taxRegimesIndex = 0
+        |    navigator.nextPage(TaxRegimePage(Choice.Yes, taxRegimesIndex), CheckMode, userAnswers, answer) shouldBe routes.AddAnotherTaxRegimeBaseController.onPageLoad(taxRegimesIndex, CheckMode)
+        |  }
+        |
+        |  it should "navigate from AddAnotherTaxRegimePage(Yes, i) to TaxRegimePage at the next index when the user chooses Yes in check mode" in {
+        |    val taxRegimesIndex = 0
+        |    navigator.nextPage(AddAnotherTaxRegimePage(Choice.Yes, taxRegimesIndex), CheckMode, userAnswers, Choice.Yes) shouldBe routes.TaxRegimeBaseController.onPageLoad(taxRegimesIndex + 1, CheckMode)
+        |  }
+        |
+        |  it should "navigate from AddAnotherTaxRegimePage(Yes, i) to CheckYourAnswersPage when the user chooses No in check mode" in {
+        |    val taxRegimesIndex = 0
+        |    navigator.nextPage(AddAnotherTaxRegimePage(Choice.Yes, taxRegimesIndex), CheckMode, userAnswers, Choice.No) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }""".stripMargin
+  }
+
+  it should "render tests for navigations between the pages of a switch-case journey" in {
+    val whichTaxRegime =
+      journeyPage("whichTaxRegime", ClassType(basePackage / "models" / "TaxRegime"))
+    val vatInfo =
+      journeyPage("vatInfo", FieldType.STRING)
+    val saInfo =
+      journeyPage("saInfo", FieldType.STRING)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whichTaxRegime" -> Journey(
+        pages = Map(
+          "whichTaxRegime" -> whichTaxRegime,
+          "saInfo"         -> saInfo,
+          "vatInfo"        -> vatInfo
+        ),
+        journey = List(
+          SwitchCasePart(
+            "whichTaxRegime",
+            Map(
+              "SA"  -> List(SinglePagePart("saInfo", None)),
+              "VAT" -> List(SinglePagePart("vatInfo", None))
+            ),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.checkModeTestsFor(config)) shouldBe
+      """  "DefaultJourneyNavigator" should "navigate from WhichTaxRegimePage to SaInfoPage when the user chooses SA in check mode" in {
+        |    navigator.nextPage(WhichTaxRegimePage, CheckMode, userAnswers, TaxRegime.SA) shouldBe routes.SaInfoBaseController.onPageLoad(CheckMode)
+        |  }
+        |
+        |  it should "navigate from WhichTaxRegimePage to VatInfoPage when the user chooses VAT in check mode" in {
+        |    navigator.nextPage(WhichTaxRegimePage, CheckMode, userAnswers, TaxRegime.VAT) shouldBe routes.VatInfoBaseController.onPageLoad(CheckMode)
+        |  }
+        |
+        |  it should "navigate from SaInfoPage(SA) to CheckYourAnswersPage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(SaInfoPage(TaxRegime.SA), CheckMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from VatInfoPage(VAT) to CheckYourAnswersPage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(VatInfoPage(TaxRegime.VAT), CheckMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }""".stripMargin
+  }
+
+  it should "render tests for navigations between the pages of a switch-case journey with a default case" in {
+    val whichTaxRegime =
+      journeyPage("whichTaxRegime", ClassType(basePackage / "models" / "TaxRegime"))
+    val vatInfo =
+      journeyPage("vatInfo", FieldType.STRING)
+    val saInfo =
+      journeyPage("saInfo", FieldType.STRING)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whichTaxRegime" -> Journey(
+        pages = Map(
+          "whichTaxRegime" -> whichTaxRegime,
+          "saInfo"         -> saInfo,
+          "vatInfo"        -> vatInfo
+        ),
+        journey = List(
+          SwitchCasePart(
+            "whichTaxRegime",
+            Map(
+              "SA"      -> List(SinglePagePart("saInfo", None)),
+              "default" -> List(SinglePagePart("vatInfo", None))
+            ),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.checkModeTestsFor(config)) shouldBe
+      """  "DefaultJourneyNavigator" should "navigate from WhichTaxRegimePage to SaInfoPage when the user chooses SA in check mode" in {
+        |    navigator.nextPage(WhichTaxRegimePage, CheckMode, userAnswers, TaxRegime.SA) shouldBe routes.SaInfoBaseController.onPageLoad(CheckMode)
+        |  }
+        |
+        |  it should "navigate from WhichTaxRegimePage to VatInfoPage when the user chooses VAT in check mode" in {
+        |    navigator.nextPage(WhichTaxRegimePage, CheckMode, userAnswers, TaxRegime.VAT) shouldBe routes.VatInfoBaseController.onPageLoad(CheckMode)
+        |  }
+        |
+        |  it should "navigate from SaInfoPage(SA) to CheckYourAnswersPage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(SaInfoPage(TaxRegime.SA), CheckMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from VatInfoPage(VAT) to CheckYourAnswersPage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(VatInfoPage(TaxRegime.VAT), CheckMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }""".stripMargin
+  }
+
+  it should "render tests for navigations between the pages of a switch-case journey when there is one uncovered case" in {
+    val whichTaxRegime =
+      journeyPage("whichTaxRegime", ClassType(basePackage / "models" / "TaxRegime"))
+    val saInfo =
+      journeyPage("saInfo", FieldType.STRING)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whichTaxRegime" -> Journey(
+        pages = Map(
+          "whichTaxRegime" -> whichTaxRegime,
+          "saInfo"         -> saInfo
+        ),
+        journey = List(
+          SwitchCasePart(
+            "whichTaxRegime",
+            Map("SA" -> List(SinglePagePart("saInfo", None))),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.checkModeTestsFor(config)) shouldBe
+      """  "DefaultJourneyNavigator" should "navigate from WhichTaxRegimePage to SaInfoPage when the user chooses SA in check mode" in {
+        |    navigator.nextPage(WhichTaxRegimePage, CheckMode, userAnswers, TaxRegime.SA) shouldBe routes.SaInfoBaseController.onPageLoad(CheckMode)
+        |  }
+        |
+        |  it should "navigate from WhichTaxRegimePage to CheckYourAnswersPage when the user chooses VAT in check mode" in {
+        |    navigator.nextPage(WhichTaxRegimePage, CheckMode, userAnswers, TaxRegime.VAT) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from SaInfoPage(SA) to CheckYourAnswersPage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(SaInfoPage(TaxRegime.SA), CheckMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }""".stripMargin
+  }
+
+  it should "render navigations between the pages of a switch-case journey when there are multiple uncovered cases" in {
+    val whereDomiciled =
+      journeyPage("whereDomiciled", ClassType(basePackage / "models" / "Domicile"))
+    val longTermResident =
+      journeyPage("longTermResident", FieldType.BOOLEAN)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "whereDomiciled" -> Journey(
+        pages = Map(
+          "whereDomiciled"   -> whereDomiciled,
+          "longTermResident" -> longTermResident
+        ),
+        journey = List(
+          SwitchCasePart(
+            "whereDomiciled",
+            Map("OTHER" -> List(SinglePagePart("longTermResident", None))),
+            None
+          ),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    renderCases(navigator.checkModeTestsFor(config)) shouldBe
+      """  "DefaultJourneyNavigator" should "navigate from WhereDomiciledPage to LongTermResidentPage when the user chooses OTHER in check mode" in {
+        |    navigator.nextPage(WhereDomiciledPage, CheckMode, userAnswers, Domicile.OTHER) shouldBe routes.LongTermResidentBaseController.onPageLoad(CheckMode)
+        |  }
+        |
+        |  it should "navigate from WhereDomiciledPage to CheckYourAnswersPage when the user chooses ENGLAND_WALES in check mode" in {
+        |    navigator.nextPage(WhereDomiciledPage, CheckMode, userAnswers, Domicile.ENGLAND_WALES) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from WhereDomiciledPage to CheckYourAnswersPage when the user chooses SCOTLAND in check mode" in {
+        |    navigator.nextPage(WhereDomiciledPage, CheckMode, userAnswers, Domicile.SCOTLAND) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from WhereDomiciledPage to CheckYourAnswersPage when the user chooses NORTHERN_IRELAND in check mode" in {
+        |    navigator.nextPage(WhereDomiciledPage, CheckMode, userAnswers, Domicile.NORTHERN_IRELAND) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from LongTermResidentPage(OTHER) to CheckYourAnswersPage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: Boolean) =>
+        |    navigator.nextPage(LongTermResidentPage(Domicile.OTHER), CheckMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }""".stripMargin
+  }
+
+  "Navigator.renderSpec" should "render a spec for the journey navigator default implementation" in {
+    val cipAssessmentTicket =
+      journeyPage("cipAssessmentTicket", FieldType.STRING)
+    val cipAssessmentPage =
+      journeyPage("cipAssessmentPage", FieldType.STRING)
+
+    val config = journeyConfig(
+      rootPages = Map("checkYourAnswers" -> rootPage("checkYourAnswers")),
+      journey = "cipAssessment" -> Journey(
+        pages = Map(
+          "cipAssessmentTicket" -> cipAssessmentTicket,
+          "cipAssessmentPage"   -> cipAssessmentPage
+        ),
+        journey = List(
+          SinglePagePart("cipAssessmentTicket", None),
+          SinglePagePart("cipAssessmentPage", None),
+          SinglePagePart("checkYourAnswers", None)
+        )
+      )
+    )
+
+    navigator.renderSpec(config) shouldBe
+      """package uk.gov.hmrc.sbtjourneytest.navigation
+        |
+        |import _root_.generators.Generators // uk.gov.hmrc.sbtjourneytest.generators.Generators
+        |import _root_.models.CheckMode // uk.gov.hmrc.sbtjourneytest.models.CheckMode
+        |import _root_.models.NormalMode // uk.gov.hmrc.sbtjourneytest.models.NormalMode
+        |import _root_.models.UserAnswers // uk.gov.hmrc.sbtjourneytest.models.UserAnswers
+        |import uk.gov.hmrc.sbtjourneytest.controllers.routes
+        |import uk.gov.hmrc.sbtjourneytest.models.*
+        |import uk.gov.hmrc.sbtjourneytest.pages.*
+        |import org.scalatest.flatspec.AnyFlatSpec
+        |import org.scalatest.matchers.should.Matchers
+        |import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
+        |
+        |class DefaultJourneyNavigatorSpec extends AnyFlatSpec, Matchers, ScalaCheckPropertyChecks, Generators {
+        |  private val navigator = new DefaultJourneyNavigator()
+        |  private val userAnswers = UserAnswers("userId")
+        |
+        |  "DefaultJourneyNavigator" should "navigate from CipAssessmentTicketPage to CipAssessmentPagePage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(CipAssessmentTicketPage, NormalMode, userAnswers, answer) shouldBe routes.CipAssessmentPageBaseController.onPageLoad(NormalMode)
+        |  }
+        |
+        |  it should "navigate from CipAssessmentPagePage to CheckYourAnswersPage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(CipAssessmentPagePage, NormalMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from CipAssessmentTicketPage to CheckYourAnswersPage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(CipAssessmentTicketPage, CheckMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
+        |
+        |  it should "navigate from CipAssessmentPagePage to CheckYourAnswersPage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: String) =>
+        |    navigator.nextPage(CipAssessmentPagePage, CheckMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+        |  }
         |}
         |""".stripMargin
   }

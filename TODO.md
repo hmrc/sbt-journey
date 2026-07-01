@@ -13,6 +13,7 @@
     * Not sure whether this is the final change as scalac doesn't actually seem to check it
   * Changed `QuestionPage` to have `AnswerType`
   * Added passthrough to `journey.Routes` in `prod.routes`
+  * Made `ModelGenerators` from test-utils extend `JourneyGenerators`
   * If doing file uploads, add passthrough to `internal.Routes` in `prod.routes`
 * Rework the generated code to make use of the package structure
 * ~~Implement switch-case else / default functionality?~~

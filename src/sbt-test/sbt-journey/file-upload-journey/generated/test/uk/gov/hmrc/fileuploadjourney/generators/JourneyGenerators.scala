@@ -5,7 +5,9 @@ import org.scalacheck.{Arbitrary, Gen}
 import org.scalacheck.Arbitrary.arbitrary
 import uk.gov.hmrc.fileuploadjourney.models.*
 
-trait JourneyGenerators extends Generators {
+trait JourneyGenerators {
+
+  given Arbitrary[UploadId] = Arbitrary(Gen.uuid.map(UploadId.apply))
 
   given Arbitrary[Choice] = Arbitrary(Gen.oneOf(Choice.values.toIndexedSeq))
 }
