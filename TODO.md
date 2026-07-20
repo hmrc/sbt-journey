@@ -3,6 +3,7 @@
 * Add generated tests for the generated code
 * Add queries for reading the journey models
 * Add a generated messages file with descriptions of what each message is for
+* Add error link overrides as in the scaffold pages
 * Add fallback routes to the Navigator implementation when nothing matches
 * Integrate with sbt-header for copyright header generation
 * Rework the hmrc-frontend-scaffold.g8 template to use init_service package structure or create a new template
