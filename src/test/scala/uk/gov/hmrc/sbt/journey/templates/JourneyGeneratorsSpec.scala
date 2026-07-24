@@ -40,7 +40,15 @@ class JourneyGeneratorsSpec extends AnyFlatSpec with Matchers {
          |import org.scalacheck.Arbitrary.arbitrary
          |import uk.gov.hmrc.sbtjourneytest.models.*
          |
+         |import java.time.{Instant,LocalDate,ZoneOffset}
+         |
          |trait JourneyGenerators {
+         |  // Empty strings are not valid for form binding
+         |  given Arbitrary[String] = Arbitrary(Gen.nonEmptyBuildableOf[String, Char](Arbitrary.arbChar.arbitrary))
+         |  // Instant.MIN and Instant.MAX can't be serialized by hmrc-mongo as they're out of range for Long
+         |  given Arbitrary[Instant] = Arbitrary(Gen.choose(Instant.ofEpochMilli(Long.MinValue), Instant.ofEpochMilli(Long.MaxValue)))
+         |  // LocalDate is converted to Instant before it's serialized by hmrc-mongo
+         |  given Arbitrary[LocalDate] = Arbitrary(arbitrary[Instant].map(_.atZone(ZoneOffset.UTC).toLocalDate()))
          |
          |  given Arbitrary[Choice] = Arbitrary(Gen.oneOf(Choice.values.toIndexedSeq))
          |}
@@ -64,12 +72,19 @@ class JourneyGeneratorsSpec extends AnyFlatSpec with Matchers {
       s"""package uk.gov.hmrc.sbtjourneytest.generators
          |
          |import _root_.generators.Generators // TODO: Remove this once we have a better template
-         |import java.time.LocalDate
          |import org.scalacheck.{Arbitrary, Gen}
          |import org.scalacheck.Arbitrary.arbitrary
          |import uk.gov.hmrc.sbtjourneytest.models.*
          |
+         |import java.time.{Instant,LocalDate,ZoneOffset}
+         |
          |trait JourneyGenerators {
+         |  // Empty strings are not valid for form binding
+         |  given Arbitrary[String] = Arbitrary(Gen.nonEmptyBuildableOf[String, Char](Arbitrary.arbChar.arbitrary))
+         |  // Instant.MIN and Instant.MAX can't be serialized by hmrc-mongo as they're out of range for Long
+         |  given Arbitrary[Instant] = Arbitrary(Gen.choose(Instant.ofEpochMilli(Long.MinValue), Instant.ofEpochMilli(Long.MaxValue)))
+         |  // LocalDate is converted to Instant before it's serialized by hmrc-mongo
+         |  given Arbitrary[LocalDate] = Arbitrary(arbitrary[Instant].map(_.atZone(ZoneOffset.UTC).toLocalDate()))
          |
          |  given Arbitrary[AuditEvent] = Arbitrary {
          |    for {
@@ -104,7 +119,15 @@ class JourneyGeneratorsSpec extends AnyFlatSpec with Matchers {
          |import org.scalacheck.Arbitrary.arbitrary
          |import uk.gov.hmrc.sbtjourneytest.models.*
          |
+         |import java.time.{Instant,LocalDate,ZoneOffset}
+         |
          |trait JourneyGenerators {
+         |  // Empty strings are not valid for form binding
+         |  given Arbitrary[String] = Arbitrary(Gen.nonEmptyBuildableOf[String, Char](Arbitrary.arbChar.arbitrary))
+         |  // Instant.MIN and Instant.MAX can't be serialized by hmrc-mongo as they're out of range for Long
+         |  given Arbitrary[Instant] = Arbitrary(Gen.choose(Instant.ofEpochMilli(Long.MinValue), Instant.ofEpochMilli(Long.MaxValue)))
+         |  // LocalDate is converted to Instant before it's serialized by hmrc-mongo
+         |  given Arbitrary[LocalDate] = Arbitrary(arbitrary[Instant].map(_.atZone(ZoneOffset.UTC).toLocalDate()))
          |
          |  given Arbitrary[RateOfRelief] = Arbitrary(Gen.oneOf(RateOfRelief.values.toIndexedSeq))
          |
@@ -128,7 +151,15 @@ class JourneyGeneratorsSpec extends AnyFlatSpec with Matchers {
         |import org.scalacheck.Arbitrary.arbitrary
         |import uk.gov.hmrc.sbtjourneytest.models.*
         |
+        |import java.time.{Instant,LocalDate,ZoneOffset}
+        |
         |trait JourneyGenerators {
+        |  // Empty strings are not valid for form binding
+        |  given Arbitrary[String] = Arbitrary(Gen.nonEmptyBuildableOf[String, Char](Arbitrary.arbChar.arbitrary))
+        |  // Instant.MIN and Instant.MAX can't be serialized by hmrc-mongo as they're out of range for Long
+        |  given Arbitrary[Instant] = Arbitrary(Gen.choose(Instant.ofEpochMilli(Long.MinValue), Instant.ofEpochMilli(Long.MaxValue)))
+        |  // LocalDate is converted to Instant before it's serialized by hmrc-mongo
+        |  given Arbitrary[LocalDate] = Arbitrary(arbitrary[Instant].map(_.atZone(ZoneOffset.UTC).toLocalDate()))
         |
         |  given Arbitrary[UploadId] = Arbitrary(Gen.uuid.map(UploadId.apply))
         |}

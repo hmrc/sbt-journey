@@ -12,7 +12,6 @@ class DefaultFormProvidersModule extends AbstractModule {
     bind(classOf[AuditSourceBaseFormProvider]).to(classOf[DefaultAuditSourceFormProvider])
     bind(classOf[DataDomainBaseFormProvider]).to(classOf[DefaultDataDomainFormProvider])
     bind(classOf[CipAssessmentPageBaseFormProvider]).to(classOf[DefaultCipAssessmentPageFormProvider])
-    bind(classOf[AddAnotherTaxRegimeBaseFormProvider]).to(classOf[DefaultAddAnotherTaxRegimeFormProvider])
     bind(classOf[TaxRegimeBaseFormProvider]).to(classOf[DefaultTaxRegimeFormProvider])
     bind(classOf[AuditProviderBaseFormProvider]).to(classOf[DefaultAuditProviderFormProvider])
     bind(classOf[ServiceDescriptionBaseFormProvider]).to(classOf[DefaultServiceDescriptionFormProvider])

@@ -1188,6 +1188,36 @@ object JourneyPlugin extends AutoPlugin {
       }
     }.toList
 
+    val journeyFiles = config.journeys.flatMap { case (_, journey) =>
+      val journeyControllers = journey.pages.map { case (pageName, page) =>
+        val controllerFile =
+          packageFolder / "controllers" / s"Default${pascalCase(pageName)}ControllerSpec.scala"
+        IO.write(
+          controllerFile,
+          if (page.answerType.isFileUpload)
+            JourneyPageController.fileUploadControllerSpec(
+              basePackage,
+              requiresData = pageName != journey.startPage,
+              journey,
+              pageName,
+              page
+            )
+          else
+            JourneyPageController.journeyControllerSpec(
+              basePackage,
+              requiresData = pageName != journey.startPage,
+              journey,
+              pageName,
+              page
+            )
+        )
+        logger.info(s"Generated controller spec $controllerFile")
+        controllerFile
+      }
+
+      journeyControllers
+    }.toList
+
     val hasFileUploadPage = config.journeys.values
       .flatMap(_.pages.values)
       .exists(_.answerType.isFileUpload)
@@ -1205,18 +1235,23 @@ object JourneyPlugin extends AutoPlugin {
         IO.write(upscanConnectorFile, UpscanConnector.renderSpec(serviceName, basePackage))
         logger.info(s"Generated connector spec $upscanConnectorFile")
 
+        val upscanControllerFile =
+          packageFolder / "controllers" / "upscan" / "DefaultUpscanNotificationControllerSpec.scala"
+        IO.write(upscanControllerFile, UpscanNotificationController.renderSpec(basePackage))
+        logger.info(s"Generated controller spec $upscanConnectorFile")
+
         val uploadRepositoryFile = packageFolder / "repositories" / "FileUploadRepositorySpec.scala"
         IO.write(uploadRepositoryFile, UploadRepository.renderSpec(basePackage))
         logger.info(s"Generated repository spec $uploadRepositoryFile")
 
-        List(upscanConnectorFile, uploadRepositoryFile)
+        List(upscanConnectorFile, upscanControllerFile, uploadRepositoryFile)
       }
 
     val navigatorFile = packageFolder / "navigation" / s"DefaultJourneyNavigatorSpec.scala"
     IO.write(navigatorFile, new Navigator(config.models).renderSpec(config))
     logger.info(s"Generated navigator spec $navigatorFile")
 
-    rootPageFiles ++ upscanFiles :+ journeyGeneratorFile :+ navigatorFile
+    rootPageFiles ++ journeyFiles ++ upscanFiles :+ journeyGeneratorFile :+ navigatorFile
   }
 
   private[journey] def initialiseJourneyViewFiles(

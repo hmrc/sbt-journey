@@ -46,12 +46,12 @@ object Routes extends Template {
     val controllerClass = journeyPage.controllerClass
 
     if (indexes.isEmpty) {
-      s"""|GET ${viewRoute}${viewRoutePadding}${controllerClass}.onPageLoad(mode: Mode = NormalMode)
+      s"""|GET ${viewRoute}${viewRoutePadding}${controllerClass}.onPageLoad(mode: Mode = NormalMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
           |GET ${uploadSuccessViewRoute}${viewUploadRoutePadding}${controllerClass}.onUploadSuccess(id: java.util.UUID, mode: Mode = NormalMode)
-          |GET ${uploadFailureViewRoute}${viewUploadRoutePadding}${controllerClass}.onUploadFailure(id: java.util.UUID, mode: Mode = NormalMode)
-          |GET ${changeRoute}${changeRoutePadding}${controllerClass}.onPageLoad(mode: Mode = CheckMode)
+          |GET ${uploadFailureViewRoute}${viewUploadRoutePadding}${controllerClass}.onUploadFailure(id: java.util.UUID, mode: Mode = NormalMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
+          |GET ${changeRoute}${changeRoutePadding}${controllerClass}.onPageLoad(mode: Mode = CheckMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
           |GET ${uploadSuccessChangeRoute}${changeUploadRoutePadding}${controllerClass}.onUploadSuccess(id: java.util.UUID, mode: Mode = CheckMode)
-          |GET ${uploadFailureChangeRoute}${changeUploadRoutePadding}${controllerClass}.onUploadFailure(id: java.util.UUID, mode: Mode = CheckMode)""".stripMargin
+          |GET ${uploadFailureChangeRoute}${changeUploadRoutePadding}${controllerClass}.onUploadFailure(id: java.util.UUID, mode: Mode = CheckMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)""".stripMargin
     } else {
       val indexRoute = indexes
         .map { path => s"${kebabCase(path.pageKey)}/:${camelCase(path.pageKey)}" }
@@ -61,12 +61,12 @@ object Routes extends Template {
         .map { path => s"${camelCase(path.pageKey)}: Int" }
         .mkString(", ")
 
-      s"""|GET ${indexRoute}${viewRoute}${viewRoutePadding}${controllerClass}.onPageLoad($indexParams, mode: Mode = NormalMode)
+      s"""|GET ${indexRoute}${viewRoute}${viewRoutePadding}${controllerClass}.onPageLoad($indexParams, mode: Mode = NormalMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
           |GET ${indexRoute}${uploadSuccessViewRoute}${viewUploadRoutePadding}${controllerClass}.onUploadSuccess($indexParams, id: java.util.UUID, mode: Mode = NormalMode)
-          |GET ${indexRoute}${uploadFailureViewRoute}${viewUploadRoutePadding}${controllerClass}.onUploadFailure($indexParams, id: java.util.UUID, mode: Mode = NormalMode)
-          |GET ${indexRoute}${changeRoute}${changeRoutePadding}${controllerClass}.onPageLoad($indexParams, mode: Mode = CheckMode)
+          |GET ${indexRoute}${uploadFailureViewRoute}${viewUploadRoutePadding}${controllerClass}.onUploadFailure($indexParams, id: java.util.UUID, mode: Mode = NormalMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
+          |GET ${indexRoute}${changeRoute}${changeRoutePadding}${controllerClass}.onPageLoad($indexParams, mode: Mode = CheckMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
           |GET ${indexRoute}${uploadSuccessChangeRoute}${changeUploadRoutePadding}${controllerClass}.onUploadSuccess($indexParams, id: java.util.UUID, mode: Mode = CheckMode)
-          |GET ${indexRoute}${uploadFailureChangeRoute}${changeUploadRoutePadding}${controllerClass}.onUploadFailure($indexParams, id: java.util.UUID, mode: Mode = CheckMode)""".stripMargin
+          |GET ${indexRoute}${uploadFailureChangeRoute}${changeUploadRoutePadding}${controllerClass}.onUploadFailure($indexParams, id: java.util.UUID, mode: Mode = CheckMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)""".stripMargin
     }
   }
 

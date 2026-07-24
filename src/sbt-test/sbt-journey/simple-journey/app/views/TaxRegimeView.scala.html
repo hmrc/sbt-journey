@@ -2,7 +2,7 @@
     layout: templates.Layout,
     formHelper: FormWithCSRF,
     govukErrorSummary: GovukErrorSummary,
-    govukRadios: GovukRadios,
+    govukCheckboxes: GovukCheckboxes,
     govukButton: GovukButton
 )
 
@@ -15,20 +15,23 @@
             @govukErrorSummary(ErrorSummaryViewModel(form))
         }
 
-        @govukRadios(
-            RadiosViewModel(
-                field = form("value"),
+        @govukCheckboxes(
+            CheckboxesViewModel(
+                form = form,
+                name = "value",
                 legend = LegendViewModel(messages("taxRegime.heading")).asPageHeading(),
                 items = List(
-                    RadioItem(
-                        id    = Some("value-sa"),
-                        value = Some("SA"),
-                        content = Text(messages("taxRegime.value.sa"))
+                    CheckboxItemViewModel(
+                        content = Text(messages("taxRegime.value.sa")),
+                        fieldId = "value",
+                        index = 0,
+                        value = "SA"
                     ),
-                    RadioItem(
-                        id    = Some("value-vat"),
-                        value = Some("VAT"),
-                        content = Text(messages("taxRegime.value.vat"))
+                    CheckboxItemViewModel(
+                        content = Text(messages("taxRegime.value.vat")),
+                        fieldId = "value",
+                        index = 1,
+                        value = "VAT"
                     )
                 )
             )

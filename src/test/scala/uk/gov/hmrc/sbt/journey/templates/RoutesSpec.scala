@@ -105,12 +105,12 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
     )
 
     Routes.journeyRoutes(config) shouldBe
-      """GET /upload-will-and-codicils                     uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onPageLoad(mode: Mode = NormalMode)
+      """GET /upload-will-and-codicils                     uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onPageLoad(mode: Mode = NormalMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
         |GET /upload-will-and-codicils/:id/success         uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onUploadSuccess(id: java.util.UUID, mode: Mode = NormalMode)
-        |GET /upload-will-and-codicils/:id/failure         uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onUploadFailure(id: java.util.UUID, mode: Mode = NormalMode)
-        |GET /change-upload-will-and-codicils              uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onPageLoad(mode: Mode = CheckMode)
+        |GET /upload-will-and-codicils/:id/failure         uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onUploadFailure(id: java.util.UUID, mode: Mode = NormalMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
+        |GET /change-upload-will-and-codicils              uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onPageLoad(mode: Mode = CheckMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
         |GET /change-upload-will-and-codicils/:id/success  uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onUploadSuccess(id: java.util.UUID, mode: Mode = CheckMode)
-        |GET /change-upload-will-and-codicils/:id/failure  uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onUploadFailure(id: java.util.UUID, mode: Mode = CheckMode)""".stripMargin
+        |GET /change-upload-will-and-codicils/:id/failure  uk.gov.hmrc.sbtjourneytest.controllers.UploadWillAndCodicilsBaseController.onUploadFailure(id: java.util.UUID, mode: Mode = CheckMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)""".stripMargin
   }
 
   it should "render routes with index parameters for a subjourney page of a do-while journey" in {
@@ -180,12 +180,12 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
         |GET  /will-documents/:willDocuments/change-add-another-will-document  uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherWillDocumentBaseController.onPageLoad(willDocuments: Int, mode: Mode = CheckMode)
         |POST /will-documents/:willDocuments/change-add-another-will-document  uk.gov.hmrc.sbtjourneytest.controllers.AddAnotherWillDocumentBaseController.onSubmit(willDocuments: Int, mode: Mode = CheckMode)
         |
-        |GET /will-documents/:willDocuments/upload-will-document                     uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onPageLoad(willDocuments: Int, mode: Mode = NormalMode)
+        |GET /will-documents/:willDocuments/upload-will-document                     uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onPageLoad(willDocuments: Int, mode: Mode = NormalMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
         |GET /will-documents/:willDocuments/upload-will-document/:id/success         uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onUploadSuccess(willDocuments: Int, id: java.util.UUID, mode: Mode = NormalMode)
-        |GET /will-documents/:willDocuments/upload-will-document/:id/failure         uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onUploadFailure(willDocuments: Int, id: java.util.UUID, mode: Mode = NormalMode)
-        |GET /will-documents/:willDocuments/change-upload-will-document              uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onPageLoad(willDocuments: Int, mode: Mode = CheckMode)
+        |GET /will-documents/:willDocuments/upload-will-document/:id/failure         uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onUploadFailure(willDocuments: Int, id: java.util.UUID, mode: Mode = NormalMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
+        |GET /will-documents/:willDocuments/change-upload-will-document              uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onPageLoad(willDocuments: Int, mode: Mode = CheckMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
         |GET /will-documents/:willDocuments/change-upload-will-document/:id/success  uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onUploadSuccess(willDocuments: Int, id: java.util.UUID, mode: Mode = CheckMode)
-        |GET /will-documents/:willDocuments/change-upload-will-document/:id/failure  uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onUploadFailure(willDocuments: Int, id: java.util.UUID, mode: Mode = CheckMode)""".stripMargin
+        |GET /will-documents/:willDocuments/change-upload-will-document/:id/failure  uk.gov.hmrc.sbtjourneytest.controllers.UploadWillDocumentBaseController.onUploadFailure(willDocuments: Int, id: java.util.UUID, mode: Mode = CheckMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)""".stripMargin
   }
 
   it should "render non-parameterised routes for subjourney pages of switch-case journeys" in {
@@ -327,12 +327,12 @@ class RoutesSpec extends AnyFlatSpec with Matchers {
         |GET  /audit-sources/:auditSources/change-audit-source  uk.gov.hmrc.sbtjourneytest.controllers.AuditSourceBaseController.onPageLoad(auditSources: Int, mode: Mode = CheckMode)
         |POST /audit-sources/:auditSources/change-audit-source  uk.gov.hmrc.sbtjourneytest.controllers.AuditSourceBaseController.onSubmit(auditSources: Int, mode: Mode = CheckMode)
         |
-        |GET /audit-sources/:auditSources/audit-events/:auditEvents/evidence-from-qa                     uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
+        |GET /audit-sources/:auditSources/audit-events/:auditEvents/evidence-from-qa                     uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
         |GET /audit-sources/:auditSources/audit-events/:auditEvents/evidence-from-qa/:id/success         uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onUploadSuccess(auditSources: Int, auditEvents: Int, id: java.util.UUID, mode: Mode = NormalMode)
-        |GET /audit-sources/:auditSources/audit-events/:auditEvents/evidence-from-qa/:id/failure         uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onUploadFailure(auditSources: Int, auditEvents: Int, id: java.util.UUID, mode: Mode = NormalMode)
-        |GET /audit-sources/:auditSources/audit-events/:auditEvents/change-evidence-from-qa              uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
+        |GET /audit-sources/:auditSources/audit-events/:auditEvents/evidence-from-qa/:id/failure         uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onUploadFailure(auditSources: Int, auditEvents: Int, id: java.util.UUID, mode: Mode = NormalMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
+        |GET /audit-sources/:auditSources/audit-events/:auditEvents/change-evidence-from-qa              uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)
         |GET /audit-sources/:auditSources/audit-events/:auditEvents/change-evidence-from-qa/:id/success  uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onUploadSuccess(auditSources: Int, auditEvents: Int, id: java.util.UUID, mode: Mode = CheckMode)
-        |GET /audit-sources/:auditSources/audit-events/:auditEvents/change-evidence-from-qa/:id/failure  uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onUploadFailure(auditSources: Int, auditEvents: Int, id: java.util.UUID, mode: Mode = CheckMode)""".stripMargin
+        |GET /audit-sources/:auditSources/audit-events/:auditEvents/change-evidence-from-qa/:id/failure  uk.gov.hmrc.sbtjourneytest.controllers.EvidenceFromQaBaseController.onUploadFailure(auditSources: Int, auditEvents: Int, id: java.util.UUID, mode: Mode = CheckMode, key: Option[String] ?= None, errorCode: Option[String] ?= None, errorMessage: Option[String] ?= None)""".stripMargin
   }
 
   "Routes.internalRoutes" should "render routes for Upscan notifications relative to the base package" in {

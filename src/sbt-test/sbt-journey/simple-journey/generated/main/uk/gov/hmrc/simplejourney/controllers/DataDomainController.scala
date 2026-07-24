@@ -7,9 +7,10 @@ import models.UserAnswers // uk.gov.hmrc.simplejourney.models.UserAnswers
 import repositories.SessionRepository // uk.gov.hmrc.simplejourney.repositories.SessionRepository
 import uk.gov.hmrc.simplejourney.controllers.{routes as journeyRoutes}
 import uk.gov.hmrc.simplejourney.models.*
-import uk.gov.hmrc.simplejourney.forms.*
+import uk.gov.hmrc.simplejourney.forms.DataDomainBaseFormProvider
 import uk.gov.hmrc.simplejourney.navigation.*
 import uk.gov.hmrc.simplejourney.pages.*
+import views.html.DataDomainView
 
 import play.api.i18n.I18nSupport
 import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
@@ -33,7 +34,7 @@ class DefaultDataDomainController @Inject() (
   navigator: JourneyNavigator,
   sessionRepository: SessionRepository,
   form: DataDomainBaseFormProvider,
-  view: views.html.DataDomainView,
+  view: DataDomainView,
   override val controllerComponents: MessagesControllerComponents
 )(using ExecutionContext) extends DataDomainBaseController {
 

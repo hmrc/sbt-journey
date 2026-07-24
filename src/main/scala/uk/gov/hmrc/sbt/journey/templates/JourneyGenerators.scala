@@ -17,7 +17,6 @@
 package uk.gov.hmrc.sbt.journey.templates
 
 import uk.gov.hmrc.sbt.journey.models.*
-import uk.gov.hmrc.sbt.journey.templates.Imports.JavaTimePrefix
 import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.camelCase
 
 import java.time.LocalDate
@@ -122,30 +121,22 @@ class JourneyGenerators(models: Map[String, AnswerModel]) extends Template {
   }
 
   def render(basePackage: QualifiedName, hasFileUpload: Boolean = false): String = {
-    val importedSymbols = models
-      .collect { case (_, CaseClassModel(_, fields)) =>
-        importCollector.importedSymbols(fields, recursive = true)
-      }
-      .foldLeft(Map.empty[List[String], Set[String]])(Imports.merge)
-
-    val usesLocalDate =
-      importedSymbols.contains(JavaTimePrefix) &&
-        importedSymbols(JavaTimePrefix).contains("LocalDate")
-
-    val localDateImport =
-      if (usesLocalDate)
-        s"import java.time.LocalDate$NL"
-      else
-        ""
-
     s"""package ${basePackage / "generators"}
        |
        |import _root_.generators.Generators // TODO: Remove this once we have a better template
-       |${localDateImport}import org.scalacheck.{Arbitrary, Gen}
+       |import org.scalacheck.{Arbitrary, Gen}
        |import org.scalacheck.Arbitrary.arbitrary
        |import ${basePackage / "models" / "*"}
        |
+       |import java.time.{Instant,LocalDate,ZoneOffset}
+       |
        |trait JourneyGenerators {
+       |  // Empty strings are not valid for form binding
+       |  given Arbitrary[String] = Arbitrary(Gen.nonEmptyBuildableOf[String, Char](Arbitrary.arbChar.arbitrary))
+       |  // Instant.MIN and Instant.MAX can't be serialized by hmrc-mongo as they're out of range for Long
+       |  given Arbitrary[Instant] = Arbitrary(Gen.choose(Instant.ofEpochMilli(Long.MinValue), Instant.ofEpochMilli(Long.MaxValue)))
+       |  // LocalDate is converted to Instant before it's serialized by hmrc-mongo
+       |  given Arbitrary[LocalDate] = Arbitrary(arbitrary[Instant].map(_.atZone(ZoneOffset.UTC).toLocalDate()))
        |
        |${generatorsFor(models, hasFileUpload)}
        |}

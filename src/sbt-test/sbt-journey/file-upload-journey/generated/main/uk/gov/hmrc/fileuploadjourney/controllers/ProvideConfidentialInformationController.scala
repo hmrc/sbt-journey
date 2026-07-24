@@ -7,9 +7,10 @@ import models.UserAnswers // uk.gov.hmrc.fileuploadjourney.models.UserAnswers
 import repositories.SessionRepository // uk.gov.hmrc.fileuploadjourney.repositories.SessionRepository
 import uk.gov.hmrc.fileuploadjourney.controllers.{routes as journeyRoutes}
 import uk.gov.hmrc.fileuploadjourney.models.*
-import uk.gov.hmrc.fileuploadjourney.forms.*
+import uk.gov.hmrc.fileuploadjourney.forms.ProvideConfidentialInformationBaseFormProvider
 import uk.gov.hmrc.fileuploadjourney.navigation.*
 import uk.gov.hmrc.fileuploadjourney.pages.*
+import views.html.ProvideConfidentialInformationView
 
 import play.api.i18n.I18nSupport
 import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
@@ -33,7 +34,7 @@ class DefaultProvideConfidentialInformationController @Inject() (
   navigator: JourneyNavigator,
   sessionRepository: SessionRepository,
   form: ProvideConfidentialInformationBaseFormProvider,
-  view: views.html.ProvideConfidentialInformationView,
+  view: ProvideConfidentialInformationView,
   override val controllerComponents: MessagesControllerComponents
 )(using ExecutionContext) extends ProvideConfidentialInformationBaseController {
 

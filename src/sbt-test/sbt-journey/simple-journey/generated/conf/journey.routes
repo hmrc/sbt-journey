@@ -24,11 +24,6 @@ POST /data-domains/:dataDomains/add-another-data-domain         uk.gov.hmrc.simp
 GET  /data-domains/:dataDomains/change-add-another-data-domain  uk.gov.hmrc.simplejourney.controllers.AddAnotherDataDomainBaseController.onPageLoad(dataDomains: Int, mode: Mode = CheckMode)
 POST /data-domains/:dataDomains/change-add-another-data-domain  uk.gov.hmrc.simplejourney.controllers.AddAnotherDataDomainBaseController.onSubmit(dataDomains: Int, mode: Mode = CheckMode)
 
-GET  /tax-regimes/:taxRegimes/add-another-tax-regime         uk.gov.hmrc.simplejourney.controllers.AddAnotherTaxRegimeBaseController.onPageLoad(taxRegimes: Int, mode: Mode = NormalMode)
-POST /tax-regimes/:taxRegimes/add-another-tax-regime         uk.gov.hmrc.simplejourney.controllers.AddAnotherTaxRegimeBaseController.onSubmit(taxRegimes: Int, mode: Mode = NormalMode)
-GET  /tax-regimes/:taxRegimes/change-add-another-tax-regime  uk.gov.hmrc.simplejourney.controllers.AddAnotherTaxRegimeBaseController.onPageLoad(taxRegimes: Int, mode: Mode = CheckMode)
-POST /tax-regimes/:taxRegimes/change-add-another-tax-regime  uk.gov.hmrc.simplejourney.controllers.AddAnotherTaxRegimeBaseController.onSubmit(taxRegimes: Int, mode: Mode = CheckMode)
-
 GET  /audit-sources/:auditSources/audit-events/:auditEvents/audit-event         uk.gov.hmrc.simplejourney.controllers.AuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
 POST /audit-sources/:auditSources/audit-events/:auditEvents/audit-event         uk.gov.hmrc.simplejourney.controllers.AuditEventBaseController.onSubmit(auditSources: Int, auditEvents: Int, mode: Mode = NormalMode)
 GET  /audit-sources/:auditSources/audit-events/:auditEvents/change-audit-event  uk.gov.hmrc.simplejourney.controllers.AuditEventBaseController.onPageLoad(auditSources: Int, auditEvents: Int, mode: Mode = CheckMode)
@@ -69,7 +64,7 @@ POST /service-name         uk.gov.hmrc.simplejourney.controllers.ServiceNameBase
 GET  /change-service-name  uk.gov.hmrc.simplejourney.controllers.ServiceNameBaseController.onPageLoad(mode: Mode = CheckMode)
 POST /change-service-name  uk.gov.hmrc.simplejourney.controllers.ServiceNameBaseController.onSubmit(mode: Mode = CheckMode)
 
-GET  /tax-regimes/:taxRegimes/tax-regime         uk.gov.hmrc.simplejourney.controllers.TaxRegimeBaseController.onPageLoad(taxRegimes: Int, mode: Mode = NormalMode)
-POST /tax-regimes/:taxRegimes/tax-regime         uk.gov.hmrc.simplejourney.controllers.TaxRegimeBaseController.onSubmit(taxRegimes: Int, mode: Mode = NormalMode)
-GET  /tax-regimes/:taxRegimes/change-tax-regime  uk.gov.hmrc.simplejourney.controllers.TaxRegimeBaseController.onPageLoad(taxRegimes: Int, mode: Mode = CheckMode)
-POST /tax-regimes/:taxRegimes/change-tax-regime  uk.gov.hmrc.simplejourney.controllers.TaxRegimeBaseController.onSubmit(taxRegimes: Int, mode: Mode = CheckMode)
+GET  /tax-regime         uk.gov.hmrc.simplejourney.controllers.TaxRegimeBaseController.onPageLoad(mode: Mode = NormalMode)
+POST /tax-regime         uk.gov.hmrc.simplejourney.controllers.TaxRegimeBaseController.onSubmit(mode: Mode = NormalMode)
+GET  /change-tax-regime  uk.gov.hmrc.simplejourney.controllers.TaxRegimeBaseController.onPageLoad(mode: Mode = CheckMode)
+POST /change-tax-regime  uk.gov.hmrc.simplejourney.controllers.TaxRegimeBaseController.onSubmit(mode: Mode = CheckMode)

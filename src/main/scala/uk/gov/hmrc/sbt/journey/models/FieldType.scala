@@ -24,6 +24,12 @@ sealed abstract class FieldType extends Product with Serializable {
   def isFileUpload: Boolean =
     typeName.contains("UploadId")
 
+  def canBeEmpty: Boolean =
+    this match {
+      case SetType(_) | OptionType(_) => true
+      case _                          => false
+    }
+
   def typeName: Option[String] = this match {
     case ClassType(clazz) => clazz.split("\\.").lastOption
     case _                => None
@@ -31,11 +37,11 @@ sealed abstract class FieldType extends Product with Serializable {
 }
 
 object FieldType {
-  val INT     = PrimitiveType(classOf[Int])
-  val BOOLEAN = PrimitiveType(classOf[Boolean])
-  val STRING  = ClassType(classOf[String])
+  val INT        = PrimitiveType(classOf[Int])
+  val BOOLEAN    = PrimitiveType(classOf[Boolean])
+  val STRING     = ClassType(classOf[String])
   val BIGDECIMAL = ClassType(classOf[BigDecimal])
-  val LOCALDATE = ClassType(classOf[LocalDate])
+  val LOCALDATE  = ClassType(classOf[LocalDate])
 }
 
 /** A list answer.
@@ -45,9 +51,9 @@ object FieldType {
 case class ListType(elements: FieldType) extends FieldType
 
 /** A set answer.
- * @param elements
- *   the element type of the set.
- */
+  * @param elements
+  *   the element type of the set.
+  */
 case class SetType(elements: FieldType) extends FieldType
 
 /** An optional answer.

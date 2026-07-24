@@ -48,26 +48,15 @@ class DefaultJourneyNavigatorSpec extends AnyFlatSpec, Matchers, ScalaCheckPrope
   }
 
   it should "navigate from AddATaxRegimePage to TaxRegimePage when the user chooses Yes in normal mode" in {
-    navigator.nextPage(AddATaxRegimePage, NormalMode, userAnswers, Choice.Yes) shouldBe routes.TaxRegimeBaseController.onPageLoad(0, NormalMode)
+    navigator.nextPage(AddATaxRegimePage, NormalMode, userAnswers, Choice.Yes) shouldBe routes.TaxRegimeBaseController.onPageLoad(NormalMode)
   }
 
   it should "navigate from AddATaxRegimePage to AuditProviderPage when the user chooses No in normal mode" in {
     navigator.nextPage(AddATaxRegimePage, NormalMode, userAnswers, Choice.No) shouldBe routes.AuditProviderBaseController.onPageLoad(NormalMode)
   }
 
-  it should "navigate from TaxRegimePage(Yes, i) to AddAnotherTaxRegimePage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: TaxRegime) =>
-    val taxRegimesIndex = 0
-    navigator.nextPage(TaxRegimePage(Choice.Yes, taxRegimesIndex), NormalMode, userAnswers, answer) shouldBe routes.AddAnotherTaxRegimeBaseController.onPageLoad(taxRegimesIndex, NormalMode)
-  }
-
-  it should "navigate from AddAnotherTaxRegimePage(Yes, i) to TaxRegimePage at the next index when the user chooses Yes in normal mode" in {
-    val taxRegimesIndex = 0
-    navigator.nextPage(AddAnotherTaxRegimePage(Choice.Yes, taxRegimesIndex), NormalMode, userAnswers, Choice.Yes) shouldBe routes.TaxRegimeBaseController.onPageLoad(taxRegimesIndex + 1, NormalMode)
-  }
-
-  it should "navigate from AddAnotherTaxRegimePage(Yes, i) to AuditProviderPage when the user chooses No in normal mode" in {
-    val taxRegimesIndex = 0
-    navigator.nextPage(AddAnotherTaxRegimePage(Choice.Yes, taxRegimesIndex), NormalMode, userAnswers, Choice.No) shouldBe routes.AuditProviderBaseController.onPageLoad(NormalMode)
+  it should "navigate from TaxRegimePage(Yes) to AuditProviderPage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: Set[TaxRegime]) =>
+    navigator.nextPage(TaxRegimePage(Choice.Yes), NormalMode, userAnswers, answer) shouldBe routes.AuditProviderBaseController.onPageLoad(NormalMode)
   }
 
   it should "navigate from AuditProviderPage to AuditSourcePage for all answers in normal mode" in forAll(minSuccessful(5)) { (answer: String) =>
@@ -139,26 +128,15 @@ class DefaultJourneyNavigatorSpec extends AnyFlatSpec, Matchers, ScalaCheckPrope
   }
 
   it should "navigate from AddATaxRegimePage to TaxRegimePage when the user chooses Yes in check mode" in {
-    navigator.nextPage(AddATaxRegimePage, CheckMode, userAnswers, Choice.Yes) shouldBe routes.TaxRegimeBaseController.onPageLoad(0, CheckMode)
+    navigator.nextPage(AddATaxRegimePage, CheckMode, userAnswers, Choice.Yes) shouldBe routes.TaxRegimeBaseController.onPageLoad(CheckMode)
   }
 
   it should "navigate from AddATaxRegimePage to CheckYourAnswersPage when the user chooses No in check mode" in {
     navigator.nextPage(AddATaxRegimePage, CheckMode, userAnswers, Choice.No) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
   }
 
-  it should "navigate from TaxRegimePage(Yes, i) to AddAnotherTaxRegimePage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: TaxRegime) =>
-    val taxRegimesIndex = 0
-    navigator.nextPage(TaxRegimePage(Choice.Yes, taxRegimesIndex), CheckMode, userAnswers, answer) shouldBe routes.AddAnotherTaxRegimeBaseController.onPageLoad(taxRegimesIndex, CheckMode)
-  }
-
-  it should "navigate from AddAnotherTaxRegimePage(Yes, i) to TaxRegimePage at the next index when the user chooses Yes in check mode" in {
-    val taxRegimesIndex = 0
-    navigator.nextPage(AddAnotherTaxRegimePage(Choice.Yes, taxRegimesIndex), CheckMode, userAnswers, Choice.Yes) shouldBe routes.TaxRegimeBaseController.onPageLoad(taxRegimesIndex + 1, CheckMode)
-  }
-
-  it should "navigate from AddAnotherTaxRegimePage(Yes, i) to CheckYourAnswersPage when the user chooses No in check mode" in {
-    val taxRegimesIndex = 0
-    navigator.nextPage(AddAnotherTaxRegimePage(Choice.Yes, taxRegimesIndex), CheckMode, userAnswers, Choice.No) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
+  it should "navigate from TaxRegimePage(Yes) to CheckYourAnswersPage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: Set[TaxRegime]) =>
+    navigator.nextPage(TaxRegimePage(Choice.Yes), CheckMode, userAnswers, answer) shouldBe routes.CheckYourAnswersBaseController.onPageLoad
   }
 
   it should "navigate from AuditProviderPage to CheckYourAnswersPage for all answers in check mode" in forAll(minSuccessful(5)) { (answer: String) =>

@@ -7,9 +7,10 @@ import models.UserAnswers // uk.gov.hmrc.simplejourney.models.UserAnswers
 import repositories.SessionRepository // uk.gov.hmrc.simplejourney.repositories.SessionRepository
 import uk.gov.hmrc.simplejourney.controllers.{routes as journeyRoutes}
 import uk.gov.hmrc.simplejourney.models.*
-import uk.gov.hmrc.simplejourney.forms.*
+import uk.gov.hmrc.simplejourney.forms.CipAssessmentPageBaseFormProvider
 import uk.gov.hmrc.simplejourney.navigation.*
 import uk.gov.hmrc.simplejourney.pages.*
+import views.html.CipAssessmentPageView
 
 import play.api.i18n.I18nSupport
 import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
@@ -33,7 +34,7 @@ class DefaultCipAssessmentPageController @Inject() (
   navigator: JourneyNavigator,
   sessionRepository: SessionRepository,
   form: CipAssessmentPageBaseFormProvider,
-  view: views.html.CipAssessmentPageView,
+  view: CipAssessmentPageView,
   override val controllerComponents: MessagesControllerComponents
 )(using ExecutionContext) extends CipAssessmentPageBaseController {
 

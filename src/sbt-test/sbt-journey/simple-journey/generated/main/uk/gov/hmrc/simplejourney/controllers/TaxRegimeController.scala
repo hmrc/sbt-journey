@@ -7,9 +7,10 @@ import models.UserAnswers // uk.gov.hmrc.simplejourney.models.UserAnswers
 import repositories.SessionRepository // uk.gov.hmrc.simplejourney.repositories.SessionRepository
 import uk.gov.hmrc.simplejourney.controllers.{routes as journeyRoutes}
 import uk.gov.hmrc.simplejourney.models.*
-import uk.gov.hmrc.simplejourney.forms.*
+import uk.gov.hmrc.simplejourney.forms.TaxRegimeBaseFormProvider
 import uk.gov.hmrc.simplejourney.navigation.*
 import uk.gov.hmrc.simplejourney.pages.*
+import views.html.TaxRegimeView
 
 import play.api.i18n.I18nSupport
 import play.api.mvc.{Action, AnyContent, MessagesControllerComponents}
@@ -21,8 +22,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[DefaultTaxRegimeController])
 trait TaxRegimeBaseController extends FrontendBaseController, I18nSupport {
-  def onPageLoad(taxRegimesIndex: Int, mode: Mode): Action[AnyContent]
-  def onSubmit(taxRegimesIndex: Int, mode: Mode): Action[AnyContent]
+  def onPageLoad(mode: Mode): Action[AnyContent]
+  def onSubmit(mode: Mode): Action[AnyContent]
 }
 
 @Singleton
@@ -33,16 +34,16 @@ class DefaultTaxRegimeController @Inject() (
   navigator: JourneyNavigator,
   sessionRepository: SessionRepository,
   form: TaxRegimeBaseFormProvider,
-  view: views.html.TaxRegimeView,
+  view: TaxRegimeView,
   override val controllerComponents: MessagesControllerComponents
 )(using ExecutionContext) extends TaxRegimeBaseController {
 
-  def onPageLoad(taxRegimesIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
-    val submitRoute = journeyRoutes.TaxRegimeBaseController.onSubmit(taxRegimesIndex, mode)
+  def onPageLoad(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+    val submitRoute = journeyRoutes.TaxRegimeBaseController.onSubmit(mode)
     val userAnswers = request.userAnswers
     val result = for {
       addATaxRegime <- userAnswers.get(AddATaxRegimePage)
-      page = TaxRegimePage(addATaxRegime, taxRegimesIndex)
+      page = TaxRegimePage(addATaxRegime)
       preparedForm = userAnswers.get(page)
         .map(form().fill)
         .getOrElse(form())
@@ -50,12 +51,12 @@ class DefaultTaxRegimeController @Inject() (
     result.getOrElse(Redirect(routes.JourneyRecoveryController.onPageLoad()))
   }
 
-  def onSubmit(taxRegimesIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
-    val submitRoute = journeyRoutes.TaxRegimeBaseController.onSubmit(taxRegimesIndex, mode)
+  def onSubmit(mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+    val submitRoute = journeyRoutes.TaxRegimeBaseController.onSubmit(mode)
     val userAnswers = request.userAnswers
     val result = for {
       addATaxRegime <- userAnswers.get(AddATaxRegimePage)
-      page = TaxRegimePage(addATaxRegime, taxRegimesIndex)
+      page = TaxRegimePage(addATaxRegime)
     } yield form().bindFromRequest().fold(
       formWithErrors =>
         Future.successful(BadRequest(view(formWithErrors, submitRoute, mode))),

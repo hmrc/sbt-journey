@@ -6,17 +6,17 @@ import _root_.forms.mappings.Mappings // uk.gov.hmrc.simplejourney.forms.mapping
 import uk.gov.hmrc.simplejourney.models.TaxRegime
 
 trait TaxRegimeBaseFormProvider {
-  def apply(): Form[TaxRegime]
+  def apply(): Form[Set[TaxRegime]]
 }
 
 class DefaultTaxRegimeFormProvider
   extends TaxRegimeBaseFormProvider
   with Mappings {
 
-  def apply(): Form[TaxRegime] = Form(
-    "value" -> enumerable[TaxRegime](
+  def apply(): Form[Set[TaxRegime]] = Form(
+    "value" -> set(enumerable[TaxRegime](
       requiredKey = "taxRegime.error.required",
       invalidKey = "taxRegime.error.invalid",
-    )
+    ))
   )
 }

@@ -10,10 +10,11 @@ import uk.gov.hmrc.fileuploadjourney.controllers.upscan.{routes as upscanRoutes}
 import uk.gov.hmrc.fileuploadjourney.connectors.UpscanConnector
 import uk.gov.hmrc.fileuploadjourney.models.*
 import uk.gov.hmrc.fileuploadjourney.models.upscan.*
-import uk.gov.hmrc.fileuploadjourney.forms.*
+import uk.gov.hmrc.fileuploadjourney.forms.UploadSupportingDocumentBaseFormProvider
 import uk.gov.hmrc.fileuploadjourney.navigation.*
 import uk.gov.hmrc.fileuploadjourney.repositories.FileUploadRepository
 import uk.gov.hmrc.fileuploadjourney.pages.*
+import views.html.UploadSupportingDocumentView
 
 import play.api.Logging
 import play.api.i18n.I18nSupport
@@ -27,9 +28,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[DefaultUploadSupportingDocumentController])
 trait UploadSupportingDocumentBaseController extends FrontendBaseController, I18nSupport, Logging {
-  def onPageLoad(supportingDocumentsIndex: Int, mode: Mode): Action[AnyContent]
+  def onPageLoad(supportingDocumentsIndex: Int, mode: Mode, upscanReference: Option[String], upscanErrorCode: Option[String], upscanErrorMessage: Option[String]): Action[AnyContent]
   def onUploadSuccess(supportingDocumentsIndex: Int, id: UUID, mode: Mode): Action[AnyContent]
-  def onUploadFailure(supportingDocumentsIndex: Int, id: UUID, mode: Mode): Action[AnyContent]
+  def onUploadFailure(supportingDocumentsIndex: Int, id: UUID, mode: Mode, upscanReference: Option[String], upscanErrorCode: Option[String], upscanErrorMessage: Option[String]): Action[AnyContent]
 }
 
 @Singleton
@@ -42,24 +43,25 @@ class DefaultUploadSupportingDocumentController @Inject() (
   upscanConnector: UpscanConnector,
   fileUploadRepository: FileUploadRepository,
   form: UploadSupportingDocumentBaseFormProvider,
-  view: views.html.UploadSupportingDocumentView,
+  view: UploadSupportingDocumentView,
   override val controllerComponents: MessagesControllerComponents
 )(using ExecutionContext) extends UploadSupportingDocumentBaseController {
 
-  def onPageLoad(supportingDocumentsIndex: Int, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
+  def onPageLoad(supportingDocumentsIndex: Int, mode: Mode, upscanReference: Option[String], upscanErrorCode: Option[String], upscanErrorMessage: Option[String]): Action[AnyContent] = (identify andThen getData andThen requireData).async { implicit request =>
     val uploadId = UploadId.next()
     for {
       initiateResponse <- upscanConnector.initiate(
         callbackUrl = upscanRoutes.UpscanNotificationBaseController.onNotificationReceived(uploadId.id),
         successRedirect = journeyRoutes.UploadSupportingDocumentBaseController.onUploadSuccess(supportingDocumentsIndex: Int, uploadId.id, mode),
-        errorRedirect = journeyRoutes.UploadSupportingDocumentBaseController.onUploadFailure(supportingDocumentsIndex: Int, uploadId.id, mode)
+        errorRedirect = journeyRoutes.UploadSupportingDocumentBaseController.onUploadFailure(supportingDocumentsIndex: Int, uploadId.id, mode, None, None, None)
       )
       uploadId <- fileUploadRepository.initiate(uploadId, request.userId, initiateResponse.reference)
       formTemplate = initiateResponse.uploadRequest
-      preparedForm <- request.getQueryString("errorCode").fold(Future.successful(form())) { errorCode =>
-        val reference = UpscanReference(request.getQueryString("key").orNull)
+      preparedForm <- upscanReference.fold(Future.successful(form())) { ref =>
+        val reference = UpscanReference(ref)
         fileUploadRepository.setRejected(request.userId, reference).map { _ =>
-          val errorMessage = request.getQueryString("errorMessage").orNull
+          val errorCode = upscanErrorCode.orNull
+          val errorMessage = upscanErrorMessage.orNull
           logger.error(s"File upload with reference $reference failed with error code $errorCode: $errorMessage")
           val uploadError = UploadError.fromErrorCode(errorCode)
           form().withError("file", uploadError.messageKey)
@@ -82,7 +84,7 @@ class DefaultUploadSupportingDocumentController @Inject() (
     result.getOrElse(Future.successful(Redirect(routes.JourneyRecoveryController.onPageLoad())))
   }
 
-  def onUploadFailure(supportingDocumentsIndex: Int, id: UUID, mode: Mode): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
-    Redirect(journeyRoutes.UploadSupportingDocumentBaseController.onPageLoad(supportingDocumentsIndex, mode).path, request.queryString)
+  def onUploadFailure(supportingDocumentsIndex: Int, id: UUID, mode: Mode, upscanReference: Option[String], upscanErrorCode: Option[String], upscanErrorMessage: Option[String]): Action[AnyContent] = (identify andThen getData andThen requireData) { implicit request =>
+    Redirect(journeyRoutes.UploadSupportingDocumentBaseController.onPageLoad(supportingDocumentsIndex, mode, upscanReference, upscanErrorCode, upscanErrorMessage))
   }
 }

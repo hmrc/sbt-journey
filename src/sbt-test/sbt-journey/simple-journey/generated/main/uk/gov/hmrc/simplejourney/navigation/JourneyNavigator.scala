@@ -37,15 +37,11 @@ class DefaultJourneyNavigator @Inject() () extends JourneyNavigator {
     case DataDomainPage(dataDomainsIndex) => _ => _ =>
       routes.AddAnotherDataDomainBaseController.onPageLoad(dataDomainsIndex, NormalMode)
     case AddATaxRegimePage => _ => {
-      case Choice.Yes => routes.TaxRegimeBaseController.onPageLoad(0, NormalMode)
+      case Choice.Yes => routes.TaxRegimeBaseController.onPageLoad(NormalMode)
       case Choice.No  => routes.AuditProviderBaseController.onPageLoad(NormalMode)
     }
-    case AddAnotherTaxRegimePage(Choice.Yes,taxRegimesIndex) => _ => {
-      case Choice.Yes => routes.TaxRegimeBaseController.onPageLoad(taxRegimesIndex + 1, NormalMode)
-      case Choice.No  => routes.AuditProviderBaseController.onPageLoad(NormalMode)
-    }
-    case TaxRegimePage(Choice.Yes,taxRegimesIndex) => _ => _ =>
-      routes.AddAnotherTaxRegimeBaseController.onPageLoad(taxRegimesIndex, NormalMode)
+    case TaxRegimePage(Choice.Yes) => _ => _ =>
+      routes.AuditProviderBaseController.onPageLoad(NormalMode)
     case AuditProviderPage => _ => _ =>
       routes.AuditSourceBaseController.onPageLoad(0, NormalMode)
     case AddAnotherAuditSourcePage(auditSourcesIndex) => _ => {
@@ -78,15 +74,11 @@ class DefaultJourneyNavigator @Inject() () extends JourneyNavigator {
     case DataDomainPage(dataDomainsIndex) => _ => _ =>
       routes.AddAnotherDataDomainBaseController.onPageLoad(dataDomainsIndex, CheckMode)
     case AddATaxRegimePage => _ => {
-      case Choice.Yes => routes.TaxRegimeBaseController.onPageLoad(0, CheckMode)
+      case Choice.Yes => routes.TaxRegimeBaseController.onPageLoad(CheckMode)
       case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
     }
-    case AddAnotherTaxRegimePage(Choice.Yes,taxRegimesIndex) => _ => {
-      case Choice.Yes => routes.TaxRegimeBaseController.onPageLoad(taxRegimesIndex + 1, CheckMode)
-      case Choice.No  => routes.CheckYourAnswersBaseController.onPageLoad
-    }
-    case TaxRegimePage(Choice.Yes,taxRegimesIndex) => _ => _ =>
-      routes.AddAnotherTaxRegimeBaseController.onPageLoad(taxRegimesIndex, CheckMode)
+    case TaxRegimePage(Choice.Yes) => _ => _ =>
+      routes.CheckYourAnswersBaseController.onPageLoad
     case AuditProviderPage => _ => _ =>
       routes.CheckYourAnswersBaseController.onPageLoad
     case AddAnotherAuditSourcePage(auditSourcesIndex) => _ => {

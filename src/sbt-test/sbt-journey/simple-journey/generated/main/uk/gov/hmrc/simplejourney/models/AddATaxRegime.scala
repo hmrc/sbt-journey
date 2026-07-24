@@ -4,7 +4,7 @@ import play.api.libs.json.{JsPath,Reads}
 
 enum AddATaxRegime {
   case Yes(
-    taxRegimes: List[TaxRegime]
+    taxRegime: Set[TaxRegime]
   )
   case No
 
@@ -15,10 +15,8 @@ enum AddATaxRegime {
 }
 
 object AddATaxRegime extends EnumFormats {
-  private val yesReads: Reads[AddATaxRegime] = {
-    val taxRegimes = Reads.list(Reads.at[TaxRegime](JsPath \ "taxRegime"))
-    (JsPath \ "taxRegimes").read[List[TaxRegime]](using taxRegimes).map(Yes.apply)
-  }
+  private val yesReads: Reads[AddATaxRegime] =
+    (JsPath \ "taxRegime").read[Set[TaxRegime]].map(Yes.apply)
   private val nestedYesReads: Reads[AddATaxRegime] =
     (JsPath \ "Yes").read[AddATaxRegime](using yesReads)
 
