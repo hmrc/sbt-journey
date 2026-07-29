@@ -1,13 +1,15 @@
 ## TODOs
 
-* Add generated tests for the generated code
-* Add queries for reading the journey models
+* Simplify by saving the "add another" choice in add-to-list pages
+* ~~Add generated tests for the generated code~~
+* ~~Add queries for reading the journey models~~ Superseded by:
+* Remove the generated `Reads` and `Writes` for the journey models and use them as result objects for Check Your Answers validation instead
 * Add a generated messages file with descriptions of what each message is for
 * Add error link overrides as in the scaffold pages
 * Add fallback routes to the Navigator implementation when nothing matches
-* Integrate with sbt-header for copyright header generation
+* Integrate with sbt-header for copyright header generation?
+* ~~Add `loadRoute` to Page objects to make navigator code easier?~~ removed `submitRoute` to reduce divergence from scaffolds
 * Rework the hmrc-frontend-scaffold.g8 template to use init_service package structure or create a new template
-* Add `loadRoute` to Page objects to make navigator code easier?
 * Special care needs to be taken to preserve the changes to the frontend-scaffold:
   * Changed `RichJsObject` to use `deepMerge`, preserving nested answers
   * Changed `Page` to have `AnswerType`
