@@ -1,0 +1,15 @@
+@this(
+    layout: templates.Layout
+)
+
+@()(implicit request: Request[_], messages: Messages)
+
+@layout(
+    pageTitle = titleNoForm(messages("beforeYouBegin.title")),
+    showBackLink = false
+) {
+
+<h1 class="govuk-heading-xl">@messages("beforeYouBegin.heading")</h1>
+
+<p class="govuk-body">@messages("beforeYouBegin.guidance")</p>
+}

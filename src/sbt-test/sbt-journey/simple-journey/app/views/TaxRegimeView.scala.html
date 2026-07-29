@@ -1,0 +1,44 @@
+@this(
+    layout: templates.Layout,
+    formHelper: FormWithCSRF,
+    govukErrorSummary: GovukErrorSummary,
+    govukCheckboxes: GovukCheckboxes,
+    govukButton: GovukButton
+)
+
+@(form: Form[_], action: Call, mode: Mode)(implicit request: Request[_], messages: Messages)
+
+@layout(pageTitle = title(form, messages("taxRegime.title"))) {
+
+    @formHelper(action = action, Symbol("autoComplete") -> "off") {
+        @if(form.errors.nonEmpty) {
+            @govukErrorSummary(ErrorSummaryViewModel(form))
+        }
+
+        @govukCheckboxes(
+            CheckboxesViewModel(
+                form = form,
+                name = "value",
+                legend = LegendViewModel(messages("taxRegime.heading")).asPageHeading(),
+                items = List(
+                    CheckboxItemViewModel(
+                        content = Text(messages("taxRegime.value.sa")),
+                        fieldId = "value",
+                        index = 0,
+                        value = "SA"
+                    ),
+                    CheckboxItemViewModel(
+                        content = Text(messages("taxRegime.value.vat")),
+                        fieldId = "value",
+                        index = 1,
+                        value = "VAT"
+                    )
+                )
+            )
+        )
+
+        @govukButton(
+            ButtonViewModel(messages("site.continue"))
+        )
+    }
+}

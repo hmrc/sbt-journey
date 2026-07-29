@@ -1,0 +1,89 @@
+/*
+ * Copyright 2026 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package uk.gov.hmrc.sbt.journey.models
+
+import java.time.LocalDate
+
+/** The type of user answer.
+  */
+sealed abstract class FieldType extends Product with Serializable {
+  def isFileUpload: Boolean =
+    typeName.contains("UploadId")
+
+  def canBeEmpty: Boolean =
+    this match {
+      case SetType(_) | OptionType(_) => true
+      case _                          => false
+    }
+
+  def typeName: Option[String] = this match {
+    case ClassType(clazz) => clazz.split("\\.").lastOption
+    case _                => None
+  }
+}
+
+object FieldType {
+  val INT        = PrimitiveType(classOf[Int])
+  val BOOLEAN    = PrimitiveType(classOf[Boolean])
+  val STRING     = ClassType(classOf[String])
+  val BIGDECIMAL = ClassType(classOf[BigDecimal])
+  val LOCALDATE  = ClassType(classOf[LocalDate])
+}
+
+/** A list answer.
+  * @param elements
+  *   the element type of the list.
+  */
+case class ListType(elements: FieldType) extends FieldType
+
+/** A set answer.
+  * @param elements
+  *   the element type of the set.
+  */
+case class SetType(elements: FieldType) extends FieldType
+
+/** An optional answer.
+  * @param elements
+  *   the element type of the option.
+  */
+case class OptionType(elements: FieldType) extends FieldType
+
+/** A primitive type answer.
+  * @param clazz
+  *   A class reference for the primitive type.
+  */
+case class PrimitiveType(clazz: Class[? <: AnyVal]) extends FieldType
+
+/** A class type answer.
+  * @param clazz
+  *   A fully qualified class name.
+  */
+case class ClassType(clazz: String) extends FieldType
+
+object ClassType {
+  def apply(clazz: Class[?]): ClassType =
+    ClassType(clazz.getName)
+  def apply(name: QualifiedName): ClassType =
+    ClassType(name.toString)
+}
+
+/** A synthetic class type answer. These are classes that are generated to represent user answers
+  * according to the declared journey structure.
+  * @param clazz
+  *   A fully qualified class name.
+  */
+case class SyntheticClassType(pkg: String, name: String) extends FieldType

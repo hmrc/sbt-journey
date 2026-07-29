@@ -1,0 +1,170 @@
+/*
+ * Copyright 2026 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package uk.gov.hmrc.sbt.journey.templates
+
+import uk.gov.hmrc.sbt.journey.models.*
+import uk.gov.hmrc.sbt.journey.templates.Imports.PlayJsonPrefix
+import uk.gov.hmrc.sbt.journey.utils.StringCaseUtils.{camelCase, pascalCase}
+
+class PageObject(collector: ImportCollector) extends Template {
+  private def applyParams(journey: Journey, path: JourneyPath): List[String] =
+    path.paths.collect {
+      case IndexPath(pageKey) =>
+        s"${camelCase(pageKey)}Index: Int"
+      case ChoicePath(pageKey, _) =>
+        val answerType = journey.pages(pageKey).answerType
+        val choiceType = ModelFields.fieldType(answerType)
+        s"$pageKey: $choiceType"
+    }
+
+  private def jsPathFor(path: JourneyPath): String =
+    path.paths
+      .flatMap {
+        case IndexPath(pageKey) =>
+          List(s""""$pageKey"""", s"${pageKey}Index")
+        case ChoicePath(pageKey, _) =>
+          List(s""""$pageKey"""", s"$pageKey.toString")
+        case StringPath(pageKey) =>
+          List(s""""$pageKey"""")
+        case Root =>
+          List("JsPath")
+      }
+      .mkString(" \\ ")
+
+  private def unapplyTypeFor(journey: Journey, path: JourneyPath): String = {
+    val paths = path.paths.collect {
+      case IndexPath(_) => "Int"
+      case ChoicePath(pageKey, _) =>
+        val answerType = journey.pages(pageKey).answerType
+        ModelFields.fieldType(answerType)
+    }
+
+    if (paths.length == 1) paths.head
+    else paths.mkString("(", ", ", ")")
+  }
+
+  private def unapplyResultFor(journey: Journey, path: JourneyPath): String = {
+    val paths = path.paths.collect {
+      case IndexPath(pageKey) =>
+        s"${pageKey}Index"
+      case ChoicePath(pageKey, _) =>
+        val answerType = journey.pages(pageKey).answerType
+        val choiceType = ModelFields.fieldType(answerType)
+        s"$choiceType.valueOf($pageKey)"
+    }
+
+    if (paths.length == 1) paths.head
+    else paths.mkString("(", ", ", ")")
+  }
+
+  private def jsPathNodesFor(path: JourneyPath): String = {
+    val p = " " * 8
+    path.paths
+      .flatMap {
+        case IndexPath(pageKey) =>
+          List(s"""KeyPathNode("$pageKey")""", s"IdxPathNode(${pageKey}Index)")
+        case ChoicePath(pageKey, _) =>
+          List(s"""KeyPathNode("$pageKey")""", s"KeyPathNode($pageKey)")
+        case StringPath(pageKey) =>
+          List(s"""KeyPathNode("$pageKey")""")
+        case _ =>
+          List.empty
+      }
+      .mkString("", s"$NL$p:: ", s"$NL$p:: Nil")
+  }
+
+  def applyMethod(pageName: String, journey: Journey, path: JourneyPath): String = {
+    val params       = applyParams(journey, path)
+    val paramsString = if (params.isEmpty) "" else params.mkString("(", ", ", ")")
+    val jsPath       = jsPathFor(path)
+    s"""|  def apply$paramsString: ${pageName}Page =
+        |    new ${pageName}Page(
+        |      $jsPath
+        |    )""".stripMargin
+  }
+
+  def unapplyMethod(pageName: String, journey: Journey, path: JourneyPath): String = {
+    val unapplyType   = unapplyTypeFor(journey, path)
+    val unapplyResult = unapplyResultFor(journey, path)
+    val jsPathNodes   = jsPathNodesFor(path)
+    s"""|  def unapply(page: ${pageName}Page): Option[$unapplyType] =
+        |    page.path.path match {
+        |      case $jsPathNodes => Some($unapplyResult)
+        |      case _ => None
+        |    }""".stripMargin
+  }
+
+  def render(basePackage: QualifiedName, journey: Journey, journeyPage: JourneyPage): String = {
+    val pagesPackage    = basePackage / "pages"
+    val capitalPageName = pascalCase(journeyPage.pageKey)
+    val overloads       = journey.pathsFor(journeyPage.pageKey)
+    val answerType      = journey.pages(journeyPage.pageKey).answerType
+    val isTopLevelPage  = overloads.length == 1 && applyParams(journey, overloads.head).isEmpty
+
+    val pageType = ModelFields.fieldType(answerType)
+
+    val hasIndexPaths     = overloads.exists(_.indexPaths.nonEmpty)
+    val idxNode           = if (hasIndexPaths) Set("IdxPathNode") else Set.empty
+    val keyNode           = if (!isTopLevelPage) Set("KeyPathNode") else Set.empty
+    val playJsonImports   = Map(PlayJsonPrefix -> (Set("JsPath") ++ idxNode ++ keyNode))
+    val answerTypeImports = collector.importedSymbols(answerType, recursive = false)
+    val baseImports       = playJsonImports ++ answerTypeImports
+
+    val choiceModelImports = overloads
+      .flatMap(_.choicePaths)
+      .map { case ChoicePath(pageKey, _) =>
+        collector.importedSymbols(journey.pages(pageKey).answerType, recursive = false)
+      }
+
+    val importedPrefixes = choiceModelImports.foldLeft(baseImports)(Imports.merge)
+    val imports = Imports.importsFor(pagesPackage, importedPrefixes, addFormatImports = false)
+
+    if (isTopLevelPage) {
+      s"""package ${basePackage / "pages"}
+         |
+         |import _root_.pages.* // TODO: Remove this once we have a better template
+         |$imports
+         |
+         |object ${capitalPageName}Page extends QuestionPage[$pageType] {
+         |  override def path: JsPath = ${jsPathFor(overloads.head)}
+         |  override def toString: String = "${journeyPage.pageKey}"
+         |}
+         |""".stripMargin
+    } else {
+      val applyMethods =
+        overloads.map(applyMethod(capitalPageName, journey, _)).distinct.mkString(NL)
+      val unapplyMethods =
+        overloads.map(unapplyMethod(capitalPageName, journey, _)).distinct.mkString(NL)
+
+      s"""package ${basePackage / "pages"}
+         |
+         |import _root_.pages.* // TODO: Remove this once we have a better template
+         |$imports
+         |
+         |case class ${capitalPageName}Page private (override val path: JsPath) extends QuestionPage[$pageType] {
+         |  override def toString: String = "${journeyPage.pageKey}"
+         |}
+         |
+         |object ${capitalPageName}Page {
+         |$applyMethods
+         |
+         |$unapplyMethods
+         |}
+         |""".stripMargin
+    }
+  }
+}

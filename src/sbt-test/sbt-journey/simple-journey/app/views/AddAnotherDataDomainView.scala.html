@@ -1,0 +1,41 @@
+@this(
+    layout: templates.Layout,
+    formHelper: FormWithCSRF,
+    govukErrorSummary: GovukErrorSummary,
+    govukRadios: GovukRadios,
+    govukButton: GovukButton
+)
+
+@(form: Form[_], action: Call, mode: Mode)(implicit request: Request[_], messages: Messages)
+
+@layout(pageTitle = title(form, messages("addAnotherDataDomain.title"))) {
+
+    @formHelper(action = action, Symbol("autoComplete") -> "off") {
+        @if(form.errors.nonEmpty) {
+            @govukErrorSummary(ErrorSummaryViewModel(form))
+        }
+
+        @govukRadios(
+            RadiosViewModel(
+                field = form("value"),
+                legend = LegendViewModel(messages("addAnotherDataDomain.heading")).asPageHeading(),
+                items = List(
+                    RadioItem(
+                        id    = Some("value-yes"),
+                        value = Some("Yes"),
+                        content = Text(messages("site.yes"))
+                    ),
+                    RadioItem(
+                        id    = Some("value-no"),
+                        value = Some("No"),
+                        content = Text(messages("site.no"))
+                    )
+                )
+            )
+        )
+
+        @govukButton(
+            ButtonViewModel(messages("site.continue"))
+        )
+    }
+}

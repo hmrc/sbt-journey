@@ -1,0 +1,108 @@
+service.name = simple-journey
+
+site.back = Back
+site.remove = Remove
+site.change = Change
+site.no = No
+site.yes = Yes
+site.continue = Continue
+site.start = Start now
+site.startAgain = Start again
+site.signIn = Sign in
+site.govuk = GOV.UK
+
+date.day = Day
+date.month = Month
+date.year = Year
+date.error.day = day
+date.error.month = month
+date.error.year = year
+
+timeout.title = You’re about to be signed out
+timeout.message = For security reasons, you will be signed out of this service in
+timeout.keepAlive = Stay signed in
+timeout.signOut = Sign out
+
+error.title.prefix = Error:
+error.prefix = Error
+error.summary.title = There is a problem
+
+index.title = simple-journey
+index.heading = simple-journey
+index.guidance = Welcome to your new frontend. Please see the README file for a guide to getting started.
+
+addAnotherAuditEvent.title = Do you want to add another audit event?
+addAnotherAuditEvent.heading = Do you want to add another audit event?
+
+addAnotherAuditSource.title = Do you want to add another audit source?
+addAnotherAuditSource.heading = Do you want to add another audit source?
+
+addAnotherCipAssessmentTicket.title = Do you want to add another CIP Assessment ticket?
+addAnotherCipAssessmentTicket.heading = Do you want to add another CIP Assessment ticket?
+
+addAnotherDataDomain.title = Do you want to add another CIP data domain?
+addAnotherDataDomain.heading = Do you want to add another CIP data domain?
+
+addAnotherTaxRegime.title = Do you want to add another tax regime?
+addAnotherTaxRegime.heading = Do you want to add another tax regime?
+
+addATaxRegime.title = Do you want to add a tax regime?
+addATaxRegime.heading = Do you want to add a tax regime?
+
+auditEvent.title = Provide details of the proposed audit event
+auditEvent.heading = Provide details of the proposed audit event
+auditEvent.auditType = Audit type
+auditEvent.description = Description
+auditEvent.expectedGoLiveDate = Expected go-live date
+auditEvent.expectedGoLiveDate.hint = This is the date when your service will begin producing this audit event.
+auditEvent.expectedDecommissioningDate = Expected decommissioning date
+auditEvent.expectedDecommissioningDate.hint = This is the date when your service will stop producing this audit event.
+
+auditProvider.title = Who is the audit provider?
+auditProvider.heading = Who is the audit provider?
+
+auditSource.title = What is the name of the audit source?
+auditSource.heading = What is the name of the audit source?
+
+cipAssessmentPage.title = What is the Confluence URL of the CIP Assessment page?
+cipAssessmentPage.heading = What is the Confluence URL of the CIP Assessment page?
+
+cipAssessmentTicket.title = What is the JIRA ID of the CIP Assessment ticket?
+cipAssessmentTicket.heading = What is the JIRA ID of the CIP Assessment ticket?
+
+dataDomain.title = What is the CIP data domain?
+dataDomain.heading = What is the CIP data domain?
+
+checkYourAnswers.title = Check your answers
+checkYourAnswers.heading = Check your answers
+
+saInfo.title = Provide some SA-related thingy
+saInfo.heading = Provide some SA-related thingy
+
+serviceName.title = What is the name of the service?
+serviceName.heading = What is the name of the service?
+
+serviceDescription.title = Provide details of the service
+serviceDescription.heading = Provide details of the service
+
+taxRegime.title = What is the relevant tax regime for the service?
+taxRegime.heading = What is the relevant tax regime for the service?
+taxRegime.value.sa = SA
+taxRegime.value.vat = VAT
+
+vatInfo.title = Provide some VAT-related thingy
+vatInfo.heading = Provide some VAT-related thingy
+
+journeyRecovery.continue.title = Sorry, there is a problem with the service
+journeyRecovery.continue.heading = Sorry, there is a problem with the service
+journeyRecovery.continue.guidance = [Add content to explain how to proceed.]
+journeyRecovery.startAgain.title = Sorry, there is a problem with the service
+journeyRecovery.startAgain.heading = Sorry, there is a problem with the service
+journeyRecovery.startAgain.guidance = [Add content to explain why the user needs to start again.]
+
+signedOut.title = For your security, we signed you out
+signedOut.heading = For your security, we signed you out
+signedOut.guidance = We did not save your answers.
+
+unauthorised.title = You can’t access this service with this account
+unauthorised.heading = You can’t access this service with this account

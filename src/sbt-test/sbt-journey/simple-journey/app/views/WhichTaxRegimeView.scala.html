@@ -1,0 +1,41 @@
+@this(
+    layout: templates.Layout,
+    formHelper: FormWithCSRF,
+    govukErrorSummary: GovukErrorSummary,
+    govukRadios: GovukRadios,
+    govukButton: GovukButton
+)
+
+@(form: Form[_], action: Call, mode: Mode)(implicit request: Request[_], messages: Messages)
+
+@layout(pageTitle = title(form, messages("whichTaxRegime.title"))) {
+
+    @formHelper(action = action, Symbol("autoComplete") -> "off") {
+        @if(form.errors.nonEmpty) {
+            @govukErrorSummary(ErrorSummaryViewModel(form))
+        }
+
+        @govukRadios(
+            RadiosViewModel(
+                field = form("value"),
+                legend = LegendViewModel(messages("whichTaxRegime.heading")).asPageHeading(),
+                items = List(
+                    RadioItem(
+                        id    = Some("value-sa"),
+                        value = Some("SA"),
+                        content = Text(messages("whichTaxRegime.value.sa"))
+                    ),
+                    RadioItem(
+                        id    = Some("value-vat"),
+                        value = Some("VAT"),
+                        content = Text(messages("whichTaxRegime.value.vat"))
+                    )
+                )
+            )
+        )
+
+        @govukButton(
+            ButtonViewModel(messages("site.continue"))
+        )
+    }
+}
